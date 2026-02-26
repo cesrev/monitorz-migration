@@ -680,6 +680,518 @@ def stats():
 
 
 # ============================================
+# ROUTES - HASHTAG FARM (Vinted)
+# ============================================
+
+# Default hashtag sets by category
+HASHTAG_PRESETS = {
+    "default": ["#WTS", "#Vinted", "#AEnvendre", "#Resell", "#SecondHand", "#FrenchResell"],
+    "sneakers": ["#WTS", "#Sneakers", "#Kicks", "#SneakerHead", "#ForSale", "#Heat"],
+    "streetwear": ["#WTS", "#Streetwear", "#Hype", "#Fashion", "#ForSale", "#Style"],
+    "luxe": ["#WTS", "#Luxury", "#Designer", "#HighFashion", "#Luxe", "#ForSale"],
+    "vintage": ["#WTS", "#Vintage", "#Retro", "#Thrift", "#VintageStyle", "#ForSale"],
+    "sport": ["#WTS", "#Sportswear", "#Running", "#Fitness", "#ForSale", "#Sport"],
+}
+
+# Brand keyword mapping for smart hashtag generation
+BRAND_KEYWORDS = {
+    "nike": ["#Nike", "#Swoosh", "#JustDoIt"],
+    "adidas": ["#Adidas", "#ThreeStripes", "#Boost"],
+    "jordan": ["#Jordan", "#AirJordan", "#Jumpman"],
+    "yeezy": ["#Yeezy", "#YeezyBoost", "#Kanye"],
+    "new balance": ["#NewBalance", "#NB", "#990"],
+    "puma": ["#Puma"],
+    "reebok": ["#Reebok"],
+    "converse": ["#Converse", "#ChuckTaylor"],
+    "vans": ["#Vans", "#OffTheWall"],
+    "supreme": ["#Supreme", "#Hype", "#Streetwear"],
+    "stussy": ["#Stussy", "#Streetwear"],
+    "carhartt": ["#Carhartt", "#CarharttWIP"],
+    "the north face": ["#TheNorthFace", "#TNF"],
+    "ralph lauren": ["#RalphLauren", "#Polo"],
+    "lacoste": ["#Lacoste"],
+    "gucci": ["#Gucci", "#Luxury"],
+    "louis vuitton": ["#LouisVuitton", "#LV", "#Luxury"],
+    "hermes": ["#Hermes", "#Luxury"],
+    "balenciaga": ["#Balenciaga", "#Luxury"],
+    "dior": ["#Dior", "#Luxury"],
+    "prada": ["#Prada", "#Luxury"],
+    "moncler": ["#Moncler", "#Luxury"],
+    "stone island": ["#StoneIsland", "#SI"],
+    "cp company": ["#CPCompany"],
+    "arcteryx": ["#Arcteryx", "#GoreTex"],
+    "salomon": ["#Salomon", "#Gorpcore"],
+    "asics": ["#Asics", "#GelLyte"],
+    "saucony": ["#Saucony"],
+    "burberry": ["#Burberry", "#Luxury"],
+    "versace": ["#Versace", "#Luxury"],
+    "fendi": ["#Fendi", "#Luxury"],
+    "off-white": ["#OffWhite", "#VirgilAbloh"],
+    "palm angels": ["#PalmAngels", "#Streetwear"],
+    "essentials": ["#Essentials", "#FearOfGod", "#FOG"],
+    "fear of god": ["#FearOfGod", "#FOG"],
+    "gallery dept": ["#GalleryDept"],
+    "represent": ["#Represent"],
+    "ami": ["#AMIParis", "#AMI"],
+    "acne studios": ["#AcneStudios"],
+    "jacquemus": ["#Jacquemus"],
+    "zara": ["#Zara"],
+    "uniqlo": ["#Uniqlo"],
+    "cos": ["#COS"],
+    "apc": ["#APC"],
+    "sezane": ["#Sezane"],
+    "isabel marant": ["#IsabelMarant"],
+    "celine": ["#Celine", "#Luxury"],
+    "loewe": ["#Loewe", "#Luxury"],
+    "bottega veneta": ["#BottegaVeneta", "#BV"],
+}
+
+# Item type keyword mapping
+ITEM_KEYWORDS = {
+    "t-shirt": ["#Tshirt", "#Tee"],
+    "tee": ["#Tshirt", "#Tee"],
+    "hoodie": ["#Hoodie", "#Sweat"],
+    "sweat": ["#Sweat", "#Hoodie"],
+    "veste": ["#Veste", "#Jacket"],
+    "jacket": ["#Jacket", "#Veste"],
+    "jean": ["#Jeans", "#Denim"],
+    "denim": ["#Denim", "#Jeans"],
+    "pantalon": ["#Pantalon", "#Pants"],
+    "short": ["#Short", "#Shorts"],
+    "sneaker": ["#Sneakers", "#Kicks"],
+    "chaussure": ["#Chaussures", "#Shoes"],
+    "basket": ["#Baskets", "#Sneakers"],
+    "sac": ["#Sac", "#Bag"],
+    "bag": ["#Bag", "#Sac"],
+    "casquette": ["#Casquette", "#Cap"],
+    "cap": ["#Cap", "#Casquette"],
+    "bonnet": ["#Bonnet", "#Beanie"],
+    "echarpe": ["#Echarpe", "#Scarf"],
+    "ceinture": ["#Ceinture", "#Belt"],
+    "montre": ["#Montre", "#Watch"],
+    "lunettes": ["#Lunettes", "#Sunglasses"],
+    "polo": ["#Polo"],
+    "chemise": ["#Chemise", "#Shirt"],
+    "manteau": ["#Manteau", "#Coat"],
+    "doudoune": ["#Doudoune", "#Puffer"],
+    "puffer": ["#Puffer", "#Doudoune"],
+    "robe": ["#Robe", "#Dress"],
+    "jupe": ["#Jupe", "#Skirt"],
+    "pull": ["#Pull", "#Sweater"],
+    "cardigan": ["#Cardigan"],
+    "survetement": ["#Survetement", "#Tracksuit"],
+    "tracksuit": ["#Tracksuit"],
+    "cargo": ["#Cargo", "#CargoPants"],
+}
+
+
+def _generate_hashtags_for_item(title: str, category: str = "default", custom_tags: list = None) -> list[str]:
+    """Generate hashtags for a Vinted item based on title and category."""
+    title_lower = title.lower()
+    hashtags = []
+
+    # 1. Add preset hashtags for category
+    preset = HASHTAG_PRESETS.get(category, HASHTAG_PRESETS["default"])
+    hashtags.extend(preset)
+
+    # 2. Detect brand from title
+    for brand, tags in BRAND_KEYWORDS.items():
+        if brand in title_lower:
+            hashtags.extend(tags)
+            break  # Only match first brand
+
+    # 3. Detect item type from title
+    for keyword, tags in ITEM_KEYWORDS.items():
+        if keyword in title_lower:
+            hashtags.extend(tags)
+            break  # Only match first item type
+
+    # 4. Add custom user tags
+    if custom_tags:
+        for tag in custom_tags:
+            tag = tag.strip()
+            if tag and not tag.startswith("#"):
+                tag = f"#{tag}"
+            if tag:
+                hashtags.append(tag)
+
+    # 5. Deduplicate while preserving order
+    seen = set()
+    unique = []
+    for h in hashtags:
+        h_lower = h.lower()
+        if h_lower not in seen:
+            seen.add(h_lower)
+            unique.append(h)
+
+    return unique
+
+
+@app.route("/api/generate-hashtags", methods=["POST"])
+@login_required
+def generate_hashtags():
+    """Generate hashtags for Vinted items.
+
+    Expects JSON:
+    {
+        "title": "Nike Air Force 1 White",       (required)
+        "category": "sneakers",                   (optional, default: "default")
+        "custom_tags": ["MonShop", "Paris"]        (optional)
+    }
+
+    Or for batch generation from sheet:
+    {
+        "from_sheet": true,
+        "category": "sneakers",
+        "custom_tags": ["MonShop"]
+    }
+    """
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "vinted":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Vinted"}), 403
+
+    data = request.get_json(silent=True) or {}
+    category = data.get("category", "default")
+    custom_tags = data.get("custom_tags", [])
+
+    # Single item mode
+    if not data.get("from_sheet"):
+        title = data.get("title", "").strip()
+        if not title:
+            return jsonify({"success": False, "error": "Titre de l'article requis"}), 400
+
+        hashtags = _generate_hashtags_for_item(title, category, custom_tags)
+        return jsonify({
+            "success": True,
+            "items": [{
+                "title": title,
+                "hashtags": hashtags,
+                "text": " ".join(hashtags),
+            }],
+        })
+
+    # Batch mode: read from Google Sheet
+    sheets = db.get_spreadsheets(user_id)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:I",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "items": [], "message": "Aucun article dans le Sheet"})
+
+        headers = rows[0]
+        items = []
+
+        for row in rows[1:]:
+            if not row:
+                continue
+            title = row[0] if len(row) > 0 else ""
+            if not title:
+                continue
+
+            # For Vinted Pro: check if item is not sold yet (no sale price)
+            # Column D (index 3) = Prix Vente in Pro layout
+            # Column B (index 1) = Prix Vente in Starter layout
+            sale_price_idx = 3 if len(headers) > 4 else 1
+            sale_price = row[sale_price_idx] if len(row) > sale_price_idx else ""
+
+            hashtags = _generate_hashtags_for_item(title, category, custom_tags)
+            items.append({
+                "title": title,
+                "hashtags": hashtags,
+                "text": " ".join(hashtags),
+                "sold": bool(sale_price and sale_price.strip()),
+            })
+
+        return jsonify({"success": True, "items": items})
+
+    except Exception as exc:
+        logger.error("Failed to read sheet for hashtags: %s", exc)
+        return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
+
+
+@app.route("/api/hashtag-categories")
+@login_required
+def hashtag_categories():
+    """Return available hashtag preset categories."""
+    categories = [
+        {"id": "default", "label": "General"},
+        {"id": "sneakers", "label": "Sneakers"},
+        {"id": "streetwear", "label": "Streetwear"},
+        {"id": "luxe", "label": "Luxe"},
+        {"id": "vintage", "label": "Vintage"},
+        {"id": "sport", "label": "Sport"},
+    ]
+    return jsonify({"success": True, "categories": categories})
+
+
+# ============================================
+# ROUTES - WTS TEMPLATE (Tickets)
+# ============================================
+
+@app.route("/api/generate-wts")
+@login_required
+def generate_wts():
+    """Generate a WTS (Want To Sell) template from unsold tickets in the Sheet.
+
+    Format:
+    WTS
+    Artiste
+    Date - Categorie x1 - prix EUR/place
+
+    One line per sheet row where "Prix Vente" column is empty.
+    """
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Tickets"}), 403
+
+    sheets = db.get_spreadsheets(user_id)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        # Tickets headers: Evenement | Categorie | Lieu | Date | Prix Achat | N Commande | Lien | Compte | Prix Vente | Benefice
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:J",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "wts_text": "", "items": [], "message": "Aucun billet dans le Sheet"})
+
+        # Parse unsold tickets
+        unsold_items = []
+        for row in rows[1:]:
+            if not row or not row[0]:
+                continue
+
+            event = row[0] if len(row) > 0 else ""
+            category = row[1] if len(row) > 1 else ""
+            lieu = row[2] if len(row) > 2 else ""
+            date = row[3] if len(row) > 3 else ""
+            prix_achat = row[4] if len(row) > 4 else ""
+            # Index 8 = Prix Vente
+            prix_vente = row[8] if len(row) > 8 else ""
+
+            # Skip sold tickets (prix_vente is filled)
+            if prix_vente and prix_vente.strip():
+                continue
+
+            unsold_items.append({
+                "event": event,
+                "category": category,
+                "lieu": lieu,
+                "date": date,
+                "prix_achat": prix_achat,
+            })
+
+        if not unsold_items:
+            return jsonify({
+                "success": True,
+                "wts_text": "",
+                "items": [],
+                "message": "Toutes les places sont vendues !",
+            })
+
+        # Build WTS text: one line per ticket row
+        lines = ["WTS"]
+        for item in unsold_items:
+            # Format: Artiste
+            #         Date - Categorie x1 - prix EUR/place
+            price_str = f"{item['prix_achat']}EUR/place" if item["prix_achat"] else ""
+            cat_str = item["category"] if item["category"] else ""
+            date_str = item["date"] if item["date"] else ""
+
+            parts = []
+            if date_str:
+                parts.append(date_str)
+            if cat_str:
+                parts.append(f"{cat_str} x1")
+            if price_str:
+                parts.append(price_str)
+
+            line = f"{item['event']}\n{' - '.join(parts)}" if parts else item["event"]
+            lines.append(line)
+
+        wts_text = "\n\n".join(lines)
+
+        return jsonify({
+            "success": True,
+            "wts_text": wts_text,
+            "items": unsold_items,
+            "unsold_count": len(unsold_items),
+        })
+
+    except Exception as exc:
+        logger.error("Failed to generate WTS: %s", exc)
+        return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
+
+
+# ============================================
+# ROUTES - VINTED SELL TIME STATS
+# ============================================
+
+@app.route("/api/vinted-sell-times")
+@login_required
+def vinted_sell_times():
+    """Return sell time stats for Vinted items (date achat -> date vente).
+
+    Reads from the Google Sheet and calculates the delta for each sold item.
+    Only works for Pro users who have both purchase and sale dates.
+    """
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "vinted":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Vinted"}), 403
+
+    sheets = db.get_spreadsheets(user_id)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        from parsers.vinted import calculate_time_in_stock
+
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:I",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "items": [], "stats": {}})
+
+        headers = rows[0]
+        items = []
+        total_days = 0
+        sold_count = 0
+        fastest = None
+        slowest = None
+
+        # Detect column layout
+        # Pro: Article | Prix Achat | Date Achat | Prix Vente | Date Vente | Benefice | ROI % | Temps en stock | Compte
+        # Starter: Article | Prix Vente | Date Vente | Compte
+        is_pro = len(headers) >= 7
+
+        for row in rows[1:]:
+            if not row or not row[0]:
+                continue
+
+            title = row[0]
+            purchase_date = ""
+            sale_date = ""
+            sale_price = ""
+
+            if is_pro:
+                purchase_date = row[2] if len(row) > 2 else ""
+                sale_price = row[3] if len(row) > 3 else ""
+                sale_date = row[4] if len(row) > 4 else ""
+            else:
+                sale_price = row[1] if len(row) > 1 else ""
+                sale_date = row[2] if len(row) > 2 else ""
+
+            # Normalize dates (DD/MM/YYYY -> YYYY-MM-DD)
+            def normalize_date(d):
+                if not d:
+                    return ""
+                d = d.strip()
+                m = re.match(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})", d)
+                if m:
+                    return f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
+                if re.match(r"\d{4}-\d{2}-\d{2}", d):
+                    return d
+                return ""
+
+            purchase_date = normalize_date(purchase_date)
+            sale_date = normalize_date(sale_date)
+
+            item_data = {
+                "title": title,
+                "purchase_date": purchase_date,
+                "sale_date": sale_date,
+                "sold": bool(sale_price and sale_price.strip()),
+                "sell_time": None,
+            }
+
+            if purchase_date and sale_date and item_data["sold"]:
+                time_data = calculate_time_in_stock(purchase_date, sale_date)
+                item_data["sell_time"] = time_data
+                days = time_data["days"]
+                total_days += days
+                sold_count += 1
+                if fastest is None or days < fastest:
+                    fastest = days
+                if slowest is None or days > slowest:
+                    slowest = days
+
+            items.append(item_data)
+
+        avg_days = round(total_days / sold_count, 1) if sold_count > 0 else 0
+
+        stats = {
+            "total_items": len(items),
+            "sold_count": sold_count,
+            "unsold_count": len(items) - sold_count,
+            "avg_sell_days": avg_days,
+            "fastest_days": fastest or 0,
+            "slowest_days": slowest or 0,
+        }
+
+        return jsonify({"success": True, "items": items, "stats": stats})
+
+    except Exception as exc:
+        logger.error("Failed to get sell times: %s", exc)
+        return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
+
+
+# ============================================
 # ROUTES - PLAN
 # ============================================
 
