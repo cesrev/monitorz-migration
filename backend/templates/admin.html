@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Monitorz</title>
+  <link rel="icon" href="/static/img/logo.png">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <div class="bg-mesh"></div>
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="dashboard">
+    <!-- Simple sidebar for admin -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__logo">
+        <img src="/static/img/logo.png" alt="Monitorz" class="sidebar__logo-img">
+      </div>
+      <nav class="sidebar__nav">
+        <a href="/admin" class="sidebar__link sidebar__link--active">
+          <span class="sidebar__link-icon">👑</span>
+          <span>Admin</span>
+        </a>
+        <a href="/dashboard" class="sidebar__link">
+          <span class="sidebar__link-icon">📊</span>
+          <span>Mon Dashboard</span>
+        </a>
+      </nav>
+      <div class="sidebar__footer">
+        <a href="/logout" class="sidebar__link">
+          <span class="sidebar__link-icon">🚪</span>
+          <span>Deconnexion</span>
+        </a>
+      </div>
+    </aside>
+
+    <main class="dashboard__main">
+      <div class="dashboard__header animate-in">
+        <div class="dashboard__greeting">
+          <div class="dashboard__avatar">👑</div>
+          <div class="dashboard__welcome">
+            <h2>Panel Admin</h2>
+            <p>Vue d'ensemble de tous les clients</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats totales -->
+      <div class="dashboard__stats">
+        <div class="stat-card animate-in animate-in--delay-1">
+          <div class="stat-card__icon">👥</div>
+          <div class="stat-card__value">{{ total_clients }}</div>
+          <div class="stat-card__label">Clients</div>
+        </div>
+        <div class="stat-card animate-in animate-in--delay-2">
+          <div class="stat-card__icon">📧</div>
+          <div class="stat-card__value">{{ total_gmail }}</div>
+          <div class="stat-card__label">Comptes Gmail</div>
+        </div>
+        <div class="stat-card animate-in animate-in--delay-3">
+          <div class="stat-card__icon">🎟</div>
+          <div class="stat-card__value">{{ total_orders }}</div>
+          <div class="stat-card__label">Commandes totales</div>
+        </div>
+      </div>
+
+      <!-- Tableau clients -->
+      <section class="dashboard__section animate-in animate-in--delay-4">
+        <div class="dashboard__section-header">
+          <h3>👥 Tous les clients</h3>
+        </div>
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Nom</th>
+                <th>Email</th>
+                <th>Type</th>
+                <th>Plan</th>
+                <th>Comptes Gmail</th>
+                <th>Commandes</th>
+                <th>Dernier scan</th>
+                <th>Sheet</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for client in clients %}
+              <tr>
+                <td>{{ client.user.name }}</td>
+                <td>{{ client.user.email }}</td>
+                <td><span class="badge badge--accent">{{ '🎟 Tickets' if client.user.monitoring_type == 'tickets' else '👗 Vinted' }}</span></td>
+                <td><span class="badge badge--{{ 'success' if client.user.plan == 'pro' else 'info' }}">{{ client.user.plan | capitalize }}</span></td>
+                <td>
+                  {% for acc in client.accounts %}
+                    <span class="badge badge--{{ 'success' if acc.is_primary else 'neutral' }}" style="margin: 2px; font-size: 0.75rem;">{{ acc.email }}</span><br>
+                  {% endfor %}
+                </td>
+                <td>{{ client.orders_count }}</td>
+                <td>{{ client.last_scan.scanned_at[:16] if client.last_scan else 'Aucun' }}</td>
+                <td>
+                  {% if client.sheets %}
+                    <a href="{{ client.sheets[0].spreadsheet_url }}" target="_blank" class="btn btn--success btn--small">Ouvrir</a>
+                  {% else %}
+                    <span style="color: var(--text-tertiary);">—</span>
+                  {% endif %}
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/js/app.js"></script>
+</body>
+</html>
