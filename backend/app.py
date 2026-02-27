@@ -730,6 +730,7 @@ BRAND_ALIASES = {
     "sandro": ["#sandro", "#sandroparis"],
     "gucci": ["#gucci"],
     "louis vuitton": ["#louisvuitton", "#lv"],
+    "lv": ["#louisvuitton", "#lv"],
     "hermes": ["#hermes"],
     "balenciaga": ["#balenciaga"],
     "dior": ["#dior"],
@@ -778,6 +779,127 @@ BRAND_ALIASES = {
     "timberland": ["#timberland"],
     "dr martens": ["#drmartens", "#docs"],
     "birkenstock": ["#birkenstock"],
+    # --- StockX top brands (ajout v2.1) ---
+    "bape": ["#bape", "#abathingape"],
+    "kith": ["#kith", "#kithnyc"],
+    "new era": ["#newera", "#neweracap"],
+    "ugg": ["#ugg"],
+    "anti social social club": ["#assc", "#antisocialsocialclub"],
+    "assc": ["#assc", "#antisocialsocialclub"],
+    "aime leon dore": ["#aimeleondore", "#ald"],
+    "ald": ["#aimeleondore", "#ald"],
+    "amiri": ["#amiri"],
+    "alexander mcqueen": ["#alexandermcqueen", "#mcqueen"],
+    "givenchy": ["#givenchy"],
+    "crocs": ["#crocs"],
+    "comme des garcons": ["#commedesgarcons", "#cdg"],
+    "cdg": ["#commedesgarcons", "#cdg"],
+    "corteiz": ["#corteiz", "#crtz"],
+    "crtz": ["#corteiz", "#crtz"],
+    "trapstar": ["#trapstar"],
+    "sp5der": ["#sp5der", "#spider"],
+    "chrome hearts": ["#chromehearts"],
+    "rick owens": ["#rickowens"],
+    "under armour": ["#underarmour", "#ua"],
+    "human made": ["#humanmade", "#nigo"],
+    "valentino": ["#valentino"],
+    "chanel": ["#chanel"],
+    "eric emanuel": ["#ericemmanuel", "#ee"],
+    "mitchell and ness": ["#mitchellandness", "#mitchellness"],
+    "mitchell & ness": ["#mitchellandness", "#mitchellness"],
+    "sprayground": ["#sprayground"],
+    "clarks": ["#clarks"],
+    "ferragamo": ["#ferragamo", "#salvatoreferragamo"],
+    "marc jacobs": ["#marcjacobs"],
+    "yohji yamamoto": ["#yohjiyamamoto", "#yohji"],
+    "merrell": ["#merrell"],
+    "brooks": ["#brooks"],
+    "telfar": ["#telfar", "#telfarbag"],
+    "maison mihara yasuhiro": ["#maisonmiharayasuhiro", "#mmy"],
+    "mihara": ["#maisonmiharayasuhiro", "#mmy"],
+    "drew house": ["#drewhouse", "#drew"],
+    "denim tears": ["#denimtears"],
+    "ovo": ["#ovo", "#octobersveryown"],
+    "evisu": ["#evisu", "#evisujeans"],
+    "heron preston": ["#heronpreston"],
+    "vetements": ["#vetements"],
+    "vivienne westwood": ["#viviennewestwood"],
+    "fred perry": ["#fredperry"],
+    "gap": ["#gap"],
+    "uniqlo": ["#uniqlo"],
+    "zara": ["#zara"],
+    "h&m": ["#hm"],
+    "hm": ["#hm"],
+    "cos": ["#cos"],
+    "massimo dutti": ["#massimodutti"],
+    "schott": ["#schott", "#schottnyc"],
+    "lyle and scott": ["#lyleandscott", "#lylescott"],
+    "lyle & scott": ["#lyleandscott", "#lylescott"],
+    "dickies": ["#dickies"],
+    "lee": ["#lee"],
+    "north sails": ["#northsails"],
+    "gant": ["#gant"],
+    "woolrich": ["#woolrich"],
+    "napapijri": ["#napapijri"],
+    "eastpak": ["#eastpak"],
+    "oakley": ["#oakley"],
+    "ray ban": ["#rayban"],
+    "ray-ban": ["#rayban"],
+    # --- Marques niche ---
+    "helly hansen": ["#hellyhansen", "#hh"],
+    "sergio tacchini": ["#sergiotacchini"],
+    "alpha industries": ["#alphaindustries", "#ma1"],
+    "mizuno": ["#mizuno"],
+    "karhu": ["#karhu"],
+    "le coq sportif": ["#lecoqsportif"],
+    "kenzo": ["#kenzo"],
+    "isabel marant": ["#isabelmarant"],
+    "acne": ["#acnestudios"],
+    "stone island shadow": ["#stoneisland", "#stoneislandshadow"],
+    "canada goose": ["#canadagoose"],
+    "marmot": ["#marmot"],
+    "mammut": ["#mammut"],
+    "fjallraven": ["#fjallraven"],
+    "penfield": ["#penfield"],
+    "filson": ["#filson"],
+    "ben sherman": ["#bensherman"],
+    "ted baker": ["#tedbaker"],
+    "paul smith": ["#paulsmith"],
+    "hugo boss": ["#hugoboss", "#boss"],
+    "boss": ["#hugoboss", "#boss"],
+    "armani": ["#armani", "#emporioarmani"],
+    "emporio armani": ["#armani", "#emporioarmani"],
+    "dolce gabbana": ["#dolcegabbana", "#dg"],
+    "d&g": ["#dolcegabbana", "#dg"],
+    "mcm": ["#mcm"],
+    "goyard": ["#goyard"],
+    "balmain": ["#balmain"],
+    "kolor": ["#kolor"],
+    "kapital": ["#kapital"],
+    "needles": ["#needles"],
+    "wtaps": ["#wtaps"],
+    "neighborhood": ["#neighborhood", "#nbhd"],
+    "mastermind": ["#mastermind", "#mastermindjapan"],
+    # --- Gaming / Collectibles ---
+    "nintendo": ["#nintendo"],
+    "pokemon": ["#pokemon", "#pokemontcg"],
+    "pokémon": ["#pokemon", "#pokemontcg"],
+    "yu-gi-oh": ["#yugioh"],
+    "yugioh": ["#yugioh"],
+    "magic the gathering": ["#mtg", "#magicthegathering"],
+    "mtg": ["#mtg", "#magicthegathering"],
+    "sony": ["#sony", "#playstation"],
+    "playstation": ["#playstation", "#sony"],
+    "xbox": ["#xbox", "#microsoft"],
+    "sega": ["#sega", "#retrogaming"],
+    "lego": ["#lego"],
+    "funko": ["#funko", "#funkopop"],
+    "bandai": ["#bandai"],
+    "digimon": ["#digimon"],
+    "one piece": ["#onepiece"],
+    "dragon ball": ["#dragonball", "#dbz"],
+    "panini": ["#panini"],
+    "topps": ["#topps"],
 }
 
 MODEL_ALIASES = {
@@ -804,7 +926,7 @@ MODEL_ALIASES = {
     "dunk sb": ["#dunksb", "#dunklow", "#nikesb", "#sb"],
     "dunk low": ["#dunklow", "#nikedunk"],
     "dunk high": ["#dunkhigh", "#nikedunk"],
-    "blazer": ["#blazer", "#nikeblazer"],
+    "nike blazer": ["#blazer", "#nikeblazer"],
     "cortez": ["#cortez", "#nikecortez"],
     "huarache": ["#huarache", "#nikehuarache"],
     "presto": ["#presto", "#nikepresto"],
@@ -830,23 +952,63 @@ MODEL_ALIASES = {
     "acs pro": ["#acspro", "#salomonacs"],
     "xt-6": ["#xt6", "#salomonxt6"],
     "speedcross": ["#speedcross"],
+    # Jordan shorthand aliases (j1, j4, etc.)
+    "j1": ["#jordan1", "#j1", "#aj1", "#jordan", "#nike"],
+    "j2": ["#jordan2", "#j2", "#jordan", "#nike"],
+    "j3": ["#jordan3", "#j3", "#jordan", "#nike"],
+    "j4": ["#jordan4", "#j4", "#jordan", "#nike"],
+    "j5": ["#jordan5", "#j5", "#jordan", "#nike"],
+    "j6": ["#jordan6", "#j6", "#jordan", "#nike"],
+    "j11": ["#jordan11", "#j11", "#jordan", "#nike"],
+    "aj1": ["#jordan1", "#j1", "#aj1", "#jordan", "#nike"],
+    "aj4": ["#jordan4", "#j4", "#jordan", "#nike"],
+    # Asics models
+    "gel-kayano": ["#gelkayano", "#asicskayano"],
+    "gel kayano": ["#gelkayano", "#asicskayano"],
+    "gel lyte iii": ["#gellyteiii", "#gellyte3"],
+    "gel lyte v": ["#gellytev", "#gellyte5"],
+    # Reebok models
+    "reebok classic leather": ["#classicleather", "#reebokclassic"],
+    "reebok classic": ["#reebokclassic", "#classicleather"],
+    "club c": ["#clubc", "#clubc85"],
+    "instapump": ["#instapump", "#instapumpfury"],
     # Clothing models
     "harrington": ["#harrington"],
     "half zip": ["#halfzip", "#sweathalfzip"],
     "box logo": ["#boxlogo", "#bogo"],
+    "patchwork": ["#patchwork"],
 }
 
 # --- COUCHE 2 : Style / Epoque / Univers ---
 
 # Sneaker keywords -> article is a sneaker
 SNEAKER_KEYWORDS = [
-    "air max", "airmax", "jordan", "dunk", "vapormax", "air force",
+    "air max", "airmax", "dunk", "vapormax", "air force",
     "yeezy", "new balance", "nb550", "990", "salomon", "acs",
     "xt-6", "speedcross", "stan smith", "superstar", "gazelle",
     "samba", "campus", "forum", "spezial", "huarache", "presto",
-    "cortez", "blazer", "react", "sneaker", "basket", "chaussure",
+    "cortez", "nike blazer", "react", "sneaker", "basket", "chaussure",
     "converse", "vans old skool", "sk8", "puma suede", "gel lyte",
-    "hoka", "on running",
+    "gel-kayano", "gel kayano", "gel-lyte", "asics",
+    "hoka", "on running", "crocs", "ugg",
+    "reebok", "reebok classic",
+    # Jordan sneaker patterns (not bare "jordan" to avoid "Short Jordan")
+    "jordan 1", "jordan 2", "jordan 3", "jordan 4", "jordan 5",
+    "jordan 6", "jordan 7", "jordan 8", "jordan 9", "jordan 10",
+    "jordan 11", "jordan 12", "jordan 13", "jordan retro",
+    "j1 ", "j2 ", "j3 ", "j4 ", "j5 ", "j6 ", "j11 ",
+    "aj1", "aj4", "aj6", "aj11",
+    "air jordan",
+    # Extra sneaker brands from StockX
+    "mihara", "rick owens ramones", "clarks wallabee",
+    "alexander mcqueen", "mcqueen oversized",
+    "brooks", "merrell",
+    # Niche sneaker brands
+    "saucony", "shadow 6000", "shadow 5000",
+    "mizuno", "wave rider", "wave prophecy",
+    "karhu", "fusion 2.0", "aria 95",
+    "diadora", "n9000",
+    "le coq sportif",
 ]
 
 UNIVERSE_TAGS = {
@@ -867,6 +1029,11 @@ UNIVERSE_TAGS = {
     "menswear": ["#menswear", "#modehomme"],
     "preppy": ["#preppy", "#preppystyle", "#collegestyle"],
     "sneakers": ["#sneakers", "#kicks", "#retro"],
+    "japanese": ["#japanesestyle", "#japanfashion"],
+    "uk": ["#ukstreetwear", "#ukfashion"],
+    "gaming": ["#gaming", "#gamer", "#jeuxvideo"],
+    "tcg": ["#tcg", "#tradingcards", "#collector"],
+    "retrogaming": ["#retrogaming", "#retro", "#nostalgia"],
 }
 
 # Auto-detect universe from title keywords
@@ -889,6 +1056,17 @@ UNIVERSE_DETECTION = {
     "preppy": ["ralph lauren", "polo", "lacoste", "gant", "half zip", "col v"],
     "sportswear": ["tracksuit", "jogging", "track", "jersey", "maillot",
                    "survetement", "windbreaker"],
+    "japanese": ["japanese", "japan", "evisu", "bape", "comme des garcons", "cdg",
+                 "yohji", "mihara"],
+    "uk": ["corteiz", "crtz", "trapstar"],
+    "gaming": ["nintendo", "switch", "playstation", "ps5", "ps4", "xbox",
+               "gameboy", "wii", "sega", "n64", "manette", "controller"],
+    "tcg": ["pokemon", "pokémon", "yu-gi-oh", "yugioh", "magic the gathering",
+            "mtg", "trading card", "carte", "booster", "etb", "display",
+            "coffret", "tin", "blister", "ev9", "ev8", "ev7", "ev6",
+            "dilga", "151", "ecarlate", "scarlet"],
+    "retrogaming": ["gameboy", "game boy", "sega", "n64", "snes", "nes",
+                    "megadrive", "game cube", "gamecube", "retrogaming"],
 }
 
 # --- COUCHE 3 : Couleurs ---
@@ -923,11 +1101,50 @@ _BLOCKED_PATTERN = _re.compile(
 )
 
 MAX_HASHTAGS = 15
+MIN_HASHTAGS = 10
+
+# Fallback tags when not enough tags are generated (by article type)
+FALLBACK_SNEAKER_TAGS = [
+    "#sneakers", "#kicks", "#sneakerstyle", "#sneakerhead",
+    "#streetwear", "#hype", "#classic", "#retro", "#vintage",
+    "#sportswear", "#style", "#fashion", "#collection",
+]
+
+FALLBACK_CLOTHING_TAGS = [
+    "#mode", "#style", "#fashion", "#vintage", "#streetwear",
+    "#modehomme", "#outfitoftheday", "#lookdujour", "#streetstyle",
+    "#casual", "#urbanwear", "#trend", "#wardrobe",
+]
+
+FALLBACK_ACCESSORY_TAGS = [
+    "#accessoire", "#style", "#fashion", "#mode", "#vintage",
+    "#designer", "#collection", "#luxury", "#trend",
+    "#classic", "#premium", "#detail",
+]
+
+FALLBACK_GAMING_TAGS = [
+    "#gaming", "#gamer", "#collector", "#collection",
+    "#retrogaming", "#videogames", "#jeuxvideo", "#geek",
+    "#tradingcards", "#tcg", "#rare", "#limited",
+    "#hobby",
+]
+
+
+def _word_match(keyword: str, text: str) -> bool:
+    """Check if keyword appears as a whole word (not substring) in text.
+    For short keywords (<=3 chars), use word boundary matching.
+    For longer keywords, simple 'in' check is fine."""
+    if len(keyword) <= 3:
+        pattern = r'(?:^|[\s,/\-])' + _re.escape(keyword) + r'(?:$|[\s,/\-])'
+        return bool(_re.search(pattern, text))
+    return keyword in text
 
 
 def _is_sneaker(title_lower: str) -> bool:
     """Detect if the article is a sneaker based on title keywords."""
-    return any(kw in title_lower for kw in SNEAKER_KEYWORDS)
+    # Add trailing space for end-of-string matching (e.g. "j1 " matches "j1 chicago")
+    padded = title_lower + " "
+    return any(kw in padded for kw in SNEAKER_KEYWORDS)
 
 
 def _detect_universes(title_lower: str) -> list[str]:
@@ -939,8 +1156,74 @@ def _detect_universes(title_lower: str) -> list[str]:
     return found
 
 
+def _detect_article_type(title_lower: str) -> str:
+    """Detect broad article type: sneaker, clothing, accessory, or gaming."""
+    if _is_sneaker(title_lower):
+        return "sneaker"
+    gaming_kw = [
+        # --- Consoles & Gaming ---
+        "nintendo", "switch", "playstation", "ps5", "ps4", "ps3", "ps2",
+        "xbox", "gameboy", "game boy", "wii", "sega", "n64",
+        "manette", "controller", "amiibo", "jeux", "jeu video",
+        # --- TCG generique ---
+        "yu-gi-oh", "yugioh", "magic the gathering", "mtg",
+        "trading card", "carte", "booster", "etb", "display",
+        "tcg", "coffret", "tin", "blister",
+        "digimon", "one piece card", "dragon ball",
+        # --- Pokemon extensions / sets ---
+        "pokemon", "pokémon",
+        "ev9", "ev8", "ev7", "ev6", "ev5", "ev4", "ev3", "ev2", "ev1",
+        "151", "ecarlate", "scarlet", "paldea", "obsidienne",
+        "tempete argentee", "origine perdue", "couronne zenith",
+        "astres radieux", "evolutions", "soleil et lune", "epee et bouclier",
+        "flammes obsidiennes", "forces temporelles", "faille paradoxe",
+        "mascarade crepusculaire", "destinees de paldea",
+        # --- Collectibles ---
+        "funko", "figurine", "lego", "bearbrick",
+        # --- Pokemon top 100 (FR + EN) ---
+        "pikachu", "dracaufeu", "charizard", "tortank", "blastoise",
+        "florizarre", "venusaur", "mewtwo", "mew", "evoli", "eevee",
+        "rondoudou", "jigglypuff", "ronflex", "snorlax", "leviator", "gyarados",
+        "dracolosse", "dragonite", "electhor", "zapdos", "artikodin", "articuno",
+        "sulfura", "moltres", "lokhlass", "lapras", "metamorph", "ditto",
+        "magicarpe", "magikarp", "carapuce", "squirtle", "salameche", "charmander",
+        "bulbizarre", "bulbasaur", "alakazam", "ectoplasma", "gengar",
+        "mackogneur", "machamp", "scarabrute", "pinsir", "insecateur", "scyther",
+        "arcanin", "arcanine", "feunard", "ninetales", "nidoking", "nidoqueen",
+        "sulfureux", "groudon", "kyogre", "rayquaza", "deoxys",
+        "lucario", "gardevoir", "gallame", "gallade", "absol",
+        "lugia", "ho-oh", "celebi", "latias", "latios",
+        "dialga", "dilga", "palkia", "giratina", "arceus", "darkrai",
+        "reshiram", "zekrom", "kyurem",
+        "xerneas", "yveltal", "zygarde",
+        "solgaleo", "lunala", "necrozma", "marshadow",
+        "zacian", "zamazenta", "eternatus",
+        "koraidon", "miraidon",
+        "pichu", "togepi", "marill", "tyranocif", "tyranitar",
+        "demolosse", "houndoom", "mentali", "espeon", "noctali", "umbreon",
+        "leviator", "suicune", "entei", "raikou",
+        "brasegali", "blaziken", "jungko", "sceptile", "laggron", "swampert",
+        "libegon", "flygon", "milotic", "metalosse", "metagross",
+        "carchacrok", "garchomp", "luxray", "staraptor", "roserade",
+        "amphinobi", "greninja", "felinferno", "incineroar",
+        "mimiqui", "mimikyu", "nymphali", "sylveon",
+        "dracaufeu", "tortank", "florizarre",
+        "zarude", "urshifu", "spectrier", "glastrier",
+        "palafin", "gholdengo", "kingambit", "baxcalibur",
+        "roaring moon", "iron valiant", "walking wake",
+    ]
+    if any(kw in title_lower for kw in gaming_kw):
+        return "gaming"
+    accessory_kw = ["sac", "bag", "lunettes", "sunglasses", "casquette", "cap",
+                    "bonnet", "beanie", "ceinture", "belt", "montre", "watch",
+                    "echarpe", "scarf", "banner", "drapeau", "bijou"]
+    if any(kw in title_lower for kw in accessory_kw):
+        return "accessory"
+    return "clothing"
+
+
 def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[str]:
-    """Generate hashtags v2 for a Vinted item. 3-layer system, 15 max."""
+    """Generate hashtags v2 for a Vinted item. 3-layer system, 10 min / 15 max."""
     title_lower = title.lower().strip()
     layer1 = []  # Marque + Modele (priority)
     layer2 = []  # Style / Epoque / Univers
@@ -950,19 +1233,46 @@ def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[st
     matched_brand = None
     # Sort by length desc to match "ralph lauren" before "ralph"
     for brand in sorted(BRAND_ALIASES.keys(), key=len, reverse=True):
-        if brand in title_lower:
+        if _word_match(brand, title_lower):
             layer1.extend(BRAND_ALIASES[brand])
             matched_brand = brand
             break
 
-    # Model detection (match longest first)
+    # Fallback: if no known brand, extract first word as raw brand tag
+    if not matched_brand:
+        words = title.strip().split()
+        if words:
+            raw_brand = words[0].lower().strip()
+            # Only use if it looks like a brand (not a generic word)
+            generic_words = {"le", "la", "les", "un", "une", "des", "de", "du",
+                            "lot", "pack", "set", "paire", "pair", "air", "t-shirt",
+                            "tee", "veste", "pantalon", "pull", "sac", "short",
+                            "jean", "chemise", "hoodie", "sweat", "jogging",
+                            "casquette", "bonnet", "maillot", "chaussure",
+                            "lunettes", "robe", "manteau", "doudoune", "polo",
+                            "cardigan", "bermuda", "cargo", "col", "blouson",
+                            "gilet", "parka", "trench", "survetement",
+                            "debardeur", "polaire", "coffret", "cap"}
+            if raw_brand not in generic_words and len(raw_brand) > 2:
+                layer1.append(f"#{raw_brand}")
+                # Also try brand + second word combo
+                if len(words) > 1:
+                    second = words[1].lower().strip()
+                    if second not in generic_words and len(second) > 2:
+                        layer1.append(f"#{raw_brand}{second}")
+
+    # Model detection (match all models, longest first, max 2)
+    model_matches = 0
     for model in sorted(MODEL_ALIASES.keys(), key=len, reverse=True):
         if model in title_lower:
             layer1.extend(MODEL_ALIASES[model])
-            break
+            model_matches += 1
+            if model_matches >= 2:
+                break
 
     # === COUCHE 2 : Style / Epoque / Univers ===
-    is_sneaker = _is_sneaker(title_lower)
+    article_type = _detect_article_type(title_lower)
+    is_sneaker = article_type == "sneaker"
     universes = _detect_universes(title_lower)
 
     if is_sneaker and "sneakers" not in universes:
@@ -978,15 +1288,17 @@ def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[st
         layer2.extend(tags[:3])  # Max 3 tags per universe
 
     # === COUCHE 3 : Descripteurs (couleur, type article, specifiques) ===
-    # Couleur
+    # Couleur (max 2 couleurs)
+    color_count = 0
     for color in sorted(COLOR_ALIASES.keys(), key=len, reverse=True):
-        if color in title_lower:
+        if _word_match(color, title_lower):
             layer3.extend(COLOR_ALIASES[color])
-            break  # One color match
+            color_count += 1
+            if color_count >= 2:
+                break
 
     # Sneaker-specific: extract colorway/collab name
     if is_sneaker:
-        # Known colorway/collab keywords to extract
         colorways = [
             "cement", "bred", "chicago", "shadow", "royal", "obsidian",
             "mocha", "travis", "og", "anatomy", "koston", "safari",
@@ -996,7 +1308,7 @@ def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[st
             if cw in title_lower:
                 layer3.append(f"#{cw}")
     else:
-        # Clothing: descriptive compound tags
+        # Clothing/Accessory: descriptive compound tags
         clothing_descriptors = {
             "veste": ["#veste"], "jacket": ["#jacket"],
             "hoodie": ["#hoodie"], "sweat": ["#sweat"],
@@ -1029,9 +1341,22 @@ def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[st
             "col velours": ["#colvelourscotele"],
             "tartan": ["#tartan"],
             "brode": ["#logobrodé"],
+            "blouson": ["#blouson", "#jacket"],
+            "cuir": ["#cuir", "#leather"],
+            "polaire": ["#polaire", "#fleece"],
+            "survetement": ["#survetement", "#tracksuit"],
+            "gilet": ["#gilet", "#vest"],
+            "parka": ["#parka"],
+            "trench": ["#trench", "#trenchcoat"],
+            "crop": ["#croptop"],
+            "debardeur": ["#debardeur", "#tanktop"],
+            "bomber": ["#bomber", "#bomberjacket"],
+            "blazer": ["#blazer"],
+            "cravate": ["#cravate", "#tie"],
+            "mocassin": ["#mocassin", "#loafer"],
         }
         for kw in sorted(clothing_descriptors.keys(), key=len, reverse=True):
-            if kw in title_lower:
+            if _word_match(kw, title_lower):
                 layer3.extend(clothing_descriptors[kw])
 
     # === ASSEMBLAGE ===
@@ -1060,6 +1385,26 @@ def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[st
         if h_clean not in seen:
             seen.add(h_clean)
             unique.append(h_clean)
+
+    # === MINIMUM 10 TAGS : fallback si pas assez ===
+    if len(unique) < MIN_HASHTAGS:
+        if article_type == "sneaker":
+            fallback_pool = FALLBACK_SNEAKER_TAGS
+        elif article_type == "gaming":
+            fallback_pool = FALLBACK_GAMING_TAGS
+        elif article_type == "accessory":
+            fallback_pool = FALLBACK_ACCESSORY_TAGS
+        else:
+            fallback_pool = FALLBACK_CLOTHING_TAGS
+
+        for fb in fallback_pool:
+            if len(unique) >= MIN_HASHTAGS:
+                break
+            fb_clean = fb.lower().strip()
+            tag_text = fb_clean.lstrip("#")
+            if fb_clean not in seen and not _BLOCKED_PATTERN.search(tag_text):
+                seen.add(fb_clean)
+                unique.append(fb_clean)
 
     # Trim to MAX_HASHTAGS
     return unique[:MAX_HASHTAGS]
