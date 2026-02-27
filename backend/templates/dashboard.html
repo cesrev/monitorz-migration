@@ -416,31 +416,19 @@
       </section>
       {% endif %}
 
-      <!-- Section: Hashtag Farm (Vinted only) -->
+      <!-- Section: Hashtag Farm v2 (Vinted only) -->
       {% if user.monitoring_type == 'vinted' %}
       <section class="dashboard__section" id="sectionHashtags" style="display: none;">
         <div class="dashboard__section-header">
           <h3># Farm a Hashtags</h3>
-        </div>
-
-        <!-- Category selector -->
-        <div class="card" style="margin-bottom: var(--space-xl);">
-          <h4 style="margin-bottom: var(--space-lg);">Categorie</h4>
-          <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;" id="hashtagCategoryBtns">
-            <button class="btn btn--primary btn--small hashtag-cat-btn" data-cat="default" onclick="selectHashtagCategory('default', this)">General</button>
-            <button class="btn btn--ghost btn--small hashtag-cat-btn" data-cat="sneakers" onclick="selectHashtagCategory('sneakers', this)">Sneakers</button>
-            <button class="btn btn--ghost btn--small hashtag-cat-btn" data-cat="streetwear" onclick="selectHashtagCategory('streetwear', this)">Streetwear</button>
-            <button class="btn btn--ghost btn--small hashtag-cat-btn" data-cat="luxe" onclick="selectHashtagCategory('luxe', this)">Luxe</button>
-            <button class="btn btn--ghost btn--small hashtag-cat-btn" data-cat="vintage" onclick="selectHashtagCategory('vintage', this)">Vintage</button>
-            <button class="btn btn--ghost btn--small hashtag-cat-btn" data-cat="sport" onclick="selectHashtagCategory('sport', this)">Sport</button>
-          </div>
+          <span style="font-size: 0.75rem; color: var(--text-tertiary);">v2 - 15 max / article</span>
         </div>
 
         <!-- Custom tags -->
         <div class="card" style="margin-bottom: var(--space-xl);">
           <h4 style="margin-bottom: var(--space-lg);">Hashtags personnalises</h4>
           <div style="display: flex; gap: var(--space-sm); align-items: center;">
-            <input type="text" class="input" id="customTagInput" placeholder="Ex: MonShop, Paris, Vintage90s" style="flex: 1;">
+            <input type="text" class="input" id="customTagInput" placeholder="Ex: MonShop, Paris" style="flex: 1;">
             <button class="btn btn--ghost btn--small" onclick="addCustomTag()">Ajouter</button>
           </div>
           <div id="customTagsList" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-top: var(--space-md);"></div>
@@ -450,12 +438,15 @@
         <div class="card" style="margin-bottom: var(--space-xl);">
           <h4 style="margin-bottom: var(--space-lg);">Generer pour un article</h4>
           <div style="display: flex; gap: var(--space-sm); align-items: center;">
-            <input type="text" class="input" id="hashtagItemTitle" placeholder="Ex: Nike Air Force 1 White" style="flex: 1;">
+            <input type="text" class="input" id="hashtagItemTitle" placeholder="Ex: Air Max One Black, Jogging Palace, Veste Barbour..." style="flex: 1;">
             <button class="btn btn--primary btn--small" onclick="generateSingleHashtags()">Generer</button>
           </div>
           <div id="singleHashtagResult" style="margin-top: var(--space-lg); display: none;">
             <div id="singleHashtagText" style="background: var(--bg-elevated); padding: var(--space-lg); border-radius: var(--radius-md); font-size: 0.88rem; color: var(--text-primary); line-height: 1.8; word-break: break-word;"></div>
-            <button class="btn btn--success btn--small" style="margin-top: var(--space-md);" onclick="copyHashtags('singleHashtagText')">Copier</button>
+            <div style="display: flex; gap: var(--space-sm); align-items: center; margin-top: var(--space-md);">
+              <button class="btn btn--success btn--small" onclick="copyHashtags('singleHashtagText')">Copier</button>
+              <span id="hashtagCount" style="font-size: 0.75rem; color: var(--text-tertiary);"></span>
+            </div>
           </div>
         </div>
 
@@ -1140,17 +1131,8 @@
       }
     }
 
-    // ===== Hashtag Farm Logic =====
-    var selectedHashtagCategory = 'default';
+    // ===== Hashtag Farm v2 Logic =====
     var customTags = [];
-
-    function selectHashtagCategory(cat, btn) {
-      selectedHashtagCategory = cat;
-      document.querySelectorAll('.hashtag-cat-btn').forEach(function(b) {
-        b.className = 'btn btn--ghost btn--small hashtag-cat-btn';
-      });
-      btn.className = 'btn btn--primary btn--small hashtag-cat-btn';
-    }
 
     function addCustomTag() {
       var input = document.getElementById('customTagInput');
@@ -1202,7 +1184,6 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             title: title,
-            category: selectedHashtagCategory,
             custom_tags: customTags.map(function(t) { return t.replace('#', ''); })
           })
         });
@@ -1210,7 +1191,9 @@
         if (data.success && data.items && data.items.length > 0) {
           var result = document.getElementById('singleHashtagResult');
           var textEl = document.getElementById('singleHashtagText');
+          var countEl = document.getElementById('hashtagCount');
           textEl.textContent = data.items[0].text;
+          countEl.textContent = data.items[0].hashtags.length + '/15 hashtags';
           result.style.display = '';
         } else {
           showToast(data.error || 'Erreur', 'error');
@@ -1232,7 +1215,6 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             from_sheet: true,
-            category: selectedHashtagCategory,
             custom_tags: customTags.map(function(t) { return t.replace('#', ''); })
           })
         });
@@ -1255,7 +1237,10 @@
                 (item.sold ? '<span class="badge badge--success" style="font-size: 0.72rem;">Vendu</span>' : '<span class="badge badge--warning" style="font-size: 0.72rem;">En vente</span>') +
               '</div>' +
               '<div id="batchHash_' + idx + '" style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; word-break: break-word;">' + item.text + '</div>' +
-              '<button class="btn btn--ghost btn--small" style="margin-top: var(--space-sm); font-size: 0.78rem;" onclick="copyHashtags(\'batchHash_' + idx + '\')">Copier</button>';
+              '<div style="display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm);">' +
+                '<button class="btn btn--ghost btn--small" style="font-size: 0.78rem;" onclick="copyHashtags(\'batchHash_' + idx + '\')">Copier</button>' +
+                '<span style="font-size: 0.72rem; color: var(--text-tertiary);">' + item.hashtags.length + '/15</span>' +
+              '</div>';
             container.appendChild(card);
           });
 

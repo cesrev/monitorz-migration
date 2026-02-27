@@ -697,169 +697,388 @@ def stats():
 
 
 # ============================================
-# ROUTES - HASHTAG FARM (Vinted)
+# ROUTES - HASHTAG FARM v2 (Vinted)
 # ============================================
+import re as _re
 
-# Default hashtag sets by category
-HASHTAG_PRESETS = {
-    "default": ["#WTS", "#Vinted", "#AEnvendre", "#Resell", "#SecondHand", "#FrenchResell"],
-    "sneakers": ["#WTS", "#Sneakers", "#Kicks", "#SneakerHead", "#ForSale", "#Heat"],
-    "streetwear": ["#WTS", "#Streetwear", "#Hype", "#Fashion", "#ForSale", "#Style"],
-    "luxe": ["#WTS", "#Luxury", "#Designer", "#HighFashion", "#Luxe", "#ForSale"],
-    "vintage": ["#WTS", "#Vintage", "#Retro", "#Thrift", "#VintageStyle", "#ForSale"],
-    "sport": ["#WTS", "#Sportswear", "#Running", "#Fitness", "#ForSale", "#Sport"],
+# --- COUCHE 1 : Marque + Modele (dictionnaire d'aliases) ---
+
+BRAND_ALIASES = {
+    "nike": ["#nike", "#nikeair"],
+    "adidas": ["#adidas", "#adidasoriginals"],
+    "jordan": ["#jordan", "#nike"],
+    "yeezy": ["#yeezy", "#adidas", "#yeezyboost"],
+    "new balance": ["#newbalance", "#nb"],
+    "puma": ["#puma"],
+    "reebok": ["#reebok"],
+    "converse": ["#converse", "#chucktaylor"],
+    "vans": ["#vans", "#offthewall"],
+    "salomon": ["#salomon", "#salomonsneakers"],
+    "asics": ["#asics", "#gellyte"],
+    "saucony": ["#saucony"],
+    "on running": ["#onrunning", "#on"],
+    "hoka": ["#hoka", "#hokaoneone"],
+    "supreme": ["#supreme", "#supremeny"],
+    "palace": ["#palace", "#palaceskateboards", "#trifergo"],
+    "stussy": ["#stussy"],
+    "carhartt": ["#carhartt", "#carharttwip"],
+    "the north face": ["#thenorthface", "#tnf"],
+    "ralph lauren": ["#ralphlauren", "#polo", "#poloralphlauren", "#polosport"],
+    "lacoste": ["#lacoste"],
+    "barbour": ["#barbour", "#barbourhomme"],
+    "the kooples": ["#thekooples", "#thekooklessport"],
+    "sandro": ["#sandro", "#sandroparis"],
+    "gucci": ["#gucci"],
+    "louis vuitton": ["#louisvuitton", "#lv"],
+    "hermes": ["#hermes"],
+    "balenciaga": ["#balenciaga"],
+    "dior": ["#dior"],
+    "prada": ["#prada"],
+    "moncler": ["#moncler"],
+    "stone island": ["#stoneisland", "#si"],
+    "cp company": ["#cpcompany"],
+    "arcteryx": ["#arcteryx"],
+    "burberry": ["#burberry"],
+    "versace": ["#versace"],
+    "fendi": ["#fendi"],
+    "off-white": ["#offwhite"],
+    "palm angels": ["#palmangels"],
+    "essentials": ["#essentials", "#fearofgod", "#fog"],
+    "fear of god": ["#fearofgod", "#fog"],
+    "gallery dept": ["#gallerydept"],
+    "represent": ["#represent"],
+    "ami": ["#amiparis", "#ami"],
+    "acne studios": ["#acnestudios"],
+    "jacquemus": ["#jacquemus"],
+    "apc": ["#apc"],
+    "celine": ["#celine"],
+    "loewe": ["#loewe"],
+    "bottega veneta": ["#bottegaveneta", "#bv"],
+    "yves saint laurent": ["#yvessaintlaurent", "#yslvintage"],
+    "ysl": ["#yvessaintlaurent", "#yslvintage"],
+    "pelle pelle": ["#pellepelle", "#pellepelleathletics"],
+    "dada": ["#dadasupreme"],
+    "marina yachting": ["#marinayachting"],
+    "slipknot": ["#slipknot"],
+    "shakira": ["#shakira", "#shakiramerch"],
+    "tommy hilfiger": ["#tommyhilfiger", "#tommy"],
+    "nautica": ["#nautica"],
+    "champion": ["#champion"],
+    "fila": ["#fila"],
+    "ellesse": ["#ellesse"],
+    "kappa": ["#kappa"],
+    "umbro": ["#umbro"],
+    "diadora": ["#diadora"],
+    "levi's": ["#levis", "#levi"],
+    "levis": ["#levis", "#levi"],
+    "diesel": ["#diesel"],
+    "wrangler": ["#wrangler"],
+    "patagonia": ["#patagonia"],
+    "columbia": ["#columbia"],
+    "timberland": ["#timberland"],
+    "dr martens": ["#drmartens", "#docs"],
+    "birkenstock": ["#birkenstock"],
 }
 
-# Brand keyword mapping for smart hashtag generation
-BRAND_KEYWORDS = {
-    "nike": ["#Nike", "#Swoosh", "#JustDoIt"],
-    "adidas": ["#Adidas", "#ThreeStripes", "#Boost"],
-    "jordan": ["#Jordan", "#AirJordan", "#Jumpman"],
-    "yeezy": ["#Yeezy", "#YeezyBoost", "#Kanye"],
-    "new balance": ["#NewBalance", "#NB", "#990"],
-    "puma": ["#Puma"],
-    "reebok": ["#Reebok"],
-    "converse": ["#Converse", "#ChuckTaylor"],
-    "vans": ["#Vans", "#OffTheWall"],
-    "supreme": ["#Supreme", "#Hype", "#Streetwear"],
-    "stussy": ["#Stussy", "#Streetwear"],
-    "carhartt": ["#Carhartt", "#CarharttWIP"],
-    "the north face": ["#TheNorthFace", "#TNF"],
-    "ralph lauren": ["#RalphLauren", "#Polo"],
-    "lacoste": ["#Lacoste"],
-    "gucci": ["#Gucci", "#Luxury"],
-    "louis vuitton": ["#LouisVuitton", "#LV", "#Luxury"],
-    "hermes": ["#Hermes", "#Luxury"],
-    "balenciaga": ["#Balenciaga", "#Luxury"],
-    "dior": ["#Dior", "#Luxury"],
-    "prada": ["#Prada", "#Luxury"],
-    "moncler": ["#Moncler", "#Luxury"],
-    "stone island": ["#StoneIsland", "#SI"],
-    "cp company": ["#CPCompany"],
-    "arcteryx": ["#Arcteryx", "#GoreTex"],
-    "salomon": ["#Salomon", "#Gorpcore"],
-    "asics": ["#Asics", "#GelLyte"],
-    "saucony": ["#Saucony"],
-    "burberry": ["#Burberry", "#Luxury"],
-    "versace": ["#Versace", "#Luxury"],
-    "fendi": ["#Fendi", "#Luxury"],
-    "off-white": ["#OffWhite", "#VirgilAbloh"],
-    "palm angels": ["#PalmAngels", "#Streetwear"],
-    "essentials": ["#Essentials", "#FearOfGod", "#FOG"],
-    "fear of god": ["#FearOfGod", "#FOG"],
-    "gallery dept": ["#GalleryDept"],
-    "represent": ["#Represent"],
-    "ami": ["#AMIParis", "#AMI"],
-    "acne studios": ["#AcneStudios"],
-    "jacquemus": ["#Jacquemus"],
-    "zara": ["#Zara"],
-    "uniqlo": ["#Uniqlo"],
-    "cos": ["#COS"],
-    "apc": ["#APC"],
-    "sezane": ["#Sezane"],
-    "isabel marant": ["#IsabelMarant"],
-    "celine": ["#Celine", "#Luxury"],
-    "loewe": ["#Loewe", "#Luxury"],
-    "bottega veneta": ["#BottegaVeneta", "#BV"],
+MODEL_ALIASES = {
+    # Nike sneakers
+    "air force": ["#airforce", "#af1", "#airforce1"],
+    "air force 1": ["#airforce", "#af1", "#airforce1"],
+    "air force one": ["#airforce", "#af1", "#airforce1", "#airmaxone"],
+    "air max 1": ["#airmax", "#airmax1", "#am1", "#airmaxone"],
+    "air max one": ["#airmax", "#airmax1", "#am1", "#airmaxone"],
+    "air max 90": ["#airmax", "#airmax90", "#am90"],
+    "air max 95": ["#airmax", "#airmax95", "#am95", "#airmaxplus"],
+    "air max 97": ["#airmax", "#airmax97", "#am97"],
+    "air max plus": ["#airmax", "#airmaxplus", "#tn", "#requin"],
+    "air max tn": ["#airmaxplus", "#tn", "#requin", "#airmax"],
+    "tn": ["#tn", "#airmaxplus", "#requin", "#nike"],
+    "vapormax": ["#vapormax", "#nikevapormax"],
+    "jordan 1": ["#jordan1", "#j1", "#aj1"],
+    "jordan 3": ["#jordan3", "#j3"],
+    "jordan 4": ["#jordan", "#jordan4", "#j4"],
+    "jordan 5": ["#jordan5", "#j5"],
+    "jordan 6": ["#jordan6", "#j6"],
+    "jordan 11": ["#jordan11", "#j11"],
+    "dunk": ["#dunk", "#dunklow", "#nikedunk"],
+    "dunk sb": ["#dunksb", "#dunklow", "#nikesb", "#sb"],
+    "dunk low": ["#dunklow", "#nikedunk"],
+    "dunk high": ["#dunkhigh", "#nikedunk"],
+    "blazer": ["#blazer", "#nikeblazer"],
+    "cortez": ["#cortez", "#nikecortez"],
+    "huarache": ["#huarache", "#nikehuarache"],
+    "presto": ["#presto", "#nikepresto"],
+    "react": ["#react", "#nikereact"],
+    # Adidas sneakers
+    "yeezy 350": ["#yeezy350", "#v2"],
+    "yeezy 500": ["#yeezy500"],
+    "yeezy 700": ["#yeezy700"],
+    "stan smith": ["#stansmith"],
+    "superstar": ["#superstar", "#adidassuperstar"],
+    "gazelle": ["#gazelle", "#adidasgazelle"],
+    "samba": ["#samba", "#adidassamba"],
+    "campus": ["#campus", "#adidascampus"],
+    "forum": ["#forum", "#adidasforum"],
+    "spezial": ["#spezial", "#adidasspezial"],
+    # NB
+    "550": ["#nb550", "#550"],
+    "990": ["#nb990", "#990"],
+    "2002r": ["#nb2002r", "#2002r"],
+    "530": ["#nb530", "#530"],
+    # Salomon
+    "acs": ["#acspro", "#salomonacs"],
+    "acs pro": ["#acspro", "#salomonacs"],
+    "xt-6": ["#xt6", "#salomonxt6"],
+    "speedcross": ["#speedcross"],
+    # Clothing models
+    "harrington": ["#harrington"],
+    "half zip": ["#halfzip", "#sweathalfzip"],
+    "box logo": ["#boxlogo", "#bogo"],
 }
 
-# Item type keyword mapping
-ITEM_KEYWORDS = {
-    "t-shirt": ["#Tshirt", "#Tee"],
-    "tee": ["#Tshirt", "#Tee"],
-    "hoodie": ["#Hoodie", "#Sweat"],
-    "sweat": ["#Sweat", "#Hoodie"],
-    "veste": ["#Veste", "#Jacket"],
-    "jacket": ["#Jacket", "#Veste"],
-    "jean": ["#Jeans", "#Denim"],
-    "denim": ["#Denim", "#Jeans"],
-    "pantalon": ["#Pantalon", "#Pants"],
-    "short": ["#Short", "#Shorts"],
-    "sneaker": ["#Sneakers", "#Kicks"],
-    "chaussure": ["#Chaussures", "#Shoes"],
-    "basket": ["#Baskets", "#Sneakers"],
-    "sac": ["#Sac", "#Bag"],
-    "bag": ["#Bag", "#Sac"],
-    "casquette": ["#Casquette", "#Cap"],
-    "cap": ["#Cap", "#Casquette"],
-    "bonnet": ["#Bonnet", "#Beanie"],
-    "echarpe": ["#Echarpe", "#Scarf"],
-    "ceinture": ["#Ceinture", "#Belt"],
-    "montre": ["#Montre", "#Watch"],
-    "lunettes": ["#Lunettes", "#Sunglasses"],
-    "polo": ["#Polo"],
-    "chemise": ["#Chemise", "#Shirt"],
-    "manteau": ["#Manteau", "#Coat"],
-    "doudoune": ["#Doudoune", "#Puffer"],
-    "puffer": ["#Puffer", "#Doudoune"],
-    "robe": ["#Robe", "#Dress"],
-    "jupe": ["#Jupe", "#Skirt"],
-    "pull": ["#Pull", "#Sweater"],
-    "cardigan": ["#Cardigan"],
-    "survetement": ["#Survetement", "#Tracksuit"],
-    "tracksuit": ["#Tracksuit"],
-    "cargo": ["#Cargo", "#CargoPants"],
+# --- COUCHE 2 : Style / Epoque / Univers ---
+
+# Sneaker keywords -> article is a sneaker
+SNEAKER_KEYWORDS = [
+    "air max", "airmax", "jordan", "dunk", "vapormax", "air force",
+    "yeezy", "new balance", "nb550", "990", "salomon", "acs",
+    "xt-6", "speedcross", "stan smith", "superstar", "gazelle",
+    "samba", "campus", "forum", "spezial", "huarache", "presto",
+    "cortez", "blazer", "react", "sneaker", "basket", "chaussure",
+    "converse", "vans old skool", "sk8", "puma suede", "gel lyte",
+    "hoka", "on running",
+]
+
+UNIVERSE_TAGS = {
+    "streetwear": ["#streetwear", "#urbanwear", "#streetculture"],
+    "vintage": ["#vintage", "#retro", "#oldschool"],
+    "y2k": ["#y2k", "#2000s", "#annee2000"],
+    "90s": ["#90s", "#vintage90s"],
+    "techwear": ["#techwear", "#technical", "#functional", "#gorpcore"],
+    "oldmoney": ["#oldmoney", "#oldmoneystyle", "#classicfit", "#preppy"],
+    "hiphop": ["#hiphopstyle", "#hiphopfashion"],
+    "sportswear": ["#sportswear"],
+    "outdoor": ["#outdoor", "#gorpcore", "#hiking"],
+    "luxe": ["#luxevintage", "#vintageluxury", "#designer"],
+    "skate": ["#skateculture", "#skatewear"],
+    "british": ["#stylebritannique", "#british"],
+    "merch": ["#merch", "#bandmerch", "#concert", "#collector"],
+    "casual": ["#casual", "#casualstyle", "#cleanfit"],
+    "menswear": ["#menswear", "#modehomme"],
+    "preppy": ["#preppy", "#preppystyle", "#collegestyle"],
+    "sneakers": ["#sneakers", "#kicks", "#retro"],
 }
 
+# Auto-detect universe from title keywords
+UNIVERSE_DETECTION = {
+    "vintage": ["vintage", "retro", "old", "90s", "80s", "70s", "archive"],
+    "y2k": ["y2k", "2000", "millenium"],
+    "streetwear": ["supreme", "palace", "stussy", "carhartt", "bape", "off-white"],
+    "techwear": ["gore-tex", "goretex", "therma", "tech", "utility", "waterproof",
+                 "coupe-vent", "windbreaker", "salomon", "arcteryx"],
+    "oldmoney": ["ralph lauren", "barbour", "lacoste", "polo", "preppy",
+                 "marina yachting", "nautica", "gant"],
+    "hiphop": ["pelle pelle", "dada", "fubu", "ecko", "rocawear", "sean john"],
+    "outdoor": ["patagonia", "columbia", "barbour", "north face"],
+    "luxe": ["gucci", "louis vuitton", "hermes", "balenciaga", "dior", "prada",
+             "celine", "loewe", "bottega", "ysl", "yves saint laurent", "fendi"],
+    "skate": ["sb", "palace", "dunk sb", "vans"],
+    "british": ["barbour", "burberry", "fred perry", "harrington", "tartan"],
+    "merch": ["merch", "concert", "tour", "band", "slipknot", "metallica",
+              "shakira", "travis scott", "kanye"],
+    "preppy": ["ralph lauren", "polo", "lacoste", "gant", "half zip", "col v"],
+    "sportswear": ["tracksuit", "jogging", "track", "jersey", "maillot",
+                   "survetement", "windbreaker"],
+}
 
-def _generate_hashtags_for_item(title: str, category: str = "default", custom_tags: list = None) -> list[str]:
-    """Generate hashtags for a Vinted item based on title and category."""
-    title_lower = title.lower()
-    hashtags = []
+# --- COUCHE 3 : Couleurs ---
 
-    # 1. Add preset hashtags for category
-    preset = HASHTAG_PRESETS.get(category, HASHTAG_PRESETS["default"])
-    hashtags.extend(preset)
+COLOR_ALIASES = {
+    "noir": ["#black", "#noir"], "black": ["#black", "#noir"],
+    "blanc": ["#white", "#blanc"], "white": ["#white", "#blanc"],
+    "bleu": ["#blue", "#bleu"], "blue": ["#blue", "#bleu"],
+    "bleu marine": ["#bleumarine", "#navy"],
+    "navy": ["#navy", "#bleumarine"],
+    "rouge": ["#red", "#rouge"], "red": ["#red", "#rouge"],
+    "vert": ["#green", "#vert"], "green": ["#green", "#vert"],
+    "kaki": ["#kaki", "#militarystyle"], "khaki": ["#kaki", "#militarystyle"],
+    "rose": ["#pink", "#rose"], "pink": ["#pink", "#rose"],
+    "gris": ["#gris", "#grey"], "grey": ["#gris", "#grey"], "gray": ["#gris", "#grey"],
+    "orange": ["#orange"],
+    "jaune": ["#jaune", "#yellow"], "yellow": ["#jaune", "#yellow"],
+    "beige": ["#beige", "#cream"], "cream": ["#beige", "#cream"],
+    "marron": ["#marron", "#brown"], "brown": ["#marron", "#brown"],
+    "bordeaux": ["#bordeaux", "#burgundy"], "burgundy": ["#bordeaux", "#burgundy"],
+    "turquoise": ["#turquoise"],
+    "violet": ["#violet", "#purple"], "purple": ["#violet", "#purple"],
+}
 
-    # 2. Detect brand from title
-    for brand, tags in BRAND_KEYWORDS.items():
+# --- BLOCKLIST : tags interdits ---
+
+_BLOCKED_PATTERN = _re.compile(
+    r"(taille|size|\bxs\b|\bxxs\b|\bs\b|\bm\b|\bl\b|\bxl\b|\bxxl\b|\bxxxl\b"
+    r"|\d{2,}cm|etat|neuf|occasion|tbe|vnds|ttbe|vinted|resell|depop"
+    r"|friperie|achat|vente|promo|solde|forsale|secondhand|wts|wtb)",
+    _re.IGNORECASE,
+)
+
+MAX_HASHTAGS = 15
+
+
+def _is_sneaker(title_lower: str) -> bool:
+    """Detect if the article is a sneaker based on title keywords."""
+    return any(kw in title_lower for kw in SNEAKER_KEYWORDS)
+
+
+def _detect_universes(title_lower: str) -> list[str]:
+    """Detect style/era universes from title."""
+    found = []
+    for universe, keywords in UNIVERSE_DETECTION.items():
+        if any(kw in title_lower for kw in keywords):
+            found.append(universe)
+    return found
+
+
+def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[str]:
+    """Generate hashtags v2 for a Vinted item. 3-layer system, 15 max."""
+    title_lower = title.lower().strip()
+    layer1 = []  # Marque + Modele (priority)
+    layer2 = []  # Style / Epoque / Univers
+    layer3 = []  # Descripteurs specifiques (couleur, type)
+
+    # === COUCHE 1 : Marque + Modele ===
+    matched_brand = None
+    # Sort by length desc to match "ralph lauren" before "ralph"
+    for brand in sorted(BRAND_ALIASES.keys(), key=len, reverse=True):
         if brand in title_lower:
-            hashtags.extend(tags)
-            break  # Only match first brand
+            layer1.extend(BRAND_ALIASES[brand])
+            matched_brand = brand
+            break
 
-    # 3. Detect item type from title
-    for keyword, tags in ITEM_KEYWORDS.items():
-        if keyword in title_lower:
-            hashtags.extend(tags)
-            break  # Only match first item type
+    # Model detection (match longest first)
+    for model in sorted(MODEL_ALIASES.keys(), key=len, reverse=True):
+        if model in title_lower:
+            layer1.extend(MODEL_ALIASES[model])
+            break
 
-    # 4. Add custom user tags
+    # === COUCHE 2 : Style / Epoque / Univers ===
+    is_sneaker = _is_sneaker(title_lower)
+    universes = _detect_universes(title_lower)
+
+    if is_sneaker and "sneakers" not in universes:
+        universes.insert(0, "sneakers")
+
+    # Check for vintage indicators
+    if any(w in title_lower for w in ["vintage", "retro", "old", "90s", "80s"]):
+        if "vintage" not in universes:
+            universes.append("vintage")
+
+    for universe in universes[:3]:  # Max 3 universes
+        tags = UNIVERSE_TAGS.get(universe, [])
+        layer2.extend(tags[:3])  # Max 3 tags per universe
+
+    # === COUCHE 3 : Descripteurs (couleur, type article, specifiques) ===
+    # Couleur
+    for color in sorted(COLOR_ALIASES.keys(), key=len, reverse=True):
+        if color in title_lower:
+            layer3.extend(COLOR_ALIASES[color])
+            break  # One color match
+
+    # Sneaker-specific: extract colorway/collab name
+    if is_sneaker:
+        # Known colorway/collab keywords to extract
+        colorways = [
+            "cement", "bred", "chicago", "shadow", "royal", "obsidian",
+            "mocha", "travis", "og", "anatomy", "koston", "safari",
+            "panda", "university", "denim", "infrared", "neon",
+        ]
+        for cw in colorways:
+            if cw in title_lower:
+                layer3.append(f"#{cw}")
+    else:
+        # Clothing: descriptive compound tags
+        clothing_descriptors = {
+            "veste": ["#veste"], "jacket": ["#jacket"],
+            "hoodie": ["#hoodie"], "sweat": ["#sweat"],
+            "t-shirt": ["#tshirt"], "tee": ["#tee"],
+            "pantalon": ["#pantalon"], "pants": ["#pants"],
+            "jogging": ["#jogger", "#trackpants"],
+            "jogger": ["#jogger", "#trackpants"],
+            "chemise": ["#chemise"], "shirt": ["#shirt"],
+            "pull": ["#pull", "#sweater"],
+            "col roule": ["#colroule"],
+            "half zip": ["#halfzip", "#sweathalfzip"],
+            "zip": ["#zipup"],
+            "maillot": ["#maillot"],
+            "jersey": ["#jersey"],
+            "short": ["#short"],
+            "jean": ["#denim", "#jeans"],
+            "cargo": ["#cargo"],
+            "sac": ["#sac", "#backpack"],
+            "lunettes": ["#lunettes", "#sunglasses"],
+            "casquette": ["#cap"],
+            "bonnet": ["#beanie"],
+            "doudoune": ["#puffer"],
+            "manteau": ["#manteau", "#coat"],
+            "polo": ["#polo"],
+            "cardigan": ["#cardigan"],
+            "robe": ["#robe", "#dress"],
+            "banner": ["#banner", "#drapeau"],
+            "matelasse": ["#vestehiver", "#vesteautomne"],
+            "imperme": ["#vesteimpermeable"],
+            "col velours": ["#colvelourscotele"],
+            "tartan": ["#tartan"],
+            "brode": ["#logobrodé"],
+        }
+        for kw in sorted(clothing_descriptors.keys(), key=len, reverse=True):
+            if kw in title_lower:
+                layer3.extend(clothing_descriptors[kw])
+
+    # === ASSEMBLAGE ===
+    all_tags = layer1 + layer2 + layer3
+
+    # Add custom user tags
     if custom_tags:
         for tag in custom_tags:
             tag = tag.strip()
             if tag and not tag.startswith("#"):
                 tag = f"#{tag}"
             if tag:
-                hashtags.append(tag)
+                all_tags.append(tag)
 
-    # 5. Deduplicate while preserving order
+    # Deduplicate (case-insensitive), preserve order
     seen = set()
     unique = []
-    for h in hashtags:
-        h_lower = h.lower()
-        if h_lower not in seen:
-            seen.add(h_lower)
-            unique.append(h)
+    for h in all_tags:
+        h_clean = h.lower().strip()
+        if not h_clean or h_clean == "#":
+            continue
+        # Blocklist filter
+        tag_text = h_clean.lstrip("#")
+        if _BLOCKED_PATTERN.search(tag_text):
+            continue
+        if h_clean not in seen:
+            seen.add(h_clean)
+            unique.append(h_clean)
 
-    return unique
+    # Trim to MAX_HASHTAGS
+    return unique[:MAX_HASHTAGS]
 
 
 @app.route("/api/generate-hashtags", methods=["POST"])
 @login_required
 def generate_hashtags():
-    """Generate hashtags for Vinted items.
+    """Generate hashtags v2 for Vinted items.
 
     Expects JSON:
     {
-        "title": "Nike Air Force 1 White",       (required)
-        "category": "sneakers",                   (optional, default: "default")
-        "custom_tags": ["MonShop", "Paris"]        (optional)
+        "title": "Air Max One Black",               (required)
+        "custom_tags": ["MonShop", "Paris"]          (optional)
     }
 
     Or for batch generation from sheet:
     {
         "from_sheet": true,
-        "category": "sneakers",
         "custom_tags": ["MonShop"]
     }
     """
@@ -870,7 +1089,6 @@ def generate_hashtags():
         return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Vinted"}), 403
 
     data = request.get_json(silent=True) or {}
-    category = data.get("category", "default")
     custom_tags = data.get("custom_tags", [])
 
     # Single item mode
@@ -879,7 +1097,7 @@ def generate_hashtags():
         if not title:
             return jsonify({"success": False, "error": "Titre de l'article requis"}), 400
 
-        hashtags = _generate_hashtags_for_item(title, category, custom_tags)
+        hashtags = _generate_hashtags_for_item(title, custom_tags)
         return jsonify({
             "success": True,
             "items": [{
@@ -927,13 +1145,10 @@ def generate_hashtags():
             if not title:
                 continue
 
-            # For Vinted Pro: check if item is not sold yet (no sale price)
-            # Column D (index 3) = Prix Vente in Pro layout
-            # Column B (index 1) = Prix Vente in Starter layout
             sale_price_idx = 3 if len(headers) > 4 else 1
             sale_price = row[sale_price_idx] if len(row) > sale_price_idx else ""
 
-            hashtags = _generate_hashtags_for_item(title, category, custom_tags)
+            hashtags = _generate_hashtags_for_item(title, custom_tags)
             items.append({
                 "title": title,
                 "hashtags": hashtags,
@@ -951,14 +1166,9 @@ def generate_hashtags():
 @app.route("/api/hashtag-categories")
 @login_required
 def hashtag_categories():
-    """Return available hashtag preset categories."""
+    """Return available hashtag preset categories (kept for backward compat)."""
     categories = [
         {"id": "default", "label": "General"},
-        {"id": "sneakers", "label": "Sneakers"},
-        {"id": "streetwear", "label": "Streetwear"},
-        {"id": "luxe", "label": "Luxe"},
-        {"id": "vintage", "label": "Vintage"},
-        {"id": "sport", "label": "Sport"},
     ]
     return jsonify({"success": True, "categories": categories})
 
