@@ -14,6 +14,8 @@ GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
 APP_URL = os.getenv("APP_URL", "http://localhost:5000")
 
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+
 ADMIN_EMAILS = os.getenv("ADMIN_EMAILS", "7carambaa7@gmail.com").split(",")
 
 SCOPES = [

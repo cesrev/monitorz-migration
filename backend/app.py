@@ -28,8 +28,9 @@ from google.auth.transport.requests import Request
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
+import anthropic
 import database as db
-from config import SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_URL, SCOPES, ADMIN_EMAILS
+from config import SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_URL, SCOPES, ADMIN_EMAILS, ANTHROPIC_API_KEY
 
 # ============================================
 # CONFIGURATION
@@ -277,6 +278,8 @@ def dashboard():
     last_scan = db.get_last_scan(user_id)
     orders_count = db.get_processed_orders_count(user_id)
 
+    unread_count = db.get_unread_notification_count(user_id)
+
     return render_template(
         "dashboard.html",
         user=user,
@@ -284,6 +287,7 @@ def dashboard():
         sheets=sheets,
         last_scan=last_scan,
         orders_count=orders_count,
+        unread_count=unread_count,
     )
 
 
@@ -613,6 +617,13 @@ def scan_now():
     try:
         from scanner import scan_user
         orders_found = scan_user(user_id)
+
+        # Check alerts after manual scan
+        try:
+            _check_alerts_for_user(user)
+        except Exception as alert_exc:
+            logger.error("Alert check after manual scan failed: %s", alert_exc)
+
         return jsonify({
             "success": True,
             "orders_found": orders_found,
@@ -1062,6 +1073,164 @@ def generate_wts():
         return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
 
 
+@app.route("/api/generate-wts-ai")
+@login_required
+def generate_wts_ai():
+    """Generate an AI-enhanced WTS post using Claude API.
+
+    Reads unsold tickets from Google Sheets, sends them to Claude to produce
+    a compelling, emoji-rich Twitter/X WTS post in French.
+    Restricted to monitoring_type='tickets' and plan='pro'.
+    Falls back to the basic template if Claude API fails.
+    """
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Tickets"}), 403
+
+    if user.get("plan") != "pro":
+        return jsonify({"success": False, "error": "Feature reservee au plan Pro"}), 403
+
+    sheets = db.get_spreadsheets(user_id)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:J",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "wts_text": "", "items": [], "message": "Aucun billet dans le Sheet"})
+
+        # Parse unsold tickets
+        unsold_items = []
+        for row in rows[1:]:
+            if not row or not row[0]:
+                continue
+
+            event = row[0] if len(row) > 0 else ""
+            category = row[1] if len(row) > 1 else ""
+            lieu = row[2] if len(row) > 2 else ""
+            date = row[3] if len(row) > 3 else ""
+            prix_achat = row[4] if len(row) > 4 else ""
+            prix_vente = row[8] if len(row) > 8 else ""
+
+            if prix_vente and prix_vente.strip():
+                continue
+
+            unsold_items.append({
+                "event": event,
+                "category": category,
+                "lieu": lieu,
+                "date": date,
+                "prix_achat": prix_achat,
+            })
+
+        if not unsold_items:
+            return jsonify({
+                "success": True,
+                "wts_text": "",
+                "items": [],
+                "message": "Toutes les places sont vendues !",
+            })
+
+        # Build ticket list for the prompt
+        ticket_lines = []
+        for item in unsold_items:
+            parts = [f"Evenement: {item['event']}"]
+            if item["date"]:
+                parts.append(f"Date: {item['date']}")
+            if item["category"]:
+                parts.append(f"Categorie: {item['category']}")
+            if item["lieu"]:
+                parts.append(f"Lieu: {item['lieu']}")
+            if item["prix_achat"]:
+                parts.append(f"Prix: {item['prix_achat']}EUR")
+            ticket_lines.append(" | ".join(parts))
+
+        tickets_text = "\n".join(ticket_lines)
+
+        prompt = (
+            "Tu es un expert en revente de billets. "
+            "Genere un post WTS (Want To Sell) professionnel et accrocheur pour Twitter/X en francais.\n\n"
+            f"Voici mes billets non vendus:\n{tickets_text}\n\n"
+            "Regles:\n"
+            "- Format concis pour Twitter/X (max 280 caracteres si possible, sinon reste court)\n"
+            "- Utilise des emojis pertinents (🎟, 📍, 📅, 💰)\n"
+            "- Groupe par artiste/evenement si plusieurs billets pour le meme evenement\n"
+            "- Mentionne le prix, la date et la categorie\n"
+            "- Ajoute \"DM pour info\" a la fin\n"
+            "- Commence par \"WTS 🎟\"\n"
+            "- Ne mets pas de hashtags\n"
+            "- Reponds UNIQUEMENT avec le texte du post, sans explication"
+        )
+
+        # Attempt Claude API call
+        ai_generated = True
+        try:
+            if not ANTHROPIC_API_KEY:
+                raise ValueError("ANTHROPIC_API_KEY is not configured")
+
+            client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+            message = client.messages.create(
+                model="claude-sonnet-4-20250514",
+                max_tokens=1024,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            wts_text = message.content[0].text.strip()
+        except Exception as ai_exc:
+            logger.warning("Claude API call failed, falling back to basic template: %s", ai_exc)
+            ai_generated = False
+
+            # Fallback: build basic WTS text (same logic as /api/generate-wts)
+            lines = ["WTS"]
+            for item in unsold_items:
+                price_str = f"{item['prix_achat']}EUR/place" if item["prix_achat"] else ""
+                cat_str = item["category"] if item["category"] else ""
+                date_str = item["date"] if item["date"] else ""
+
+                parts = []
+                if date_str:
+                    parts.append(date_str)
+                if cat_str:
+                    parts.append(f"{cat_str} x1")
+                if price_str:
+                    parts.append(price_str)
+
+                line = f"{item['event']}\n{' - '.join(parts)}" if parts else item["event"]
+                lines.append(line)
+
+            wts_text = "\n\n".join(lines)
+
+        return jsonify({
+            "success": True,
+            "wts_text": wts_text,
+            "items": unsold_items,
+            "unsold_count": len(unsold_items),
+            "ai_generated": ai_generated,
+        })
+
+    except Exception as exc:
+        logger.error("Failed to generate WTS AI: %s", exc)
+        return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
+
+
 # ============================================
 # ROUTES - VINTED SELL TIME STATS
 # ============================================
@@ -1079,6 +1248,9 @@ def vinted_sell_times():
 
     if not user or user.get("monitoring_type") != "vinted":
         return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Vinted"}), 403
+
+    if user.get("plan") != "pro":
+        return jsonify({"success": False, "error": "Feature reservee au plan Pro (necessite dates d'achat)"}), 403
 
     sheets = db.get_spreadsheets(user_id)
     if not sheets:
@@ -1192,6 +1364,68 @@ def vinted_sell_times():
 
 
 # ============================================
+# ROUTES - NOTIFICATIONS
+# ============================================
+
+@app.route("/api/notifications")
+@login_required
+def get_notifications():
+    """Get notifications for the current user."""
+    user_id = session["user_id"]
+    unread_only = request.args.get("unread") == "1"
+    notifications = db.get_notifications(user_id, limit=30, unread_only=unread_only)
+    unread_count = db.get_unread_notification_count(user_id)
+    return jsonify({
+        "success": True,
+        "notifications": notifications,
+        "unread_count": unread_count,
+    })
+
+
+@app.route("/api/notifications/mark-read", methods=["POST"])
+@login_required
+def mark_notifications_read():
+    """Mark notification(s) as read."""
+    user_id = session["user_id"]
+    data = request.get_json(silent=True) or {}
+
+    notif_id = data.get("id")
+    if notif_id:
+        db.mark_notification_read(int(notif_id), user_id)
+    else:
+        db.mark_all_notifications_read(user_id)
+
+    return jsonify({"success": True})
+
+
+@app.route("/api/update-alert-settings", methods=["POST"])
+@login_required
+def update_alert_settings():
+    """Update alert thresholds (days before event, dormant stock days)."""
+    user_id = session["user_id"]
+    data = request.get_json(silent=True) or {}
+
+    updates = {}
+
+    if "alert_days_before" in data:
+        val = int(data["alert_days_before"])
+        if 1 <= val <= 60:
+            updates["alert_days_before"] = val
+
+    if "dormant_days_threshold" in data:
+        val = int(data["dormant_days_threshold"])
+        if 1 <= val <= 365:
+            updates["dormant_days_threshold"] = val
+
+    if updates:
+        db.update_user(user_id, **updates)
+        logger.info("User id=%d updated alert settings: %s", user_id, updates)
+        return jsonify({"success": True, **updates})
+
+    return jsonify({"success": False, "error": "Aucun parametre valide"}), 400
+
+
+# ============================================
 # ROUTES - PLAN
 # ============================================
 
@@ -1282,6 +1516,164 @@ def admin_clients_api():
 
 
 # ============================================
+# ALERT HELPERS
+# ============================================
+
+def _normalize_date(raw: str) -> Optional[str]:
+    """Normalize various date formats to YYYY-MM-DD. Returns None if unparseable."""
+    if not raw:
+        return None
+    raw = raw.strip()
+
+    # Already YYYY-MM-DD
+    if re.match(r"^\d{4}-\d{2}-\d{2}$", raw):
+        return raw
+
+    # DD/MM/YYYY or DD-MM-YYYY or DD.MM.YYYY
+    m = re.match(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})", raw)
+    if m:
+        return f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
+
+    # Try French text dates: "15 mars 2025", "Samedi 15 mars 2025"
+    mois_map = {
+        "janvier": "01", "fevrier": "02", "février": "02", "mars": "03",
+        "avril": "04", "mai": "05", "juin": "06", "juillet": "07",
+        "aout": "08", "août": "08", "septembre": "09", "octobre": "10",
+        "novembre": "11", "decembre": "12", "décembre": "12",
+    }
+    m = re.search(r"(\d{1,2})\s+(\w+)\s+(\d{4})", raw.lower())
+    if m:
+        day = m.group(1).zfill(2)
+        month_str = m.group(2)
+        year = m.group(3)
+        month = mois_map.get(month_str)
+        if month:
+            return f"{year}-{month}-{day}"
+
+    return None
+
+
+def _check_alerts_for_user(user: dict):
+    """Check upcoming events and dormant stock, create notifications."""
+    user_id = user["id"]
+    monitoring_type = user["monitoring_type"]
+    plan = user.get("plan", "starter")
+    alert_days = user.get("alert_days_before", 7)
+    dormant_days = user.get("dormant_days_threshold", 30)
+
+    accounts = db.get_gmail_accounts(user_id)
+    sheets = db.get_spreadsheets(user_id)
+    if not accounts or not sheets:
+        return
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+        now = datetime.utcnow()
+
+        if monitoring_type == "tickets":
+            # Read ticket data: A=Event, B=Cat, C=Lieu, D=Date, E=Prix Achat, I=Prix Vente
+            result = sheets_service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range="Commandes!A:J",
+            ).execute()
+            rows = result.get("values", [])
+
+            for row in rows[1:]:
+                if not row or not row[0]:
+                    continue
+
+                event = row[0]
+                event_date_raw = row[3] if len(row) > 3 else ""
+                prix_vente = row[8] if len(row) > 8 else ""
+
+                # Skip sold tickets
+                if prix_vente and prix_vente.strip():
+                    continue
+
+                event_date = _normalize_date(event_date_raw)
+                if not event_date:
+                    continue
+
+                try:
+                    event_dt = datetime.strptime(event_date, "%Y-%m-%d")
+                    days_until = (event_dt - now).days
+
+                    # Alert: event coming soon
+                    if 0 <= days_until <= alert_days:
+                        ref_key = f"event_soon:{event}:{event_date}"
+                        db.create_notification(
+                            user_id,
+                            "event_soon",
+                            f"Event dans {days_until}j : {event}",
+                            f"{event} le {event_date_raw} — billet non vendu !",
+                            reference_key=ref_key,
+                        )
+
+                    # Alert: event passed and ticket unsold
+                    if days_until < 0:
+                        ref_key = f"event_passed:{event}:{event_date}"
+                        db.create_notification(
+                            user_id,
+                            "event_soon",
+                            f"Event passe : {event}",
+                            f"{event} le {event_date_raw} est passe et le billet n'a pas ete vendu.",
+                            reference_key=ref_key,
+                        )
+
+                except (ValueError, TypeError):
+                    continue
+
+        elif monitoring_type == "vinted" and plan == "pro":
+            # Vinted Pro: A=Article, B=Prix Achat, C=Date Achat, D=Prix Vente
+            result = sheets_service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range="Commandes!A:I",
+            ).execute()
+            rows = result.get("values", [])
+
+            for row in rows[1:]:
+                if not row or not row[0]:
+                    continue
+
+                title = row[0]
+                date_achat_raw = row[2] if len(row) > 2 else ""
+                prix_vente = row[3] if len(row) > 3 else ""
+
+                # Skip sold items
+                if prix_vente and prix_vente.strip():
+                    continue
+
+                date_achat = _normalize_date(date_achat_raw)
+                if not date_achat:
+                    continue
+
+                try:
+                    achat_dt = datetime.strptime(date_achat, "%Y-%m-%d")
+                    days_in_stock = (now - achat_dt).days
+
+                    if days_in_stock >= dormant_days:
+                        ref_key = f"dormant:{title}:{date_achat}"
+                        db.create_notification(
+                            user_id,
+                            "dormant_stock",
+                            f"Stock dormant : {title}",
+                            f"{title} en stock depuis {days_in_stock} jours (achat {date_achat_raw})",
+                            reference_key=ref_key,
+                        )
+                except (ValueError, TypeError):
+                    continue
+
+    except Exception as exc:
+        logger.error("Alert check failed for user id=%d: %s", user_id, exc)
+
+
+# ============================================
 # BACKGROUND SCANNER — 1 scan / hour for all users
 # ============================================
 
@@ -1328,6 +1720,12 @@ def _background_scanner():
                     logger.info("Auto-scan user id=%d: %d orders found", user_id, orders)
                 except Exception as exc:
                     logger.error("Auto-scan failed for user id=%d: %s", user_id, exc)
+
+                # Check alerts after scan
+                try:
+                    _check_alerts_for_user(user)
+                except Exception as exc:
+                    logger.error("Alert check failed for user id=%d: %s", user_id, exc)
 
         except Exception as exc:
             logger.error("Background scanner error: %s", exc)

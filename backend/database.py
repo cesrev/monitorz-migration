@@ -83,6 +83,18 @@ def init_db() -> None:
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
+        CREATE TABLE IF NOT EXISTS notifications (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            type TEXT NOT NULL CHECK(type IN ('event_soon', 'dormant_stock', 'scan_result', 'info')),
+            title TEXT NOT NULL,
+            message TEXT NOT NULL DEFAULT '',
+            read INTEGER NOT NULL DEFAULT 0,
+            reference_key TEXT DEFAULT '',
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+
         CREATE UNIQUE INDEX IF NOT EXISTS idx_processed_orders_unique
             ON processed_orders(user_id, email_id);
 
@@ -94,6 +106,9 @@ def init_db() -> None:
 
         CREATE INDEX IF NOT EXISTS idx_scan_logs_user
             ON scan_logs(user_id);
+
+        CREATE INDEX IF NOT EXISTS idx_notifications_user
+            ON notifications(user_id, read);
     """)
 
     conn.commit()
@@ -106,6 +121,16 @@ def init_db() -> None:
         conn.execute("ALTER TABLE users ADD COLUMN scan_frequency INTEGER NOT NULL DEFAULT 10")
         conn.commit()
         logger.info("Migration: added scan_frequency column to users")
+
+    if "alert_days_before" not in existing_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN alert_days_before INTEGER NOT NULL DEFAULT 7")
+        conn.commit()
+        logger.info("Migration: added alert_days_before column to users")
+
+    if "dormant_days_threshold" not in existing_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN dormant_days_threshold INTEGER NOT NULL DEFAULT 30")
+        conn.commit()
+        logger.info("Migration: added dormant_days_threshold column to users")
 
     conn.close()
     logger.info("Database initialized at %s", DB_PATH)
@@ -167,7 +192,7 @@ def update_user(user_id: int, **kwargs) -> bool:
     """Update user fields. Pass field=value pairs."""
     if not kwargs:
         return False
-    allowed = {"email", "name", "picture", "monitoring_type", "plan", "scan_frequency"}
+    allowed = {"email", "name", "picture", "monitoring_type", "plan", "scan_frequency", "alert_days_before", "dormant_days_threshold"}
     fields = {k: v for k, v in kwargs.items() if k in allowed}
     if not fields:
         return False
@@ -471,5 +496,99 @@ def get_processed_orders(user_id: int, limit: int = 50) -> list[dict]:
             (user_id, limit)
         ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+# ============================================
+# NOTIFICATIONS
+# ============================================
+
+def create_notification(
+    user_id: int,
+    notif_type: str,
+    title: str,
+    message: str = "",
+    reference_key: str = "",
+) -> Optional[int]:
+    """Create a notification. reference_key prevents duplicates for the same event."""
+    conn = get_db()
+    try:
+        # If reference_key provided, skip if already exists (unread)
+        if reference_key:
+            existing = conn.execute(
+                "SELECT 1 FROM notifications WHERE user_id = ? AND reference_key = ? AND read = 0",
+                (user_id, reference_key)
+            ).fetchone()
+            if existing:
+                return None
+
+        cursor = conn.execute(
+            """INSERT INTO notifications (user_id, type, title, message, reference_key, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, notif_type, title, message, reference_key, datetime.utcnow().isoformat())
+        )
+        conn.commit()
+        return cursor.lastrowid
+    finally:
+        conn.close()
+
+
+def get_notifications(user_id: int, limit: int = 30, unread_only: bool = False) -> list[dict]:
+    """Get notifications for a user."""
+    conn = get_db()
+    try:
+        if unread_only:
+            rows = conn.execute(
+                "SELECT * FROM notifications WHERE user_id = ? AND read = 0 ORDER BY created_at DESC LIMIT ?",
+                (user_id, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM notifications WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
+                (user_id, limit)
+            ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_unread_notification_count(user_id: int) -> int:
+    """Get count of unread notifications."""
+    conn = get_db()
+    try:
+        row = conn.execute(
+            "SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND read = 0",
+            (user_id,)
+        ).fetchone()
+        return row["cnt"] if row else 0
+    finally:
+        conn.close()
+
+
+def mark_notification_read(notification_id: int, user_id: int) -> bool:
+    """Mark a single notification as read."""
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE notifications SET read = 1 WHERE id = ? AND user_id = ?",
+            (notification_id, user_id)
+        )
+        conn.commit()
+        return True
+    finally:
+        conn.close()
+
+
+def mark_all_notifications_read(user_id: int) -> bool:
+    """Mark all notifications as read for a user."""
+    conn = get_db()
+    try:
+        conn.execute(
+            "UPDATE notifications SET read = 1 WHERE user_id = ? AND read = 0",
+            (user_id,)
+        )
+        conn.commit()
+        return True
     finally:
         conn.close()

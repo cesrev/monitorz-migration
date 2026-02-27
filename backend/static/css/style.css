@@ -523,6 +523,28 @@ p {
   border: 1px solid var(--border-subtle);
 }
 
+/* Notification count badge */
+.notif-count-badge {
+  background: var(--error);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.notif-count-badge--header {
+  position: absolute;
+  top: 2px;
+  right: 0;
+}
+
 /* ---------- Stat Cards ---------- */
 .stat-card {
   background: var(--glass-bg);
@@ -1790,6 +1812,28 @@ p {
 
 .toast--exit {
   animation: toastOut 0.3s var(--ease-out) forwards;
+}
+
+/* ---------- Notification Badge ---------- */
+.notif-count-badge {
+  background: var(--danger);
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: 99px;
+  padding: 0 4px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.notif-count-badge--header {
+  position: absolute;
+  top: 2px;
+  right: 0;
 }
 
 /* ---------- Animations ---------- */
