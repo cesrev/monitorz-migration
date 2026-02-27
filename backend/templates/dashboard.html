@@ -57,10 +57,12 @@
           <span>Hashtags</span>
         </a>
         {% endif %}
+        {% if user.monitoring_type == 'tickets' %}
         <a href="#" class="sidebar__link" data-section="notifications">
           <span class="sidebar__link-icon">🔔</span>
           <span style="display: flex; align-items: center; gap: 6px;">Notifications <span id="sidebarNotifBadge" class="notif-count-badge" style="display: none;">0</span></span>
         </a>
+        {% endif %}
         <a href="#" class="sidebar__link" data-section="settings">
           <span class="sidebar__link-icon">⚙️</span>
           <span>Parametres</span>
@@ -99,14 +101,14 @@
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: var(--space-lg);">
-          {% if user.monitoring_type == 'vinted' %}
-          <span class="badge badge--accent" id="userType">👗 Vinted</span>
-          {% else %}
-          <span class="badge badge--accent" id="userType">🎟 Tickets</span>
-          {% endif %}
+          <!-- Monitoring type badge -->
+          <span class="badge badge--accent">
+            {% if user.monitoring_type == 'tickets' %}🎟 Tickets{% else %}👗 Vinted{% endif %}
+          </span>
           <span class="badge badge--neutral">{{ user.plan | capitalize if user.plan else 'Starter' }}</span>
 
-          <!-- Notification Bell -->
+          {% if user.monitoring_type == 'tickets' %}
+          <!-- Notification Bell (Tickets only) -->
           <div style="position: relative;" id="notifWrapper">
             <button id="notifBell" onclick="toggleNotifDropdown()" style="background: none; border: none; cursor: pointer; position: relative; padding: 6px; font-size: 1.3rem; line-height: 1; color: var(--text-secondary); transition: color 0.2s;">
               🔔
@@ -122,6 +124,7 @@
               </div>
             </div>
           </div>
+          {% endif %}
 
           <div style="display: flex; align-items: center; gap: var(--space-sm);">
             <span class="status-dot status-dot--active" id="statusDot"></span>
@@ -204,6 +207,11 @@
       <section class="dashboard__section animate-in animate-in--delay-6" id="sectionSheet">
         <div class="dashboard__section-header">
           <h3>📋 Mon Google Sheet</h3>
+          {% if user.monitoring_type == 'tickets' and user.plan == 'pro' %}
+          <button class="btn btn--small" id="organizeTabsBtn" onclick="organizeTabs()" style="background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); color: #fff; border: none; cursor: pointer;">
+            Organiser par artiste
+          </button>
+          {% endif %}
         </div>
 
         <div class="sheet-card">
@@ -296,26 +304,38 @@
         </div>
       </section>
 
-      <!-- Section: WTS Template (Tickets only) -->
+      <!-- Section: WTS Template (Tickets Pro only) -->
       {% if user.monitoring_type == 'tickets' %}
       <section class="dashboard__section" id="sectionWts" style="display: none;">
         <div class="dashboard__section-header">
           <h3>Template WTS</h3>
+          {% if user.plan == 'pro' %}
           <div style="display: flex; gap: var(--space-sm);">
             <button class="btn btn--primary btn--small" id="generateWtsBtn" onclick="generateWts()">Generer</button>
-            {% if user.plan == 'pro' %}
             <button class="btn btn--small" id="generateWtsAiBtn" onclick="generateWtsAI()" style="background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); color: #fff; border: none; cursor: pointer;">
               <span id="generateWtsAiLabel">Generer avec IA</span>
             </button>
-            {% endif %}
           </div>
+          {% else %}
+          <span class="badge badge--neutral" style="font-size: 0.72rem;">PRO</span>
+          {% endif %}
         </div>
 
         <div class="card">
+          {% if user.plan == 'pro' %}
           <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-lg);">
             Genere un message WTS pret a poster avec toutes tes places non vendues. Les billets avec un prix de vente renseigne dans le Sheet sont exclus.
           </p>
+          {% else %}
+          <div style="text-align: center; padding: var(--space-2xl);">
+            <p style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm);">Feature Pro</p>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-lg);">
+              Genere automatiquement des templates WTS avec IA pour tes places non vendues. Passe au plan Pro pour debloquer cette feature.
+            </p>
+          </div>
+          {% endif %}
 
+          {% if user.plan == 'pro' %}
           <!-- WTS Output -->
           <div id="wtsOutput" style="display: none;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md);">
@@ -335,6 +355,7 @@
           <div id="wtsPlaceholder" style="text-align: center; padding: var(--space-xl); color: var(--text-tertiary);">
             <p>Clique sur "Generer" pour creer ton template WTS</p>
           </div>
+          {% endif %}
         </div>
       </section>
       {% endif %}
@@ -449,7 +470,8 @@
       </section>
       {% endif %}
 
-      <!-- Section: Notifications -->
+      <!-- Section: Notifications (Tickets only) -->
+      {% if user.monitoring_type == 'tickets' %}
       <section class="dashboard__section" id="sectionNotifications" style="display: none;">
         <div class="dashboard__section-header">
           <h3>🔔 Notifications</h3>
@@ -459,6 +481,7 @@
           <p style="text-align: center; color: var(--text-tertiary); padding: var(--space-xl);">Chargement...</p>
         </div>
       </section>
+      {% endif %}
 
       <!-- Section: Settings (hidden by default, toggled by sidebar) -->
       <section class="dashboard__section" id="sectionSettings" style="display: none;">
@@ -698,7 +721,7 @@
         var section = this.dataset.section;
 
         // Show/hide sections based on selection
-        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', 'sectionNotifications', 'sectionSettings'];
+        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}'sectionSettings'];
 
         if (section === 'overview') {
           allSections.forEach(function(id) {
@@ -793,6 +816,31 @@
         }
       });
     }
+
+    // ---- Organize tickets into per-artist tabs (Pro) ----
+    async function organizeTabs() {
+      var btn = document.getElementById('organizeTabsBtn');
+      if (!btn) return;
+      var origText = btn.textContent;
+      btn.innerHTML = '<div class="spinner"></div>';
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/organize-tabs', {method: 'POST'});
+        var data = await res.json();
+        if (data.success) {
+          var msg = data.tabs_created + ' onglet(s) cree(s), ' + data.tabs_updated + ' mis a jour';
+          showToast(msg, 'success');
+        } else {
+          showToast(data.error || 'Erreur', 'error');
+        }
+      } catch(e) {
+        showToast('Erreur reseau', 'error');
+      }
+      btn.textContent = origText;
+      btn.disabled = false;
+    }
+
+    // Segmented control removed — monitoring type is set at registration
 
     // ---- Add Gmail account (real API call) ----
     async function addGmailAccount() {
@@ -1240,7 +1288,8 @@
       });
     }
 
-    // ===== Notifications =====
+    // ===== Notifications (Tickets only) =====
+    {% if user.monitoring_type == 'tickets' %}
     var _notifOpen = false;
 
     function toggleNotifDropdown() {
@@ -1354,6 +1403,7 @@
     // Load badge on page load + poll every 60s
     (async function(){try{var r=await fetch('/api/notifications?unread=1');var d=await r.json();if(d.success)_updBadge(d.unread_count);}catch(e){}})();
     setInterval(async function(){try{var r=await fetch('/api/notifications?unread=1');var d=await r.json();if(d.success)_updBadge(d.unread_count);}catch(e){}},60000);
+    {% endif %}
 
     // ===== Alert Settings =====
     async function saveAlertSettings() {

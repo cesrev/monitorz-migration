@@ -132,6 +132,24 @@ def init_db() -> None:
         conn.commit()
         logger.info("Migration: added dormant_days_threshold column to users")
 
+    # --- Migration: add monitoring_type to data tables for profile isolation ---
+    for table in ("spreadsheets", "processed_orders", "scan_logs", "notifications"):
+        cols_cursor = conn.execute(f"PRAGMA table_info({table})")
+        table_cols = {row[1] for row in cols_cursor.fetchall()}
+        if "monitoring_type" not in table_cols:
+            conn.execute(f"ALTER TABLE {table} ADD COLUMN monitoring_type TEXT NOT NULL DEFAULT 'tickets'")
+            conn.commit()
+            logger.info("Migration: added monitoring_type column to %s", table)
+
+    # Rebuild unique index for processed_orders to include monitoring_type
+    try:
+        conn.execute("DROP INDEX IF EXISTS idx_processed_orders_unique")
+        conn.execute("""CREATE UNIQUE INDEX IF NOT EXISTS idx_processed_orders_unique
+                        ON processed_orders(user_id, email_id, monitoring_type)""")
+        conn.commit()
+    except Exception:
+        pass  # Index already correct
+
     conn.close()
     logger.info("Database initialized at %s", DB_PATH)
 
@@ -310,46 +328,59 @@ def create_spreadsheet(
     spreadsheet_id: str,
     spreadsheet_url: str,
     is_auto_created: bool = True,
+    monitoring_type: str = "tickets",
 ) -> int:
     """Create a spreadsheet entry. Returns the row id."""
     conn = get_db()
     try:
         cursor = conn.execute(
             """INSERT INTO spreadsheets
-               (user_id, spreadsheet_id, spreadsheet_url, is_auto_created, created_at)
-               VALUES (?, ?, ?, ?, ?)""",
+               (user_id, spreadsheet_id, spreadsheet_url, is_auto_created, monitoring_type, created_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
             (user_id, spreadsheet_id, spreadsheet_url,
-             1 if is_auto_created else 0, datetime.utcnow().isoformat())
+             1 if is_auto_created else 0, monitoring_type, datetime.utcnow().isoformat())
         )
         conn.commit()
         row_id = cursor.lastrowid
-        logger.info("Created spreadsheet id=%d user=%d sheet=%s", row_id, user_id, spreadsheet_id)
+        logger.info("Created spreadsheet id=%d user=%d type=%s sheet=%s", row_id, user_id, monitoring_type, spreadsheet_id)
         return row_id
     finally:
         conn.close()
 
 
-def get_spreadsheets(user_id: int) -> list[dict]:
-    """Get all spreadsheets for a user."""
+def get_spreadsheets(user_id: int, monitoring_type: str = None) -> list[dict]:
+    """Get spreadsheets for a user, optionally filtered by monitoring_type."""
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT * FROM spreadsheets WHERE user_id = ? ORDER BY created_at DESC",
-            (user_id,)
-        ).fetchall()
+        if monitoring_type:
+            rows = conn.execute(
+                "SELECT * FROM spreadsheets WHERE user_id = ? AND monitoring_type = ? ORDER BY created_at DESC",
+                (user_id, monitoring_type)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM spreadsheets WHERE user_id = ? ORDER BY created_at DESC",
+                (user_id,)
+            ).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
 
 
-def get_primary_spreadsheet(user_id: int) -> Optional[dict]:
-    """Get the most recent spreadsheet for a user."""
+def get_primary_spreadsheet(user_id: int, monitoring_type: str = None) -> Optional[dict]:
+    """Get the most recent spreadsheet for a user, optionally filtered by type."""
     conn = get_db()
     try:
-        row = conn.execute(
-            "SELECT * FROM spreadsheets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
-            (user_id,)
-        ).fetchone()
+        if monitoring_type:
+            row = conn.execute(
+                "SELECT * FROM spreadsheets WHERE user_id = ? AND monitoring_type = ? ORDER BY created_at DESC LIMIT 1",
+                (user_id, monitoring_type)
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM spreadsheets WHERE user_id = ? ORDER BY created_at DESC LIMIT 1",
+                (user_id,)
+            ).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
@@ -377,16 +408,17 @@ def create_scan_log(
     orders_found: int = 0,
     status: str = "pending",
     error_message: Optional[str] = None,
+    monitoring_type: str = "tickets",
 ) -> int:
     """Create a scan log entry. Returns the log id."""
     conn = get_db()
     try:
         cursor = conn.execute(
             """INSERT INTO scan_logs
-               (user_id, gmail_account_id, scan_type, orders_found, status, error_message, scanned_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (user_id, gmail_account_id, scan_type, orders_found, status, error_message, monitoring_type, scanned_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (user_id, gmail_account_id, scan_type, orders_found,
-             status, error_message, datetime.utcnow().isoformat())
+             status, error_message, monitoring_type, datetime.utcnow().isoformat())
         )
         conn.commit()
         return cursor.lastrowid
@@ -408,27 +440,39 @@ def update_scan_log(log_id: int, orders_found: int, status: str, error_message: 
         conn.close()
 
 
-def get_scan_logs(user_id: int, limit: int = 20) -> list[dict]:
-    """Get recent scan logs for a user."""
+def get_scan_logs(user_id: int, limit: int = 20, monitoring_type: str = None) -> list[dict]:
+    """Get recent scan logs for a user, optionally filtered by monitoring_type."""
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT * FROM scan_logs WHERE user_id = ? ORDER BY scanned_at DESC LIMIT ?",
-            (user_id, limit)
-        ).fetchall()
+        if monitoring_type:
+            rows = conn.execute(
+                "SELECT * FROM scan_logs WHERE user_id = ? AND monitoring_type = ? ORDER BY scanned_at DESC LIMIT ?",
+                (user_id, monitoring_type, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM scan_logs WHERE user_id = ? ORDER BY scanned_at DESC LIMIT ?",
+                (user_id, limit)
+            ).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
 
 
-def get_last_scan(user_id: int) -> Optional[dict]:
-    """Get the most recent scan log for a user."""
+def get_last_scan(user_id: int, monitoring_type: str = None) -> Optional[dict]:
+    """Get the most recent scan log for a user, optionally filtered by type."""
     conn = get_db()
     try:
-        row = conn.execute(
-            "SELECT * FROM scan_logs WHERE user_id = ? ORDER BY scanned_at DESC LIMIT 1",
-            (user_id,)
-        ).fetchone()
+        if monitoring_type:
+            row = conn.execute(
+                "SELECT * FROM scan_logs WHERE user_id = ? AND monitoring_type = ? ORDER BY scanned_at DESC LIMIT 1",
+                (user_id, monitoring_type)
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT * FROM scan_logs WHERE user_id = ? ORDER BY scanned_at DESC LIMIT 1",
+                (user_id,)
+            ).fetchone()
         return dict(row) if row else None
     finally:
         conn.close()
@@ -443,15 +487,16 @@ def create_processed_order(
     order_number: str,
     source: str,
     email_id: str,
+    monitoring_type: str = "tickets",
 ) -> Optional[int]:
     """Record a processed order. Returns row id or None if duplicate."""
     conn = get_db()
     try:
         cursor = conn.execute(
             """INSERT OR IGNORE INTO processed_orders
-               (user_id, order_number, source, email_id, processed_at)
-               VALUES (?, ?, ?, ?, ?)""",
-            (user_id, order_number, source, email_id, datetime.utcnow().isoformat())
+               (user_id, order_number, source, email_id, monitoring_type, processed_at)
+               VALUES (?, ?, ?, ?, ?, ?)""",
+            (user_id, order_number, source, email_id, monitoring_type, datetime.utcnow().isoformat())
         )
         conn.commit()
         if cursor.rowcount == 0:
@@ -461,40 +506,58 @@ def create_processed_order(
         conn.close()
 
 
-def is_order_processed(user_id: int, email_id: str) -> bool:
-    """Check if an email has already been processed for a user."""
+def is_order_processed(user_id: int, email_id: str, monitoring_type: str = None) -> bool:
+    """Check if an email has already been processed for a user (and monitoring_type)."""
     conn = get_db()
     try:
-        row = conn.execute(
-            "SELECT 1 FROM processed_orders WHERE user_id = ? AND email_id = ?",
-            (user_id, email_id)
-        ).fetchone()
+        if monitoring_type:
+            row = conn.execute(
+                "SELECT 1 FROM processed_orders WHERE user_id = ? AND email_id = ? AND monitoring_type = ?",
+                (user_id, email_id, monitoring_type)
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT 1 FROM processed_orders WHERE user_id = ? AND email_id = ?",
+                (user_id, email_id)
+            ).fetchone()
         return row is not None
     finally:
         conn.close()
 
 
-def get_processed_orders_count(user_id: int) -> int:
-    """Get total processed orders count for a user."""
+def get_processed_orders_count(user_id: int, monitoring_type: str = None) -> int:
+    """Get total processed orders count for a user, optionally filtered by type."""
     conn = get_db()
     try:
-        row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM processed_orders WHERE user_id = ?",
-            (user_id,)
-        ).fetchone()
+        if monitoring_type:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM processed_orders WHERE user_id = ? AND monitoring_type = ?",
+                (user_id, monitoring_type)
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM processed_orders WHERE user_id = ?",
+                (user_id,)
+            ).fetchone()
         return row["cnt"] if row else 0
     finally:
         conn.close()
 
 
-def get_processed_orders(user_id: int, limit: int = 50) -> list[dict]:
-    """Get recent processed orders for a user."""
+def get_processed_orders(user_id: int, limit: int = 50, monitoring_type: str = None) -> list[dict]:
+    """Get recent processed orders for a user, optionally filtered by type."""
     conn = get_db()
     try:
-        rows = conn.execute(
-            "SELECT * FROM processed_orders WHERE user_id = ? ORDER BY processed_at DESC LIMIT ?",
-            (user_id, limit)
-        ).fetchall()
+        if monitoring_type:
+            rows = conn.execute(
+                "SELECT * FROM processed_orders WHERE user_id = ? AND monitoring_type = ? ORDER BY processed_at DESC LIMIT ?",
+                (user_id, monitoring_type, limit)
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT * FROM processed_orders WHERE user_id = ? ORDER BY processed_at DESC LIMIT ?",
+                (user_id, limit)
+            ).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -510,6 +573,7 @@ def create_notification(
     title: str,
     message: str = "",
     reference_key: str = "",
+    monitoring_type: str = "tickets",
 ) -> Optional[int]:
     """Create a notification. reference_key prevents duplicates for the same event."""
     conn = get_db()
@@ -524,9 +588,9 @@ def create_notification(
                 return None
 
         cursor = conn.execute(
-            """INSERT INTO notifications (user_id, type, title, message, reference_key, created_at)
-               VALUES (?, ?, ?, ?, ?, ?)""",
-            (user_id, notif_type, title, message, reference_key, datetime.utcnow().isoformat())
+            """INSERT INTO notifications (user_id, type, title, message, reference_key, monitoring_type, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+            (user_id, notif_type, title, message, reference_key, monitoring_type, datetime.utcnow().isoformat())
         )
         conn.commit()
         return cursor.lastrowid
@@ -534,11 +598,21 @@ def create_notification(
         conn.close()
 
 
-def get_notifications(user_id: int, limit: int = 30, unread_only: bool = False) -> list[dict]:
-    """Get notifications for a user."""
+def get_notifications(user_id: int, limit: int = 30, unread_only: bool = False, monitoring_type: str = None) -> list[dict]:
+    """Get notifications for a user, optionally filtered by monitoring_type."""
     conn = get_db()
     try:
-        if unread_only:
+        if monitoring_type and unread_only:
+            rows = conn.execute(
+                "SELECT * FROM notifications WHERE user_id = ? AND monitoring_type = ? AND read = 0 ORDER BY created_at DESC LIMIT ?",
+                (user_id, monitoring_type, limit)
+            ).fetchall()
+        elif monitoring_type:
+            rows = conn.execute(
+                "SELECT * FROM notifications WHERE user_id = ? AND monitoring_type = ? ORDER BY created_at DESC LIMIT ?",
+                (user_id, monitoring_type, limit)
+            ).fetchall()
+        elif unread_only:
             rows = conn.execute(
                 "SELECT * FROM notifications WHERE user_id = ? AND read = 0 ORDER BY created_at DESC LIMIT ?",
                 (user_id, limit)
@@ -553,14 +627,20 @@ def get_notifications(user_id: int, limit: int = 30, unread_only: bool = False) 
         conn.close()
 
 
-def get_unread_notification_count(user_id: int) -> int:
-    """Get count of unread notifications."""
+def get_unread_notification_count(user_id: int, monitoring_type: str = None) -> int:
+    """Get count of unread notifications, optionally filtered by type."""
     conn = get_db()
     try:
-        row = conn.execute(
-            "SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND read = 0",
-            (user_id,)
-        ).fetchone()
+        if monitoring_type:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND monitoring_type = ? AND read = 0",
+                (user_id, monitoring_type)
+            ).fetchone()
+        else:
+            row = conn.execute(
+                "SELECT COUNT(*) as cnt FROM notifications WHERE user_id = ? AND read = 0",
+                (user_id,)
+            ).fetchone()
         return row["cnt"] if row else 0
     finally:
         conn.close()

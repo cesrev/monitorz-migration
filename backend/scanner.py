@@ -20,6 +20,10 @@ from parsers.tickets import (
     parse_ticketmaster_email,
     parse_roland_garros_email,
     parse_stade_de_france_email,
+    parse_ticketmaster_us_email,
+    parse_ticketmaster_uk_email,
+    parse_accor_arena_email,
+    parse_axs_email,
     TICKET_QUERIES,
 )
 from parsers.vinted import (
@@ -432,8 +436,8 @@ def _scan_gmail_account(
             for msg_info in messages:
                 msg_id = msg_info["id"]
 
-                # Deduplication at DB level
-                if db.is_order_processed(user_id, msg_id):
+                # Deduplication at DB level (scoped to monitoring_type)
+                if db.is_order_processed(user_id, msg_id, monitoring_type=monitoring_type):
                     continue
 
                 # Fetch full message
@@ -459,6 +463,14 @@ def _scan_gmail_account(
                         order = parse_roland_garros_email(subject, html_content)
                     elif source == "stade-de-france":
                         order = parse_stade_de_france_email(subject, html_content)
+                    elif source == "ticketmaster-us":
+                        order = parse_ticketmaster_us_email(subject, html_content)
+                    elif source == "ticketmaster-uk":
+                        order = parse_ticketmaster_uk_email(subject, html_content)
+                    elif source == "accor-arena":
+                        order = parse_accor_arena_email(subject, html_content)
+                    elif source == "axs":
+                        order = parse_axs_email(subject, html_content)
                 elif monitoring_type == "vinted":
                     if source == "vinted-sale":
                         order = parse_vinted_sale_email(html_content)
@@ -470,9 +482,9 @@ def _scan_gmail_account(
                     order["msg_id"] = msg_id
                     order["source"] = source
 
-                    # Record in processed_orders
+                    # Record in processed_orders (scoped to monitoring_type)
                     order_number = order.get("order_id", order.get("title", msg_id))
-                    db.create_processed_order(user_id, order_number, source, msg_id)
+                    db.create_processed_order(user_id, order_number, source, msg_id, monitoring_type=monitoring_type)
 
                     all_orders.append(order)
                     logger.info(
@@ -501,7 +513,7 @@ def scan_user(user_id: int) -> int:
     monitoring_type = user["monitoring_type"]
     plan = user.get("plan", "starter")
     accounts = db.get_gmail_accounts(user_id)
-    sheet = db.get_primary_spreadsheet(user_id)
+    sheet = db.get_primary_spreadsheet(user_id, monitoring_type=monitoring_type)
 
     if not accounts:
         logger.warning("User id=%d has no gmail accounts", user_id)
@@ -528,6 +540,7 @@ def scan_user(user_id: int) -> int:
             scan_type=monitoring_type,
             gmail_account_id=account["id"],
             status="running",
+            monitoring_type=monitoring_type,
         )
 
         try:
@@ -561,6 +574,107 @@ def scan_user(user_id: int) -> int:
             db.update_scan_log(log_id, 0, "error", str(exc)[:500])
 
     return total_orders
+
+
+def organize_ticket_tabs(user_id: int) -> dict:
+    """Organize ticket data into per-artist/event Google Sheet tabs.
+
+    PRO feature for ticket users. Reads the main 'Commandes' sheet,
+    groups rows by event name, and creates/updates one tab per event.
+
+    Returns: {"tabs_created": int, "tabs_updated": int, "events": list[str]}
+    """
+    user = db.get_user_by_id(user_id)
+    if not user or user["monitoring_type"] != "tickets" or user.get("plan") != "pro":
+        return {"error": "Feature reservee au plan Pro Tickets"}
+
+    sheets_creds = _get_user_credentials(user_id)
+    if not sheets_creds:
+        return {"error": "Erreur d'authentification"}
+
+    sheet = db.get_primary_spreadsheet(user_id, monitoring_type="tickets")
+    if not sheet:
+        return {"error": "Aucun Google Sheet configure"}
+
+    sheets_service = build("sheets", "v4", credentials=sheets_creds, cache_discovery=False)
+    spreadsheet_id = sheet["spreadsheet_id"]
+
+    try:
+        # Read all ticket data from main sheet
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:J",
+        ).execute()
+        rows = result.get("values", [])
+        if len(rows) < 2:
+            return {"tabs_created": 0, "tabs_updated": 0, "events": []}
+
+        headers = rows[0]
+
+        # Group rows by event name (column A)
+        events: dict[str, list] = {}
+        for row in rows[1:]:
+            if not row or not row[0]:
+                continue
+            event_name = row[0].strip()
+            if event_name not in events:
+                events[event_name] = []
+            events[event_name].append(row)
+
+        if not events:
+            return {"tabs_created": 0, "tabs_updated": 0, "events": []}
+
+        # Get existing sheet tabs
+        spreadsheet_meta = sheets_service.spreadsheets().get(
+            spreadsheetId=spreadsheet_id,
+            fields="sheets.properties.title"
+        ).execute()
+        existing_tabs = {s["properties"]["title"] for s in spreadsheet_meta.get("sheets", [])}
+
+        tabs_created = 0
+        tabs_updated = 0
+
+        for event_name, event_rows in events.items():
+            # Sanitize tab name (max 100 chars, no special chars)
+            tab_name = re.sub(r'[^\w\s\-]', '', event_name)[:100].strip()
+            if not tab_name:
+                tab_name = "Sans nom"
+
+            if tab_name not in existing_tabs:
+                # Create new tab
+                try:
+                    sheets_service.spreadsheets().batchUpdate(
+                        spreadsheetId=spreadsheet_id,
+                        body={"requests": [{"addSheet": {"properties": {"title": tab_name}}}]}
+                    ).execute()
+                    tabs_created += 1
+                    existing_tabs.add(tab_name)
+                except Exception as exc:
+                    logger.warning("Could not create tab '%s': %s", tab_name, exc)
+                    continue
+            else:
+                tabs_updated += 1
+
+            # Write headers + data to this tab
+            end_col = chr(ord("A") + len(headers) - 1)
+            all_rows = [headers] + event_rows
+            sheets_service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{tab_name}'!A1:{end_col}{len(all_rows)}",
+                valueInputOption="RAW",
+                body={"values": all_rows},
+            ).execute()
+
+        logger.info("Organized %d event tabs for user id=%d", len(events), user_id)
+        return {
+            "tabs_created": tabs_created,
+            "tabs_updated": tabs_updated,
+            "events": list(events.keys()),
+        }
+
+    except Exception as exc:
+        logger.error("organize_ticket_tabs failed for user id=%d: %s", user_id, exc)
+        return {"error": str(exc)}
 
 
 def scan_all_users() -> dict[int, int]:

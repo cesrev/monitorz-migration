@@ -235,8 +235,9 @@ def _create_spreadsheet_for_user(user_id: int, monitoring_type: str, plan: str =
             spreadsheet_id=spreadsheet_id,
             spreadsheet_url=spreadsheet_url,
             is_auto_created=True,
+            monitoring_type=monitoring_type,
         )
-        logger.info("Created spreadsheet for user %d: %s", user_id, spreadsheet_url)
+        logger.info("Created spreadsheet for user %d type=%s: %s", user_id, monitoring_type, spreadsheet_url)
         return {
             "id": row_id,
             "spreadsheet_id": spreadsheet_id,
@@ -270,15 +271,16 @@ def login():
 @app.route("/dashboard")
 @login_required
 def dashboard():
-    """Client dashboard."""
+    """Client dashboard — filtered by active monitoring_type profile."""
     user_id = session["user_id"]
     user = db.get_user_by_id(user_id)
+    mtype = user["monitoring_type"] if user else "tickets"
     accounts = db.get_gmail_accounts(user_id)
-    sheets = db.get_spreadsheets(user_id)
-    last_scan = db.get_last_scan(user_id)
-    orders_count = db.get_processed_orders_count(user_id)
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    last_scan = db.get_last_scan(user_id, monitoring_type=mtype)
+    orders_count = db.get_processed_orders_count(user_id, monitoring_type=mtype)
 
-    unread_count = db.get_unread_notification_count(user_id)
+    unread_count = db.get_unread_notification_count(user_id, monitoring_type=mtype)
 
     return render_template(
         "dashboard.html",
@@ -371,7 +373,7 @@ def oauth_callback():
     user = db.get_user_by_email(email)
     if user:
         user_id = user["id"]
-        db.update_user(user_id, name=name, picture=picture, plan=plan)
+        db.update_user(user_id, name=name, picture=picture, plan=plan, monitoring_type=monitoring_type)
     else:
         user_id = db.create_user(email, name, picture, monitoring_type, plan)
 
@@ -396,9 +398,9 @@ def oauth_callback():
             is_primary=is_primary,
         )
 
-    # Create spreadsheet if user has none
-    sheets = db.get_spreadsheets(user_id)
-    if not sheets:
+    # Create spreadsheet if user has none for THIS monitoring_type
+    sheets_for_type = db.get_spreadsheets(user_id, monitoring_type=monitoring_type)
+    if not sheets_for_type:
         _create_spreadsheet_for_user(user_id, monitoring_type, plan)
 
     # Set session
@@ -571,7 +573,8 @@ def link_sheet():
     canonical_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
 
     # Check if already linked
-    existing = db.get_spreadsheets(user_id)
+    mtype = user["monitoring_type"]
+    existing = db.get_spreadsheets(user_id, monitoring_type=mtype)
     for s in existing:
         if s["spreadsheet_id"] == spreadsheet_id:
             return jsonify({"success": False, "error": "Ce Sheet est deja lie"}), 400
@@ -581,6 +584,7 @@ def link_sheet():
         spreadsheet_id=spreadsheet_id,
         spreadsheet_url=canonical_url,
         is_auto_created=False,
+        monitoring_type=mtype,
     )
 
     logger.info("Linked sheet %s for user id=%d", spreadsheet_id, user_id)
@@ -606,11 +610,12 @@ def scan_now():
     if not user:
         return jsonify({"success": False, "error": "Utilisateur introuvable"}), 404
 
+    mtype = user["monitoring_type"]
     accounts = db.get_gmail_accounts(user_id)
     if not accounts:
         return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
 
-    sheets = db.get_spreadsheets(user_id)
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
     if not sheets:
         return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
 
@@ -645,18 +650,19 @@ def stats():
     user_id = session["user_id"]
 
     user = db.get_user_by_id(user_id)
+    mtype = user["monitoring_type"] if user else "tickets"
     accounts = db.get_gmail_accounts(user_id)
-    sheets = db.get_spreadsheets(user_id)
-    last_scan = db.get_last_scan(user_id)
-    orders_count = db.get_processed_orders_count(user_id)
-    recent_logs = db.get_scan_logs(user_id, limit=10)
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    last_scan = db.get_last_scan(user_id, monitoring_type=mtype)
+    orders_count = db.get_processed_orders_count(user_id, monitoring_type=mtype)
+    recent_logs = db.get_scan_logs(user_id, limit=10, monitoring_type=mtype)
 
     return jsonify({
         "success": True,
         "user": {
             "email": user["email"] if user else "",
             "name": user["name"] if user else "",
-            "monitoring_type": user["monitoring_type"] if user else "",
+            "monitoring_type": mtype,
             "plan": user["plan"] if user else "starter",
         },
         "gmail_accounts": [
@@ -884,7 +890,8 @@ def generate_hashtags():
         })
 
     # Batch mode: read from Google Sheet
-    sheets = db.get_spreadsheets(user_id)
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
     if not sheets:
         return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
 
@@ -978,7 +985,11 @@ def generate_wts():
     if not user or user.get("monitoring_type") != "tickets":
         return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Tickets"}), 403
 
-    sheets = db.get_spreadsheets(user_id)
+    if user.get("plan") != "pro":
+        return jsonify({"success": False, "error": "Feature reservee au plan Pro"}), 403
+
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
     if not sheets:
         return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
 
@@ -1092,7 +1103,8 @@ def generate_wts_ai():
     if user.get("plan") != "pro":
         return jsonify({"success": False, "error": "Feature reservee au plan Pro"}), 403
 
-    sheets = db.get_spreadsheets(user_id)
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
     if not sheets:
         return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
 
@@ -1252,7 +1264,8 @@ def vinted_sell_times():
     if user.get("plan") != "pro":
         return jsonify({"success": False, "error": "Feature reservee au plan Pro (necessite dates d'achat)"}), 403
 
-    sheets = db.get_spreadsheets(user_id)
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
     if not sheets:
         return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
 
@@ -1370,8 +1383,12 @@ def vinted_sell_times():
 @app.route("/api/notifications")
 @login_required
 def get_notifications():
-    """Get notifications for the current user."""
+    """Get notifications for the current user (tickets only)."""
     user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": True, "notifications": [], "unread_count": 0})
+
     unread_only = request.args.get("unread") == "1"
     notifications = db.get_notifications(user_id, limit=30, unread_only=unread_only)
     unread_count = db.get_unread_notification_count(user_id)
@@ -1385,8 +1402,12 @@ def get_notifications():
 @app.route("/api/notifications/mark-read", methods=["POST"])
 @login_required
 def mark_notifications_read():
-    """Mark notification(s) as read."""
+    """Mark notification(s) as read (tickets only)."""
     user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": False, "error": "Non disponible"}), 403
+
     data = request.get_json(silent=True) or {}
 
     notif_id = data.get("id")
@@ -1423,6 +1444,30 @@ def update_alert_settings():
         return jsonify({"success": True, **updates})
 
     return jsonify({"success": False, "error": "Aucun parametre valide"}), 400
+
+
+@app.route("/api/organize-tabs", methods=["POST"])
+@login_required
+def organize_tabs():
+    """Organize tickets into per-artist/event Sheet tabs (Pro only)."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Tickets"}), 403
+
+    if user.get("plan") != "pro":
+        return jsonify({"success": False, "error": "Feature reservee au plan Pro"}), 403
+
+    try:
+        from scanner import organize_ticket_tabs
+        result = organize_ticket_tabs(user_id)
+        if "error" in result:
+            return jsonify({"success": False, "error": result["error"]}), 400
+        return jsonify({"success": True, **result})
+    except Exception as exc:
+        logger.error("organize_tabs failed for user id=%d: %s", user_id, exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 # ============================================
@@ -1464,9 +1509,9 @@ def admin_panel():
 
     for u in users:
         accounts = db.get_gmail_accounts(u["id"])
-        sheets = db.get_spreadsheets(u["id"])
-        orders = db.get_processed_orders_count(u["id"])
-        last_scan = db.get_last_scan(u["id"])
+        sheets = db.get_spreadsheets(u["id"], monitoring_type=u["monitoring_type"])
+        orders = db.get_processed_orders_count(u["id"], monitoring_type=u["monitoring_type"])
+        last_scan = db.get_last_scan(u["id"], monitoring_type=u["monitoring_type"])
 
         total_gmail += len(accounts)
         total_orders += orders
@@ -1497,8 +1542,8 @@ def admin_clients_api():
     result = []
     for u in users:
         accounts = db.get_gmail_accounts(u["id"])
-        orders = db.get_processed_orders_count(u["id"])
-        last_scan = db.get_last_scan(u["id"])
+        orders = db.get_processed_orders_count(u["id"], monitoring_type=u["monitoring_type"])
+        last_scan = db.get_last_scan(u["id"], monitoring_type=u["monitoring_type"])
 
         result.append({
             "id": u["id"],
@@ -1562,7 +1607,7 @@ def _check_alerts_for_user(user: dict):
     dormant_days = user.get("dormant_days_threshold", 30)
 
     accounts = db.get_gmail_accounts(user_id)
-    sheets = db.get_spreadsheets(user_id)
+    sheets = db.get_spreadsheets(user_id, monitoring_type=monitoring_type)
     if not accounts or not sheets:
         return
 
@@ -1576,7 +1621,8 @@ def _check_alerts_for_user(user: dict):
         spreadsheet_id = sheets[0]["spreadsheet_id"]
         now = datetime.utcnow()
 
-        if monitoring_type == "tickets":
+        if monitoring_type == "tickets" and plan == "pro":
+            # PRO only: alertes evenement a venir
             # Read ticket data: A=Event, B=Cat, C=Lieu, D=Date, E=Prix Achat, I=Prix Vente
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=spreadsheet_id,
@@ -1604,33 +1650,36 @@ def _check_alerts_for_user(user: dict):
                     event_dt = datetime.strptime(event_date, "%Y-%m-%d")
                     days_until = (event_dt - now).days
 
-                    # Alert: event coming soon
-                    if 0 <= days_until <= alert_days:
-                        ref_key = f"event_soon:{event}:{event_date}"
+                    if days_until < 0:
+                        continue  # Event passe, on ignore
+
+                    # Alert urgente : event dans les X prochains jours
+                    if days_until <= alert_days:
+                        ref_key = f"event_urgent:{event}:{event_date}"
                         db.create_notification(
                             user_id,
                             "event_soon",
-                            f"Event dans {days_until}j : {event}",
-                            f"{event} le {event_date_raw} — billet non vendu !",
+                            f"URGENT — {event} dans {days_until}j",
+                            f"{event} le {event_date_raw} — billet non vendu, event imminent !",
                             reference_key=ref_key,
                         )
-
-                    # Alert: event passed and ticket unsold
-                    if days_until < 0:
-                        ref_key = f"event_passed:{event}:{event_date}"
+                    else:
+                        # Alert info : event a venir (non vendu)
+                        ref_key = f"event_upcoming:{event}:{event_date}"
                         db.create_notification(
                             user_id,
                             "event_soon",
-                            f"Event passe : {event}",
-                            f"{event} le {event_date_raw} est passe et le billet n'a pas ete vendu.",
+                            f"{event} — dans {days_until}j",
+                            f"{event} le {event_date_raw} — billet non vendu",
                             reference_key=ref_key,
                         )
 
                 except (ValueError, TypeError):
                     continue
 
-        elif monitoring_type == "vinted" and plan == "pro":
-            # Vinted Pro: A=Article, B=Prix Achat, C=Date Achat, D=Prix Vente
+        elif monitoring_type == "vinted":
+            # Vinted (Starter + Pro): alertes stock dormant
+            # A=Article, B=Prix Achat, C=Date Achat, D=Prix Vente
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=spreadsheet_id,
                 range="Commandes!A:I",
@@ -1698,12 +1747,13 @@ def _background_scanner():
 
                 # Check if user has gmail accounts and a sheet
                 accounts = db.get_gmail_accounts(user_id)
-                sheets = db.get_spreadsheets(user_id)
+                mtype = user["monitoring_type"]
+                sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
                 if not accounts or not sheets:
                     continue
 
                 # Check last scan time — skip if scanned less than 1h ago
-                last_scan = db.get_last_scan(user_id)
+                last_scan = db.get_last_scan(user_id, monitoring_type=mtype)
                 if last_scan and last_scan["scanned_at"]:
                     try:
                         last_dt = datetime.fromisoformat(last_scan["scanned_at"])
