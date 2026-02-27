@@ -30,6 +30,7 @@ Thumbs.db
 # Large generated images
 *.png
 !static/img/logo.png
+!backend/static/img/favicon-32.png
 
 # Node (frontend)
 node_modules/
