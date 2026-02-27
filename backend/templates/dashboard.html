@@ -423,38 +423,47 @@
         </div>
 
         <!-- Custom tags -->
-        <div class="card" style="margin-bottom: var(--space-xl);">
-          <h4 style="margin-bottom: var(--space-lg);">Hashtags personnalises</h4>
-          <div style="display: flex; gap: var(--space-sm); align-items: center;">
-            <input type="text" class="input" id="customTagInput" placeholder="Ex: MonShop, Paris" style="flex: 1;">
-            <button class="btn btn--ghost btn--small" onclick="addCustomTag()">Ajouter</button>
+        <div class="card" style="margin-bottom: var(--space-md); padding: 12px 14px;">
+          <h4 style="margin-bottom: 8px; font-size: 0.82rem;">Hashtags personnalises</h4>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input type="text" class="input" id="customTagInput" placeholder="Ex: MonShop, Paris" style="flex: 1; padding: 6px 10px; font-size: 0.8rem;">
+            <button class="btn btn--primary btn--small" style="padding: 5px 12px; font-size: 0.75rem;" onclick="addCustomTag()">Ajouter</button>
           </div>
-          <div id="customTagsList" style="display: flex; gap: var(--space-xs); flex-wrap: wrap; margin-top: var(--space-md);"></div>
+          <div id="customTagsList" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px;"></div>
         </div>
 
         <!-- Single item generator -->
-        <div class="card" style="margin-bottom: var(--space-xl);">
-          <h4 style="margin-bottom: var(--space-lg);">Generer pour un article</h4>
-          <div style="display: flex; gap: var(--space-sm); align-items: center;">
-            <input type="text" class="input" id="hashtagItemTitle" placeholder="Ex: Air Max One Black, Jogging Palace, Veste Barbour..." style="flex: 1;">
-            <button class="btn btn--primary btn--small" onclick="generateSingleHashtags()">Generer</button>
+        <div class="card" style="margin-bottom: var(--space-md); padding: 12px 14px;">
+          <h4 style="margin-bottom: 8px; font-size: 0.82rem;">Generer pour un article</h4>
+          <div style="display: flex; gap: 6px; align-items: center;">
+            <input type="text" class="input" id="hashtagItemTitle" placeholder="Ex: Air Max One Black, Jogging Palace..." style="flex: 1; padding: 6px 10px; font-size: 0.8rem;">
+            <button class="btn btn--primary btn--small" style="padding: 5px 12px; font-size: 0.75rem;" onclick="generateSingleHashtags()">Generer</button>
           </div>
-          <div id="singleHashtagResult" style="margin-top: var(--space-lg); display: none;">
-            <div id="singleHashtagText" style="background: var(--bg-elevated); padding: var(--space-lg); border-radius: var(--radius-md); font-size: 0.88rem; color: var(--text-primary); line-height: 1.8; word-break: break-word;"></div>
-            <div style="display: flex; gap: var(--space-sm); align-items: center; margin-top: var(--space-md);">
-              <button class="btn btn--success btn--small" onclick="copyHashtags('singleHashtagText')">Copier</button>
-              <span id="hashtagCount" style="font-size: 0.75rem; color: var(--text-tertiary);"></span>
+          <div id="singleHashtagResult" style="margin-top: 8px; display: none;">
+            <div id="singleHashtagText" style="padding: 8px 10px; border-radius: 6px; font-size: 0.78rem; color: var(--text-secondary); line-height: 1.6; word-break: break-word; background: rgba(255,255,255,0.02); border: 1px solid var(--border-subtle);"></div>
+            <div style="display: flex; align-items: center; gap: 6px; margin-top: 6px;">
+              <button class="hashtag-copy-btn" onclick="copyHashtags('singleHashtagText')" title="Copier">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+              </button>
+              <span id="hashtagCount" style="font-size: 0.68rem; color: var(--text-tertiary);"></span>
             </div>
           </div>
         </div>
 
         <!-- Batch from sheet -->
-        <div class="card">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-lg);">
-            <h4>Generer depuis mon Sheet</h4>
-            <button class="btn btn--primary btn--small" id="batchHashtagBtn" onclick="generateBatchHashtags()">Generer tout</button>
+        <div class="card" style="padding: 12px 14px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+            <h4 style="font-size: 0.82rem;">Generer depuis mon Sheet</h4>
+            <div style="display: flex; align-items: center; gap: 6px;">
+              <select id="hashtagFilter" class="input" style="width: auto; font-size: 0.72rem; padding: 4px 8px;" onchange="filterBatchHashtags()">
+                <option value="all">Tous</option>
+                <option value="selling">En vente</option>
+                <option value="sold">Vendus</option>
+              </select>
+              <button class="btn btn--primary btn--small" id="batchHashtagBtn" style="padding: 5px 12px; font-size: 0.75rem;" onclick="generateBatchHashtags()">Generer</button>
+            </div>
           </div>
-          <div id="batchHashtagResults" style="display: flex; flex-direction: column; gap: var(--space-md);"></div>
+          <div id="batchHashtagResults" style="display: flex; flex-direction: column; gap: 4px;"></div>
         </div>
       </section>
       {% endif %}
@@ -1232,6 +1241,8 @@
       }
     }
 
+    var _batchItems = [];
+
     async function generateBatchHashtags() {
       var btn = document.getElementById('batchHashtagBtn');
       var originalHTML = btn.innerHTML;
@@ -1249,30 +1260,8 @@
         });
         var data = await res.json();
         if (data.success) {
-          var container = document.getElementById('batchHashtagResults');
-          container.innerHTML = '';
-
-          if (!data.items || data.items.length === 0) {
-            container.innerHTML = '<p style="color: var(--text-tertiary); text-align: center;">Aucun article trouve dans le Sheet</p>';
-            return;
-          }
-
-          data.items.forEach(function(item, idx) {
-            var card = document.createElement('div');
-            card.style.cssText = 'background: var(--bg-elevated); padding: var(--space-lg); border-radius: var(--radius-md); border-left: 3px solid ' + (item.sold ? 'var(--success)' : 'var(--accent-start)') + ';';
-            card.innerHTML =
-              '<div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm);">' +
-                '<span style="font-weight: 600; font-size: 0.92rem;">' + item.title + '</span>' +
-                (item.sold ? '<span class="badge badge--success" style="font-size: 0.72rem;">Vendu</span>' : '<span class="badge badge--warning" style="font-size: 0.72rem;">En vente</span>') +
-              '</div>' +
-              '<div id="batchHash_' + idx + '" style="font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; word-break: break-word;">' + item.text + '</div>' +
-              '<div style="display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-sm);">' +
-                '<button class="btn btn--ghost btn--small" style="font-size: 0.78rem;" onclick="copyHashtags(\'batchHash_' + idx + '\')">Copier</button>' +
-                '<span style="font-size: 0.72rem; color: var(--text-tertiary);">' + item.hashtags.length + '/15</span>' +
-              '</div>';
-            container.appendChild(card);
-          });
-
+          _batchItems = data.items || [];
+          renderBatchHashtags(_batchItems);
           showToast(data.items.length + ' articles traites', 'success');
         } else {
           showToast(data.error || 'Erreur', 'error');
@@ -1285,11 +1274,72 @@
       }
     }
 
+    function filterBatchHashtags() {
+      var filter = document.getElementById('hashtagFilter').value;
+      if (!_batchItems.length) return;
+      var filtered = _batchItems;
+      if (filter === 'sold') filtered = _batchItems.filter(function(i) { return i.sold; });
+      if (filter === 'selling') filtered = _batchItems.filter(function(i) { return !i.sold; });
+      renderBatchHashtags(filtered);
+    }
+
+    function renderBatchHashtags(items) {
+      var container = document.getElementById('batchHashtagResults');
+      container.innerHTML = '';
+
+      if (!items || items.length === 0) {
+        container.innerHTML = '<p style="color: var(--text-tertiary); text-align: center; padding: var(--space-lg);">Aucun article trouve</p>';
+        return;
+      }
+
+      items.forEach(function(item, idx) {
+        var row = document.createElement('div');
+        row.className = 'hashtag-row';
+        row.setAttribute('data-sold', item.sold ? '1' : '0');
+        row.innerHTML =
+          '<div class="hashtag-row__header" onclick="toggleHashtagRow(this)">' +
+            '<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">' +
+              '<svg class="hashtag-row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
+              '<span class="hashtag-row__title">' + item.title + '</span>' +
+              '<span class="hashtag-row__count">' + item.hashtags.length + '/15</span>' +
+            '</div>' +
+            '<div style="display: flex; align-items: center; gap: 8px;">' +
+              (item.sold ? '<span class="badge badge--success" style="font-size: 0.68rem; padding: 2px 8px;">Vendu</span>' : '<span class="badge badge--warning" style="font-size: 0.68rem; padding: 2px 8px;">En vente</span>') +
+              '<button class="hashtag-copy-btn" onclick="event.stopPropagation(); copyHashtags(\'batchHash_' + idx + '\')" title="Copier">' +
+                '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+          '<div class="hashtag-row__body" style="display: none;">' +
+            '<div id="batchHash_' + idx + '" class="hashtag-row__tags">' + item.text + '</div>' +
+          '</div>';
+        container.appendChild(row);
+      });
+    }
+
+    function toggleHashtagRow(header) {
+      var body = header.nextElementSibling;
+      var chevron = header.querySelector('.hashtag-row__chevron');
+      var isOpen = body.style.display !== 'none';
+      body.style.display = isOpen ? 'none' : 'block';
+      chevron.style.transform = isOpen ? '' : 'rotate(180deg)';
+    }
+
     function copyHashtags(elementId) {
       var el = document.getElementById(elementId);
       if (!el) return;
       var text = el.textContent;
+      // Find the copy button near this element
+      var row = el.closest('.hashtag-row') || el.closest('.card');
+      var copyBtn = row ? row.querySelector('.hashtag-copy-btn') : null;
+
       navigator.clipboard.writeText(text).then(function() {
+        if (copyBtn) {
+          copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+          setTimeout(function() {
+            copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+          }, 1500);
+        }
         showToast('Hashtags copies !', 'success');
       }).catch(function() {
         var range = document.createRange();

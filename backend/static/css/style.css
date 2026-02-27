@@ -2324,6 +2324,81 @@ p {
   background: rgba(255, 255, 255, 0.18);
 }
 
+/* ===== Hashtag rows (accordion) ===== */
+.hashtag-row {
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  transition: border-color var(--transition-fast);
+}
+
+.hashtag-row:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.hashtag-row__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  cursor: pointer;
+  gap: 6px;
+}
+
+.hashtag-row__chevron {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+  width: 12px;
+  height: 12px;
+}
+
+.hashtag-row__title {
+  font-weight: 500;
+  font-size: 0.78rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.hashtag-row__count {
+  font-size: 0.65rem;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.hashtag-row__body {
+  padding: 0 10px 8px 28px;
+}
+
+.hashtag-row__tags {
+  font-size: 0.76rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  word-break: break-word;
+}
+
+.hashtag-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.hashtag-copy-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--text-primary);
+}
+
 /* Mobile: stack settings vertically */
 @media (max-width: 768px) {
   #sectionSettings .dashboard__section-header ~ div {
