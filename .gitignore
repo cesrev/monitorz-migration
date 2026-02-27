@@ -31,6 +31,7 @@ Thumbs.db
 *.png
 !static/img/logo.png
 !backend/static/img/favicon-32.png
+!backend/static/img/icon-*.png
 
 # Node (frontend)
 node_modules/

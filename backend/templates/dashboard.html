@@ -20,31 +20,31 @@
   <div class="dashboard">
     <!-- ========== SIDEBAR ========== -->
     <aside class="sidebar" id="sidebar">
+      <div class="sidebar__resize-handle" id="sidebarResizeHandle"></div>
       <div class="sidebar__logo">
         <img src="/static/img/logo.png" alt="Monitorz" class="sidebar__logo-img">
-        <span class="sidebar__logo-text">MONITORZ</span>
       </div>
 
       <nav class="sidebar__nav">
         <a href="#" class="sidebar__link sidebar__link--active" data-section="overview">
-          <span class="sidebar__link-icon">📊</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-dashboard.png" alt="Dashboard"></span>
           <span>Dashboard</span>
         </a>
         <a href="#" class="sidebar__link" data-section="gmail">
-          <span class="sidebar__link-icon">📧</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-gmail.png" alt="Gmail"></span>
           <span>Comptes Gmail</span>
         </a>
         <a href="#" class="sidebar__link" data-section="sheet">
-          <span class="sidebar__link-icon">📋</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-sheet.png" alt="Sheet"></span>
           <span>Google Sheet</span>
         </a>
         <a href="#" class="sidebar__link" data-section="history">
-          <span class="sidebar__link-icon">📜</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-history.png" alt="Historique"></span>
           <span>Historique</span>
         </a>
         {% if user.monitoring_type == 'tickets' %}
         <a href="#" class="sidebar__link" data-section="wts">
-          <span class="sidebar__link-icon">📝</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-wts.png" alt="WTS"></span>
           <span>Template WTS</span>
         </a>
         {% endif %}
@@ -60,19 +60,19 @@
         {% endif %}
         {% if user.monitoring_type == 'tickets' %}
         <a href="#" class="sidebar__link" data-section="notifications">
-          <span class="sidebar__link-icon">🔔</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-notif.png" alt="Notifications"></span>
           <span style="display: flex; align-items: center; gap: 6px;">Notifications <span id="sidebarNotifBadge" class="notif-count-badge" style="display: none;">0</span></span>
         </a>
         {% endif %}
         <a href="#" class="sidebar__link" data-section="settings">
-          <span class="sidebar__link-icon">⚙️</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-settings.png" alt="Parametres"></span>
           <span>Parametres</span>
         </a>
       </nav>
 
       <div class="sidebar__footer">
         <a href="/logout" class="sidebar__link">
-          <span class="sidebar__link-icon">🚪</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-logout.png" alt="Deconnexion"></span>
           <span>Deconnexion</span>
         </a>
       </div>
@@ -98,20 +98,17 @@
           {% endif %}
           <div class="dashboard__welcome">
             <h2>Bonjour, <span id="userName">{{ user.name or user.email }}</span></h2>
-            <p>Voici l'etat de ton monitoring</p>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: var(--space-lg);">
-          <!-- Monitoring type badge -->
-          <span class="badge badge--accent">
+        <div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: nowrap;">
+          <span class="badge badge--accent" style="font-size: 0.75rem; padding: 4px 10px;">
             {% if user.monitoring_type == 'tickets' %}🎟 Tickets{% else %}👗 Vinted{% endif %}
           </span>
-          <span class="badge badge--neutral">{{ user.plan | capitalize if user.plan else 'Starter' }}</span>
+          <span class="badge badge--neutral" style="font-size: 0.75rem; padding: 4px 10px;">{{ user.plan | capitalize if user.plan else 'Starter' }}</span>
 
           {% if user.monitoring_type == 'tickets' %}
-          <!-- Notification Bell (Tickets only) -->
           <div style="position: relative;" id="notifWrapper">
-            <button id="notifBell" onclick="toggleNotifDropdown()" style="background: none; border: none; cursor: pointer; position: relative; padding: 6px; font-size: 1.3rem; line-height: 1; color: var(--text-secondary); transition: color 0.2s;">
+            <button id="notifBell" onclick="toggleNotifDropdown()" style="background: none; border: none; cursor: pointer; position: relative; padding: 4px; font-size: 1.1rem; line-height: 1; color: var(--text-secondary); transition: color 0.2s;">
               🔔
               <span id="notifBadge" class="notif-count-badge notif-count-badge--header" style="display: none;">0</span>
             </button>
@@ -127,9 +124,9 @@
           </div>
           {% endif %}
 
-          <div style="display: flex; align-items: center; gap: var(--space-sm);">
+          <div style="display: flex; align-items: center; gap: 6px;">
             <span class="status-dot status-dot--active" id="statusDot"></span>
-            <span style="font-size: 0.82rem; color: var(--text-secondary);" id="statusText">Monitoring actif</span>
+            <span style="font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap;" id="statusText">Monitoring actif</span>
           </div>
         </div>
       </div>
@@ -788,6 +785,37 @@
       sidebar.classList.remove('sidebar--open');
       sidebarOverlay.classList.remove('sidebar-overlay--visible');
     }
+
+    // Sidebar resize
+    (function() {
+      var handle = document.getElementById('sidebarResizeHandle');
+      var main = document.querySelector('.dashboard__main');
+      if (!handle || !sidebar) return;
+      var dragging = false;
+
+      handle.addEventListener('mousedown', function(e) {
+        e.preventDefault();
+        dragging = true;
+        handle.classList.add('sidebar__resize-handle--active');
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+      });
+
+      document.addEventListener('mousemove', function(e) {
+        if (!dragging) return;
+        var newWidth = Math.min(400, Math.max(60, e.clientX));
+        sidebar.style.width = newWidth + 'px';
+        main.style.marginLeft = newWidth + 'px';
+      });
+
+      document.addEventListener('mouseup', function() {
+        if (!dragging) return;
+        dragging = false;
+        handle.classList.remove('sidebar__resize-handle--active');
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      });
+    })();
 
     // Monitoring toggle
     var monitoringToggle = document.getElementById('monitoringToggle');
