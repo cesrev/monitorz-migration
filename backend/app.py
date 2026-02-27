@@ -708,6 +708,8 @@ BRAND_ALIASES = {
     "adidas": ["#adidas", "#adidasoriginals"],
     "jordan": ["#jordan", "#nike"],
     "yeezy": ["#yeezy", "#adidas", "#yeezyboost"],
+    "travis scott": ["#travisscott", "#cactusjack", "#ts"],
+    "cactus jack": ["#cactusjack", "#travisscott"],
     "new balance": ["#newbalance", "#nb"],
     "puma": ["#puma"],
     "reebok": ["#reebok"],
@@ -972,6 +974,9 @@ MODEL_ALIASES = {
     "reebok classic": ["#reebokclassic", "#classicleather"],
     "club c": ["#clubc", "#clubc85"],
     "instapump": ["#instapump", "#instapumpfury"],
+    # Travis Scott / Collab models
+    "jumpman jack": ["#jumpmanjack", "#jumpman", "#cactusjack"],
+    "jumpman": ["#jumpman"],
     # Clothing models
     "harrington": ["#harrington"],
     "half zip": ["#halfzip", "#sweathalfzip"],
@@ -1052,7 +1057,7 @@ UNIVERSE_DETECTION = {
     "skate": ["sb", "palace", "dunk sb", "vans"],
     "british": ["barbour", "burberry", "fred perry", "harrington", "tartan"],
     "merch": ["merch", "concert", "tour", "band", "slipknot", "metallica",
-              "shakira", "travis scott", "kanye"],
+              "shakira", "kanye"],
     "preppy": ["ralph lauren", "polo", "lacoste", "gant", "half zip", "col v"],
     "sportswear": ["tracksuit", "jogging", "track", "jersey", "maillot",
                    "survetement", "windbreaker"],
@@ -1358,6 +1363,52 @@ def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[st
         for kw in sorted(clothing_descriptors.keys(), key=len, reverse=True):
             if _word_match(kw, title_lower):
                 layer3.extend(clothing_descriptors[kw])
+
+    # === POKEMON RULES ===
+    _pokemon_names = {
+        "pikachu", "dracaufeu", "charizard", "tortank", "blastoise",
+        "florizarre", "venusaur", "mewtwo", "mew", "evoli", "eevee",
+        "rondoudou", "jigglypuff", "ronflex", "snorlax", "leviator", "gyarados",
+        "dracolosse", "dragonite", "electhor", "zapdos", "artikodin", "articuno",
+        "sulfura", "moltres", "lokhlass", "lapras", "metamorph", "ditto",
+        "lucario", "gardevoir", "ectoplasma", "gengar", "arcanin", "arcanine",
+        "rayquaza", "dialga", "palkia", "giratina", "arceus", "darkrai",
+        "deoxys", "celebi", "jirachi", "groudon", "kyogre", "reshiram",
+        "zekrom", "kyurem", "xerneas", "yveltal", "zygarde", "lunala",
+        "solgaleo", "necrozma", "eternatus", "zacian", "zamazenta",
+        "amphinobi", "greninja", "noctali", "umbreon", "mentali", "espeon",
+        "phyllali", "leafeon", "givrali", "glaceon", "nymphali", "sylveon",
+        "aquali", "vaporeon", "voltali", "jolteon", "pyroli", "flareon",
+        "tyranocif", "tyranitar", "carchacrok", "garchomp", "libegon", "flygon",
+        "drattak", "salamence", "metalosse", "metagross", "brasegali", "blaziken",
+        "laggron", "swampert", "jungko", "sceptile", "suicune", "entei", "raikou",
+        "latias", "latios", "feunard", "ninetales", "alakazam",
+        "mackogneur", "machamp", "demolosse", "houndoom", "absol",
+        "torterra", "infernape", "empoleon", "zoroark",
+    }
+    _pokemon_tcg_triggers = {
+        "etb", "booster", "coffret", "display", "tin", "blister",
+        "ev9", "ev8", "ev7", "ev6", "ev5", "ev4", "ev3", "ev2", "ev1",
+        "151", "ecarlate", "scarlet", "paldea", "obsidienne",
+        "tempete argentee", "origine perdue", "couronne zenith",
+        "astres radieux", "flammes obsidiennes", "forces temporelles",
+        "faille paradoxe", "mascarade crepusculaire", "destinees de paldea",
+        "destinees rivales", "zenith supreme", "vmax", "vstar", "gx", "ex",
+    }
+    _is_pokemon_article = (
+        "pokemon" in title_lower or "pokémon" in title_lower
+        or any(name in title_lower for name in _pokemon_names)
+        or any(kw in title_lower for kw in _pokemon_tcg_triggers)
+    )
+    if _is_pokemon_article:
+        # Rule 1: #pokemon obligatoire
+        if "#pokemon" not in [t.lower() for t in layer1 + layer2 + layer3]:
+            layer1.insert(0, "#pokemon")
+        # Rule 2: premier mot du titre en hashtag
+        first_word = title.strip().split()[0].lower() if title.strip() else ""
+        first_tag = f"#{first_word}"
+        if first_word and len(first_word) > 1 and first_tag not in [t.lower() for t in layer1]:
+            layer1.insert(0, first_tag)
 
     # === ASSEMBLAGE ===
     all_tags = layer1 + layer2 + layer3
