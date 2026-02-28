@@ -50,12 +50,16 @@
         {% endif %}
         {% if user.monitoring_type == 'vinted' %}
         <a href="#" class="sidebar__link" data-section="selltime">
-          <span class="sidebar__link-icon">⏱️</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-selltime.png" alt="Temps de vente"></span>
           <span>Temps de vente</span>
         </a>
         <a href="#" class="sidebar__link" data-section="hashtags">
-          <span class="sidebar__link-icon">#</span>
+          <span class="sidebar__link-icon"><img src="/static/img/icon-hashtag.png" alt="Hashtags"></span>
           <span>Hashtags</span>
+        </a>
+        <a href="#" class="sidebar__link" data-section="description">
+          <span class="sidebar__link-icon">📝</span>
+          <span>Description</span>
         </a>
         {% endif %}
         {% if user.monitoring_type == 'tickets' %}
@@ -229,14 +233,12 @@
                 <line x1="10" y1="14" x2="21" y2="3"></line>
               </svg>
             </a>
-            <div style="display: flex; align-items: center; justify-content: space-between;">
-              <span style="font-size: 0.82rem; color: var(--text-tertiary);">
-                {% if sheet.is_auto_created %}Cree automatiquement{% else %}Lie manuellement{% endif %}
-                — {{ sheet.created_at[:10] if sheet.created_at else '' }}
+            <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-sm);">
+              <a href="{{ sheet.spreadsheet_url }}" target="_blank" class="btn btn--success btn--small">Ouvrir mon Sheet</a>
+              <button class="btn btn--success btn--small" id="toggleSheetForm" onclick="toggleSheetView()">Changer de Sheet</button>
+              <span class="btn btn--success btn--small" style="opacity: 0.7; cursor: default;">
+                {% if sheet.is_auto_created %}Cree auto{% else %}Lie manuellement{% endif %} — {{ sheet.created_at[:10] if sheet.created_at else '' }}
               </span>
-              <a href="{{ sheet.spreadsheet_url }}" target="_blank" class="btn btn--success btn--small">
-                Ouvrir mon Sheet
-              </a>
             </div>
           </div>
 
@@ -249,13 +251,6 @@
               <input type="url" class="input" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/...">
               <button class="btn btn--primary" onclick="linkSheet()">Lier</button>
             </div>
-          </div>
-
-          <!-- Toggle between linked/form -->
-          <div style="margin-top: var(--space-lg); text-align: center;">
-            <button class="btn btn--ghost" id="toggleSheetForm" onclick="toggleSheetView()">
-              Changer de Sheet
-            </button>
           </div>
 
           {% else %}
@@ -274,31 +269,92 @@
         </div>
       </section>
 
-      <!-- Section: Scan History -->
+      <!-- Section: Scan History (accordion) -->
       <section class="dashboard__section animate-in animate-in--delay-7" id="sectionHistory">
-        <div class="dashboard__section-header">
-          <h3>📜 Historique des scans</h3>
-          <button class="btn btn--primary btn--small" id="scanNowBtn" onclick="triggerScan()">
-            🔄 Scanner maintenant
-          </button>
-        </div>
+        <div class="history-accordion" id="historyAccordion">
+          <div class="history-accordion__toggle" onclick="toggleHistoryAccordion()">
+            <span style="display:flex;align-items:center;gap:var(--space-sm);">
+              <img src="/static/img/icon-history.png" alt="" style="width:18px;height:18px;object-fit:contain;">
+              <span>Historique des scans</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:var(--space-sm);">
+              {% if user.monitoring_type == 'tickets' %}
+              <button class="search-toggle" onclick="event.stopPropagation();toggleEventSearch()" title="Rechercher un event">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              </button>
+              {% endif %}
+              <button class="btn btn--primary btn--small" id="scanNowBtn" onclick="event.stopPropagation();triggerScan()">Scanner maintenant</button>
+              <svg class="history-accordion__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+          </div>
+          <div class="history-accordion__content" id="historyAccordionContent">
+            {% if user.monitoring_type == 'tickets' %}
+            <!-- Event Search Panel -->
+            <div id="eventSearchPanel" style="display:none;">
+              <div style="padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-subtle);">
+                <div style="display:flex;align-items:center;gap:var(--space-sm);margin-bottom:var(--space-md);">
+                  <button class="search-toggle" onclick="backToScanHistory()" title="Retour">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
+                  <span style="font-size:0.88rem;font-weight:600;color:var(--text-primary);">Recherche par event</span>
+                </div>
+                <input class="input" type="text" id="eventSearchInput" placeholder="Rechercher un event..." oninput="filterEvents(this.value)">
+              </div>
+              <div id="eventsList"></div>
+            </div>
 
-        <div class="table-wrapper">
-          <table class="table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Comptes scannes</th>
-                <th>Commandes trouvees</th>
-                <th>Statut</th>
-              </tr>
-            </thead>
-            <tbody id="scanHistoryBody">
-              <tr>
-                <td colspan="4" style="text-align:center; color: var(--text-tertiary);">Chargement...</td>
-              </tr>
-            </tbody>
-          </table>
+            <!-- Event Detail Panel -->
+            <div id="eventDetail" style="display:none;">
+              <div style="padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-subtle);">
+                <div style="display:flex;align-items:center;gap:var(--space-sm);">
+                  <button class="search-toggle" onclick="backToEventsList()" title="Retour">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+                  </button>
+                  <span style="font-size:0.88rem;font-weight:600;color:var(--text-primary);" id="eventDetailTitle"></span>
+                </div>
+              </div>
+              <div style="padding: var(--space-lg);">
+                <div class="event-detail__stats" id="eventStatsCards"></div>
+                <div class="table-wrapper">
+                  <table class="table table--compact">
+                    <thead>
+                      <tr>
+                        <th>Categorie</th>
+                        <th>Lieu</th>
+                        <th>Date</th>
+                        <th>Achat</th>
+                        <th>Vente</th>
+                        <th>Benefice</th>
+                        <th>Compte</th>
+                      </tr>
+                    </thead>
+                    <tbody id="eventBilletsBody"></tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+            {% endif %}
+
+            <div id="scanHistoryTable">
+              <div class="table-wrapper">
+                <table class="table table--compact">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Comptes scannes</th>
+                      <th>Commandes trouvees</th>
+                      <th>Statut</th>
+                    </tr>
+                  </thead>
+                  <tbody id="scanHistoryBody">
+                    <tr>
+                      <td colspan="4" style="text-align:center; color: var(--text-tertiary);">Chargement...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -391,14 +447,14 @@
         </div>
 
         <!-- Items list -->
-        <div class="card">
+        <div class="card" style="padding: 10px 12px;">
           <div class="table-wrapper">
-            <table class="table">
+            <table class="table table--compact">
               <thead>
                 <tr>
                   <th>Article</th>
-                  <th>Date achat</th>
-                  <th>Date vente</th>
+                  <th>Benefice</th>
+                  <th>ROI</th>
                   <th>Temps de vente</th>
                   <th>Statut</th>
                 </tr>
@@ -464,6 +520,60 @@
             </div>
           </div>
           <div id="batchHashtagResults" style="display: flex; flex-direction: column; gap: 4px;"></div>
+        </div>
+      </section>
+
+      <!-- Section: Description Generator (Vinted only) -->
+      <section class="dashboard__section" id="sectionDescription" style="display: none;">
+        <div class="dashboard__section-header">
+          <h3>📝 Generateur de description</h3>
+        </div>
+
+        <div class="card" style="padding: 14px 16px;">
+          <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+            <!-- Article selector -->
+            <div>
+              <label style="font-size: 0.78rem; color: var(--text-tertiary); display: block; margin-bottom: 4px;">Article</label>
+              <select id="descArticleSelect" class="input" style="width: 100%; padding: 8px 10px; font-size: 0.82rem;">
+                <option value="">Chargement...</option>
+              </select>
+            </div>
+
+            <!-- Price -->
+            <div>
+              <label style="font-size: 0.78rem; color: var(--text-tertiary); display: block; margin-bottom: 4px;">Prix</label>
+              <input type="number" class="input" id="descPrice" placeholder="Prix en €" style="width: 100%; padding: 8px 10px; font-size: 0.82rem;">
+            </div>
+
+            <!-- Condition -->
+            <div>
+              <label style="font-size: 0.78rem; color: var(--text-tertiary); display: block; margin-bottom: 4px;">Etat</label>
+              <select id="descCondition" class="input" style="width: 100%; padding: 8px 10px; font-size: 0.82rem;">
+                <option value="Neuf avec etiquette">Neuf avec etiquette</option>
+                <option value="Neuf sans etiquette">Neuf sans etiquette</option>
+                <option value="Tres bon etat" selected>Tres bon etat</option>
+                <option value="Bon etat">Bon etat</option>
+                <option value="Satisfaisant">Satisfaisant</option>
+              </select>
+            </div>
+
+            <!-- Generate button -->
+            <button class="btn btn--primary" onclick="generateDescription()" style="width: 100%;">Generer</button>
+          </div>
+        </div>
+
+        <!-- Preview -->
+        <div id="descPreview" class="card desc-preview" style="display: none; margin-top: var(--space-md); padding: 14px 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="display:flex;align-items:center;gap:var(--space-sm);">
+              <span style="font-size: 0.78rem; color: var(--text-tertiary);">Apercu</span>
+              <span id="descRoiBadge" style="display:none;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;"></span>
+            </span>
+            <button class="hashtag-copy-btn" id="descCopyBtn" onclick="copyDescription()" title="Copier">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
+          <pre id="descText" class="desc-preview__text"></pre>
         </div>
       </section>
       {% endif %}
@@ -719,12 +829,12 @@
         var section = this.dataset.section;
 
         // Show/hide sections based on selection
-        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}'sectionSettings'];
+        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', 'sectionDescription', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}'sectionSettings'];
 
         if (section === 'overview') {
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
-            if (el) el.style.display = (id === 'sectionSettings' || id === 'sectionNotifications') ? 'none' : '';
+            if (el) el.style.display = (id === 'sectionSettings' || id === 'sectionNotifications' || id === 'sectionDescription') ? 'none' : '';
           });
         } else if (section === 'gmail') {
           allSections.forEach(function(id) {
@@ -737,10 +847,18 @@
             if (el) el.style.display = id === 'sectionSheet' ? '' : 'none';
           });
         } else if (section === 'history') {
+          // Show only the history section
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = id === 'sectionHistory' ? '' : 'none';
           });
+          // Open the accordion if not already open
+          var acc = document.getElementById('historyAccordion');
+          if (acc && !acc.classList.contains('history-accordion--open')) {
+            acc.classList.add('history-accordion--open');
+          }
+          // Scroll to it
+          if (acc) acc.scrollIntoView({ behavior: 'smooth', block: 'start' });
         } else if (section === 'wts') {
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
@@ -756,6 +874,12 @@
             var el = document.getElementById(id);
             if (el) el.style.display = id === 'sectionHashtags' ? '' : 'none';
           });
+        } else if (section === 'description') {
+          allSections.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = id === 'sectionDescription' ? '' : 'none';
+          });
+          loadVintedArticles();
         } else if (section === 'notifications') {
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
@@ -994,6 +1118,160 @@
       }
     }
 
+    // ---- History accordion toggle ----
+    function toggleHistoryAccordion() {
+      var acc = document.getElementById('historyAccordion');
+      acc.classList.toggle('history-accordion--open');
+    }
+
+    // ===== Event Search & Stats (Tickets only) =====
+    {% if user.monitoring_type == 'tickets' %}
+    var _eventsLoaded = false;
+    var _allEvents = [];
+    var _eventSearchDebounce = null;
+
+    function toggleEventSearch() {
+      var panel = document.getElementById('eventSearchPanel');
+      var table = document.getElementById('scanHistoryTable');
+      var detail = document.getElementById('eventDetail');
+
+      if (panel.style.display === 'none') {
+        panel.style.display = '';
+        table.style.display = 'none';
+        detail.style.display = 'none';
+        if (!_eventsLoaded) loadEventsList();
+      } else {
+        backToScanHistory();
+      }
+    }
+
+    async function loadEventsList() {
+      var container = document.getElementById('eventsList');
+      container.innerHTML = '<div style="text-align:center;padding:var(--space-xl);color:var(--text-tertiary);font-size:0.84rem;"><div class="spinner" style="margin:0 auto var(--space-sm);"></div>Chargement...</div>';
+
+      try {
+        var res = await fetch('/api/events-list');
+        var data = await res.json();
+        if (data.success) {
+          _allEvents = data.events;
+          _eventsLoaded = true;
+          renderEventsList(_allEvents);
+        } else {
+          container.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-xl);font-size:0.84rem;">' + (data.error || 'Erreur') + '</p>';
+        }
+      } catch (err) {
+        container.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-xl);font-size:0.84rem;">Erreur de connexion</p>';
+      }
+    }
+
+    function renderEventsList(events) {
+      var container = document.getElementById('eventsList');
+      if (!events || events.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-xl);font-size:0.84rem;">Aucun event trouve</p>';
+        return;
+      }
+      var html = '<div class="event-list">';
+      events.forEach(function(ev) {
+        html += '<div class="event-list__item" onclick="showEventDetail(\'' + ev.name.replace(/'/g, "\\'") + '\')">' +
+          '<span>' + ev.name + '</span>' +
+          '<span class="badge badge--neutral" style="font-size:0.72rem;padding:2px 8px;">' + ev.count + ' billet' + (ev.count > 1 ? 's' : '') + '</span>' +
+          '</div>';
+      });
+      html += '</div>';
+      container.innerHTML = html;
+    }
+
+    function filterEvents(query) {
+      clearTimeout(_eventSearchDebounce);
+      _eventSearchDebounce = setTimeout(function() {
+        if (!query || !query.trim()) {
+          renderEventsList(_allEvents);
+          return;
+        }
+        var q = query.trim().toLowerCase();
+        var filtered = _allEvents.filter(function(ev) {
+          return ev.name.toLowerCase().indexOf(q) !== -1;
+        });
+        renderEventsList(filtered);
+      }, 300);
+    }
+
+    async function showEventDetail(eventName) {
+      var panel = document.getElementById('eventSearchPanel');
+      var detail = document.getElementById('eventDetail');
+      var title = document.getElementById('eventDetailTitle');
+      var statsCards = document.getElementById('eventStatsCards');
+      var tbody = document.getElementById('eventBilletsBody');
+
+      panel.style.display = 'none';
+      detail.style.display = '';
+      title.textContent = eventName;
+      statsCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-tertiary);font-size:0.84rem;padding:var(--space-md);"><div class="spinner" style="margin:0 auto var(--space-sm);"></div>Chargement...</div>';
+      tbody.innerHTML = '';
+
+      try {
+        var res = await fetch('/api/event-stats?event=' + encodeURIComponent(eventName));
+        var data = await res.json();
+        if (data.success) {
+          var roiVal = data.roi === 'N/A' ? 'N/A' : data.roi + '%';
+          var roiBadge = data.roi === 'N/A' ? 'neutral' : (data.roi >= 0 ? 'success' : 'error');
+          var benColor = data.benefice >= 0 ? 'var(--success)' : 'var(--error)';
+
+          statsCards.innerHTML =
+            '<div class="stat-card">' +
+              '<div class="stat-card__icon">💰</div>' +
+              '<div class="stat-card__value">' + data.total_achat.toFixed(2) + ' &euro;</div>' +
+              '<div class="stat-card__label">Total achat</div>' +
+            '</div>' +
+            '<div class="stat-card">' +
+              '<div class="stat-card__icon">💸</div>' +
+              '<div class="stat-card__value">' + data.total_revente.toFixed(2) + ' &euro;</div>' +
+              '<div class="stat-card__label">Total revente</div>' +
+            '</div>' +
+            '<div class="stat-card">' +
+              '<div class="stat-card__icon">📈</div>' +
+              '<div class="stat-card__value"><span class="badge badge--' + roiBadge + '" style="font-size:0.88rem;padding:4px 10px;">' + roiVal + '</span></div>' +
+              '<div class="stat-card__label">ROI</div>' +
+            '</div>';
+
+          if (data.billets && data.billets.length > 0) {
+            var rows = '';
+            data.billets.forEach(function(b) {
+              var bColor = b.benefice >= 0 ? 'var(--success)' : 'var(--error)';
+              rows += '<tr>' +
+                '<td>' + (b.categorie || '-') + '</td>' +
+                '<td>' + (b.lieu || '-') + '</td>' +
+                '<td>' + (b.date || '-') + '</td>' +
+                '<td>' + b.prix_achat.toFixed(2) + ' &euro;</td>' +
+                '<td>' + (b.prix_vente > 0 ? b.prix_vente.toFixed(2) + ' &euro;' : '-') + '</td>' +
+                '<td style="color:' + bColor + ';">' + (b.benefice !== 0 ? b.benefice.toFixed(2) + ' &euro;' : '-') + '</td>' +
+                '<td>' + (b.compte || '-') + '</td>' +
+                '</tr>';
+            });
+            tbody.innerHTML = rows;
+          } else {
+            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);">Aucun billet</td></tr>';
+          }
+        } else {
+          statsCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-tertiary);font-size:0.84rem;padding:var(--space-md);">' + (data.error || 'Erreur') + '</div>';
+        }
+      } catch (err) {
+        statsCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-tertiary);font-size:0.84rem;padding:var(--space-md);">Erreur de connexion</div>';
+      }
+    }
+
+    function backToEventsList() {
+      document.getElementById('eventDetail').style.display = 'none';
+      document.getElementById('eventSearchPanel').style.display = '';
+    }
+
+    function backToScanHistory() {
+      document.getElementById('eventSearchPanel').style.display = 'none';
+      document.getElementById('eventDetail').style.display = 'none';
+      document.getElementById('scanHistoryTable').style.display = '';
+    }
+    {% endif %}
+
     // ---- Trigger manual scan (real API call) ----
     async function triggerScan() {
       var btn = document.getElementById('scanNowBtn');
@@ -1154,8 +1432,8 @@
           }
           row.innerHTML =
             '<td style="font-weight:500;">' + item.title + '</td>' +
-            '<td>' + (item.purchase_date || '--') + '</td>' +
-            '<td>' + (item.sale_date || '--') + '</td>' +
+            '<td>' + (item.benefice || '--') + '</td>' +
+            '<td>' + (item.roi || '--') + '</td>' +
             '<td>' + sellTimeDisplay + '</td>' +
             '<td><span class="badge badge--' + (item.sold ? 'success' : 'warning') + '">' + (item.sold ? 'Vendu' : 'En vente') + '</span></td>';
           tbody.appendChild(row);
@@ -1349,6 +1627,109 @@
         document.execCommand('copy');
         window.getSelection().removeAllRanges();
         showToast('Hashtags copies !', 'success');
+      });
+    }
+
+    // ===== Description Generator (Vinted only) =====
+    var _descArticlesLoaded = false;
+
+    async function loadVintedArticles() {
+      if (_descArticlesLoaded) return;
+      var select = document.getElementById('descArticleSelect');
+      if (!select) return;
+      select.innerHTML = '<option value="">Chargement...</option>';
+      try {
+        var res = await fetch('/api/vinted-articles');
+        var data = await res.json();
+        if (data.success && data.articles.length > 0) {
+          select.innerHTML = '<option value="">-- Choisir un article --</option>';
+          data.articles.forEach(function(a) {
+            var opt = document.createElement('option');
+            opt.value = a.name;
+            opt.textContent = a.name;
+            if (a.purchase_price) opt.dataset.price = a.purchase_price;
+            select.appendChild(opt);
+          });
+          _descArticlesLoaded = true;
+        } else {
+          select.innerHTML = '<option value="">Aucun article trouve</option>';
+        }
+      } catch (err) {
+        select.innerHTML = '<option value="">Erreur de chargement</option>';
+      }
+    }
+
+    function generateDescription() {
+      var select = document.getElementById('descArticleSelect');
+      var priceInput = document.getElementById('descPrice');
+      var conditionSelect = document.getElementById('descCondition');
+      var preview = document.getElementById('descPreview');
+      var descText = document.getElementById('descText');
+
+      var article = select.value;
+      if (!article) {
+        showToast('Selectionne un article', 'error');
+        return;
+      }
+
+      var price = priceInput.value;
+      var condition = conditionSelect.value;
+
+      var lines = [
+        article,
+        '',
+        'Etat : ' + condition,
+      ];
+      if (price) {
+        lines.push('Prix : ' + price + '\u20ac');
+      }
+      lines.push('');
+      lines.push('Pour plus d\'infos / photos dispo dm \u2705');
+      lines.push('Envoi sous 48H bien emballe \uD83D\uDCE6');
+
+      descText.textContent = lines.join('\n');
+      preview.style.display = '';
+
+      // Calculate ROI estimate
+      var roiBadge = document.getElementById('descRoiBadge');
+      var selectedOpt = select.options[select.selectedIndex];
+      var purchasePrice = parseFloat((selectedOpt.dataset.price || '').replace(',', '.').replace(/[^\d.]/g, ''));
+      var salePrice = parseFloat(price);
+
+      if (purchasePrice > 0 && salePrice > 0) {
+        var roi = ((salePrice - purchasePrice) / purchasePrice * 100).toFixed(1);
+        var isPositive = roi >= 0;
+        roiBadge.textContent = (isPositive ? '+' : '') + roi + '% ROI';
+        roiBadge.style.display = '';
+        roiBadge.style.background = isPositive ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+        roiBadge.style.color = isPositive ? '#22c55e' : '#ef4444';
+      } else {
+        roiBadge.style.display = 'none';
+      }
+    }
+
+    function copyDescription() {
+      var el = document.getElementById('descText');
+      if (!el) return;
+      var text = el.textContent;
+      var copyBtn = document.getElementById('descCopyBtn');
+
+      navigator.clipboard.writeText(text).then(function() {
+        if (copyBtn) {
+          copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="var(--success)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+          setTimeout(function() {
+            copyBtn.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>';
+          }, 1500);
+        }
+        showToast('Description copiee !', 'success');
+      }).catch(function() {
+        var range = document.createRange();
+        range.selectNode(el);
+        window.getSelection().removeAllRanges();
+        window.getSelection().addRange(range);
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        showToast('Description copiee !', 'success');
       });
     }
 

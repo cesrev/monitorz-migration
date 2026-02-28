@@ -426,14 +426,20 @@ def add_gmail():
     """
     user_id = session["user_id"]
 
-    # Starter plan: limit to 1 Gmail account
+    # Plan limits: Starter = 1 Gmail, Pro = 4 Gmail
     user = db.get_user_by_id(user_id)
+    existing_accounts = db.get_gmail_accounts(user_id)
     if user and user.get("plan") == "starter":
-        existing_accounts = db.get_gmail_accounts(user_id)
         if len(existing_accounts) >= 1:
             return jsonify({
                 "success": False,
                 "error": "Le plan Starter est limite a 1 compte Gmail. Passez au Pro pour en ajouter.",
+            }), 403
+    elif user and user.get("plan") == "pro":
+        if len(existing_accounts) >= 4:
+            return jsonify({
+                "success": False,
+                "error": "Le plan Pro est limite a 4 comptes Gmail.",
             }), 403
 
     redirect_uri = f"{APP_URL}/oauth/add-gmail/callback"
@@ -636,6 +642,162 @@ def scan_now():
         })
     except Exception as exc:
         logger.error("Manual scan failed for user id=%d: %s", user_id, exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+# ============================================
+# ROUTES - EVENT SEARCH & STATS (Tickets only)
+# ============================================
+
+@app.route("/api/events-list")
+@login_required
+def events_list():
+    """Return distinct events from the tickets Sheet with count."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs tickets"}), 403
+
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:J",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "events": []})
+
+        # Column 0 = Evenement
+        event_counts = {}
+        for row in rows[1:]:
+            if not row or not row[0]:
+                continue
+            event_name = row[0].strip()
+            event_counts[event_name] = event_counts.get(event_name, 0) + 1
+
+        events = [{"name": name, "count": count} for name, count in sorted(event_counts.items())]
+        return jsonify({"success": True, "events": events})
+    except Exception as exc:
+        logger.error("Failed to load events list: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@app.route("/api/event-stats")
+@login_required
+def event_stats():
+    """Return financial stats for a specific event."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    event_name = request.args.get("event", "").strip()
+
+    if not event_name:
+        return jsonify({"success": False, "error": "Parametre event requis"}), 400
+
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs tickets"}), 403
+
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:J",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "event": event_name, "billets": [], "total_achat": 0, "total_revente": 0, "benefice": 0, "roi": "N/A", "count": 0})
+
+        # Columns: 0=Evenement, 1=Categorie, 2=Lieu, 3=Date, 4=Prix Achat, 5=N Commande, 6=Lien, 7=Compte, 8=Prix Vente, 9=Benefice
+        def _parse_price(val):
+            if not val:
+                return 0.0
+            cleaned = val.replace("\u20ac", "").replace(",", ".").replace("\u00a0", "").strip()
+            try:
+                return float(cleaned)
+            except (ValueError, TypeError):
+                return 0.0
+
+        billets = []
+        total_achat = 0.0
+        total_revente = 0.0
+        total_benefice = 0.0
+
+        for row in rows[1:]:
+            if not row or not row[0]:
+                continue
+            if row[0].strip().lower() != event_name.lower():
+                continue
+
+            prix_achat = _parse_price(row[4] if len(row) > 4 else "")
+            prix_vente = _parse_price(row[8] if len(row) > 8 else "")
+            benefice = _parse_price(row[9] if len(row) > 9 else "")
+
+            total_achat += prix_achat
+            total_revente += prix_vente
+            total_benefice += benefice
+
+            billets.append({
+                "categorie": row[1].strip() if len(row) > 1 and row[1] else "",
+                "lieu": row[2].strip() if len(row) > 2 and row[2] else "",
+                "date": row[3].strip() if len(row) > 3 and row[3] else "",
+                "prix_achat": prix_achat,
+                "prix_vente": prix_vente,
+                "benefice": benefice,
+                "numero": row[5].strip() if len(row) > 5 and row[5] else "",
+                "compte": row[7].strip() if len(row) > 7 and row[7] else "",
+            })
+
+        roi = "N/A"
+        if total_achat > 0:
+            roi = round(((total_revente - total_achat) / total_achat) * 100, 1)
+
+        return jsonify({
+            "success": True,
+            "event": event_name,
+            "billets": billets,
+            "total_achat": round(total_achat, 2),
+            "total_revente": round(total_revente, 2),
+            "benefice": round(total_benefice, 2),
+            "roi": roi,
+            "count": len(billets),
+        })
+    except Exception as exc:
+        logger.error("Failed to load event stats: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
@@ -1850,6 +2012,66 @@ def generate_wts_ai():
 
 
 # ============================================
+# ROUTES - VINTED ARTICLES LIST
+# ============================================
+
+@app.route("/api/vinted-articles")
+@login_required
+def vinted_articles():
+    """Return list of articles from Vinted sheet."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "vinted":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Vinted"}), 403
+
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:I",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "articles": []})
+
+        headers = rows[0]
+        is_pro = len(headers) >= 7
+
+        articles = []
+        for row in rows[1:]:
+            if not row or not row[0].strip():
+                continue
+            article = {"name": row[0].strip()}
+            if is_pro and len(row) > 1:
+                article["purchase_price"] = row[1].strip() if row[1].strip() else ""
+            articles.append(article)
+
+        return jsonify({"success": True, "articles": articles})
+
+    except Exception as exc:
+        logger.error("Failed to read vinted articles: %s", exc)
+        return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
+
+
+# ============================================
 # ROUTES - VINTED SELL TIME STATS
 # ============================================
 
@@ -1943,10 +2165,22 @@ def vinted_sell_times():
             purchase_date = normalize_date(purchase_date)
             sale_date = normalize_date(sale_date)
 
+            purchase_price = ""
+            benefice = ""
+            roi = ""
+            if is_pro:
+                purchase_price = row[1] if len(row) > 1 else ""
+                benefice = row[5] if len(row) > 5 else ""
+                roi = row[6] if len(row) > 6 else ""
+
             item_data = {
                 "title": title,
                 "purchase_date": purchase_date,
                 "sale_date": sale_date,
+                "purchase_price": purchase_price,
+                "sale_price": sale_price,
+                "benefice": benefice,
+                "roi": roi,
                 "sold": bool(sale_price and sale_price.strip()),
                 "sell_time": None,
             }
