@@ -22,6 +22,7 @@ from flask import (
     request,
     jsonify,
     flash,
+    send_file,
 )
 from google.oauth2.credentials import Credentials
 from google.auth.transport.requests import Request
@@ -852,13 +853,24 @@ def create_event_sheet():
         ).execute()
         rows = result.get("values", [])
 
+        logger.info("create_event_sheet: total rows=%d, event_name='%s'", len(rows), event_name)
+
         if len(rows) < 2:
             return jsonify({"success": False, "error": "Aucune donnee dans le Sheet"}), 400
 
         headers = rows[0]
+        logger.info("create_event_sheet: headers=%s", headers)
 
         # Filter rows for this event (column 0 = Evenement)
         event_rows = [row for row in rows[1:] if row and row[0] and row[0].strip().lower() == event_name.lower()]
+
+        # Debug: log all unique event names from sheet
+        unique_events = set()
+        for row in rows[1:]:
+            if row and row[0]:
+                unique_events.add(row[0].strip())
+        logger.info("create_event_sheet: unique events in sheet=%s", unique_events)
+        logger.info("create_event_sheet: matched %d rows for '%s'", len(event_rows), event_name)
 
         if not event_rows:
             return jsonify({"success": False, "error": f"Aucun billet trouve pour '{event_name}'"}), 404
@@ -2431,6 +2443,464 @@ def vinted_analytics():
 
 
 # ============================================
+# ROUTES - BILLING (Invoices & Services)
+# ============================================
+
+@app.route("/api/user/company-profile")
+@login_required
+def get_company_profile():
+    """Return company profile fields for the current user."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    if not user:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 404
+
+    company_fields = {
+        "company_name": user.get("company_name", ""),
+        "company_address": user.get("company_address", ""),
+        "company_phone": user.get("company_phone", ""),
+        "company_email": user.get("company_email", ""),
+        "company_siret": user.get("company_siret", ""),
+        "company_tva_number": user.get("company_tva_number", ""),
+        "company_iban": user.get("company_iban", ""),
+        "company_bic": user.get("company_bic", ""),
+        "company_tva_rate": user.get("company_tva_rate", 20.0),
+        "invoice_prefix": user.get("invoice_prefix", "INV"),
+        "invoice_footer": user.get("invoice_footer", ""),
+    }
+    return jsonify({"success": True, **company_fields})
+
+
+@app.route("/api/user/company-profile", methods=["PATCH"])
+@login_required
+def update_company_profile():
+    """Update company profile fields (partial update)."""
+    user_id = session["user_id"]
+    data = request.get_json(silent=True) or {}
+
+    allowed = {
+        "company_name", "company_address", "company_phone", "company_email",
+        "company_siret", "company_tva_number", "company_iban", "company_bic",
+        "company_tva_rate", "invoice_prefix", "invoice_footer",
+    }
+    fields = {k: v for k, v in data.items() if k in allowed}
+    if not fields:
+        return jsonify({"success": False, "error": "Aucun champ valide"}), 400
+
+    # Convert tva_rate to float
+    if "company_tva_rate" in fields:
+        try:
+            fields["company_tva_rate"] = float(fields["company_tva_rate"])
+        except (ValueError, TypeError):
+            fields["company_tva_rate"] = 20.0
+
+    db.update_user(user_id, **fields)
+    return jsonify({"success": True})
+
+
+@app.route("/api/services")
+@login_required
+def get_services_route():
+    """Get all services for the current user."""
+    user_email = session["user_email"]
+    services = db.get_services(user_email)
+    return jsonify({"success": True, "services": services})
+
+
+@app.route("/api/services", methods=["POST"])
+@login_required
+def create_service_route():
+    """Create a new service."""
+    user_email = session["user_email"]
+    data = request.get_json(silent=True) or {}
+
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({"success": False, "error": "Le nom du service est requis"}), 400
+
+    unit_price_ht = float(data.get("unit_price_ht", 0))
+    tva_rate = float(data.get("tva_rate", 20))
+    description = (data.get("description") or "").strip()
+
+    service = db.create_service(user_email, name, unit_price_ht, tva_rate, description)
+    return jsonify({"success": True, "service": service})
+
+
+@app.route("/api/services/<service_id>", methods=["PATCH"])
+@login_required
+def update_service_route(service_id):
+    """Update a service."""
+    user_email = session["user_email"]
+    data = request.get_json(silent=True) or {}
+
+    kwargs = {}
+    if "name" in data:
+        kwargs["name"] = (data["name"] or "").strip()
+    if "unit_price_ht" in data:
+        kwargs["unit_price_ht"] = float(data["unit_price_ht"])
+    if "tva_rate" in data:
+        kwargs["tva_rate"] = float(data["tva_rate"])
+    if "description" in data:
+        kwargs["description"] = (data["description"] or "").strip()
+
+    if not kwargs:
+        return jsonify({"success": False, "error": "Aucun champ a mettre a jour"}), 400
+
+    ok = db.update_service(service_id, user_email, **kwargs)
+    if not ok:
+        return jsonify({"success": False, "error": "Service introuvable"}), 404
+    return jsonify({"success": True})
+
+
+@app.route("/api/services/<service_id>", methods=["DELETE"])
+@login_required
+def delete_service_route(service_id):
+    """Delete a service."""
+    user_email = session["user_email"]
+    ok = db.delete_service(service_id, user_email)
+    if not ok:
+        return jsonify({"success": False, "error": "Service introuvable"}), 404
+    return jsonify({"success": True})
+
+
+def _generate_invoice_pdf(invoice_data: dict, user: dict) -> bytes:
+    """Generate a PDF invoice in memory using reportlab. Returns PDF bytes."""
+    import io
+    from reportlab.lib.pagesizes import A4
+    from reportlab.lib.units import mm
+    from reportlab.lib.colors import HexColor
+    from reportlab.pdfgen import canvas
+    from reportlab.lib.enums import TA_LEFT, TA_RIGHT, TA_CENTER
+    from reportlab.pdfbase import pdfmetrics
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    buf = io.BytesIO()
+    c = canvas.Canvas(buf, pagesize=A4)
+    w, h = A4  # 595.27, 841.89
+
+    # Colors
+    dark = HexColor("#1a1a22")
+    gray = HexColor("#6e6a68")
+    light_gray = HexColor("#a8a3a0")
+    accent = HexColor("#f0804e")
+    green = HexColor("#34d399")
+    red = HexColor("#f87171")
+    white = HexColor("#ffffff")
+    bg_light = HexColor("#f8f7f5")
+
+    margin = 40
+    col_w = (w - 2 * margin)
+
+    y = h - margin
+
+    # --- Header: mntrz branding ---
+    c.setFont("Helvetica", 7)
+    c.setFillColor(light_gray)
+    c.drawString(margin, y, "mntrz")
+    c.setStrokeColor(HexColor("#e0ddd8"))
+    c.setLineWidth(0.5)
+    y -= 8
+    c.line(margin, y, w - margin, y)
+    y -= 30
+
+    # --- FACTURE title + number ---
+    c.setFont("Helvetica-Bold", 22)
+    c.setFillColor(dark)
+    c.drawString(margin, y, "FACTURE")
+
+    invoice_number = invoice_data.get("invoice_number", "INV-001")
+    c.setFont("Helvetica", 10)
+    c.setFillColor(gray)
+    c.drawString(margin + 130, y + 4, invoice_number)
+    y -= 25
+
+    # --- Dates (right-aligned) ---
+    emission_date = invoice_data.get("emission_date", datetime.utcnow().strftime("%d/%m/%Y"))
+    due_date = invoice_data.get("due_date", "")
+
+    c.setFont("Helvetica", 9)
+    c.setFillColor(gray)
+    c.drawRightString(w - margin, y + 40, f"Date d'emission : {emission_date}")
+    if due_date:
+        c.drawRightString(w - margin, y + 26, f"Date d'echeance : {due_date}")
+    y -= 10
+
+    # --- Emitter / Client blocks side by side ---
+    block_w = (col_w - 30) / 2
+
+    # Emitter (left)
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(dark)
+    c.drawString(margin, y, "EMETTEUR")
+    y -= 14
+
+    c.setFont("Helvetica", 9)
+    c.setFillColor(gray)
+    emitter_lines = []
+    if user.get("company_name"):
+        emitter_lines.append(user["company_name"])
+    if user.get("company_address"):
+        for addr_line in user["company_address"].split("\n"):
+            emitter_lines.append(addr_line.strip())
+    if user.get("company_phone"):
+        emitter_lines.append(user["company_phone"])
+    if user.get("company_email"):
+        emitter_lines.append(user["company_email"])
+    if user.get("company_siret"):
+        emitter_lines.append(f"SIRET : {user['company_siret']}")
+    if user.get("company_tva_number"):
+        emitter_lines.append(f"TVA : {user['company_tva_number']}")
+
+    ey = y
+    for line in emitter_lines:
+        c.drawString(margin, ey, line)
+        ey -= 13
+
+    # Client (right)
+    client_x = margin + block_w + 30
+    c.setFont("Helvetica-Bold", 9)
+    c.setFillColor(dark)
+    c.drawString(client_x, y + 14, "CLIENT")
+
+    c.setFont("Helvetica", 9)
+    c.setFillColor(gray)
+    client_lines = []
+    if invoice_data.get("client_name"):
+        client_lines.append(invoice_data["client_name"])
+    if invoice_data.get("client_email"):
+        client_lines.append(invoice_data["client_email"])
+    if invoice_data.get("client_address"):
+        for addr_line in invoice_data["client_address"].split("\n"):
+            client_lines.append(addr_line.strip())
+
+    cy = y
+    for line in client_lines:
+        c.drawString(client_x, cy, line)
+        cy -= 13
+
+    y = min(ey, cy) - 20
+
+    # --- Event reference (if provided) ---
+    event_name = invoice_data.get("event_name", "")
+    if event_name:
+        c.setStrokeColor(HexColor("#e0ddd8"))
+        c.setFillColor(bg_light)
+        c.roundRect(margin, y - 25, col_w, 30, 4, fill=1, stroke=1)
+        c.setFont("Helvetica", 9)
+        c.setFillColor(dark)
+        c.drawString(margin + 10, y - 16, f"Evenement : {event_name}")
+        y -= 40
+
+    # --- Table header ---
+    table_y = y
+    col_desc_w = col_w * 0.38
+    col_qty_w = col_w * 0.10
+    col_unit_w = col_w * 0.18
+    col_ht_w = col_w * 0.17
+    col_tva_w = col_w * 0.17
+
+    # Header background
+    c.setFillColor(HexColor("#f0ece6"))
+    c.rect(margin, table_y - 4, col_w, 18, fill=1, stroke=0)
+
+    c.setFont("Helvetica-Bold", 8)
+    c.setFillColor(dark)
+    cx = margin + 4
+    c.drawString(cx, table_y, "Description")
+    cx += col_desc_w
+    c.drawString(cx, table_y, "Qte")
+    cx += col_qty_w
+    c.drawString(cx, table_y, "Prix unit. HT")
+    cx += col_unit_w
+    c.drawString(cx, table_y, "Montant HT")
+    cx += col_ht_w
+    c.drawString(cx, table_y, "TVA")
+
+    table_y -= 20
+
+    # --- Table rows ---
+    lines = invoice_data.get("lines", [])
+    c.setFont("Helvetica", 9)
+
+    total_ht = 0.0
+    total_tva = 0.0
+
+    for i, line in enumerate(lines):
+        desc = line.get("description", "")
+        qty = float(line.get("quantity", 1))
+        unit_ht = float(line.get("unit_price_ht", 0))
+        tva_rate = float(line.get("tva_rate", 0))
+        montant_ht = qty * unit_ht
+        montant_tva = montant_ht * tva_rate / 100
+
+        total_ht += montant_ht
+        total_tva += montant_tva
+
+        # Alternate row background
+        if i % 2 == 0:
+            c.setFillColor(HexColor("#fafaf8"))
+            c.rect(margin, table_y - 4, col_w, 16, fill=1, stroke=0)
+
+        c.setFillColor(dark)
+        cx = margin + 4
+        # Truncate long descriptions
+        display_desc = desc[:50] + "..." if len(desc) > 50 else desc
+        c.drawString(cx, table_y, display_desc)
+        cx += col_desc_w
+        c.drawString(cx, table_y, str(int(qty) if qty == int(qty) else qty))
+        cx += col_qty_w
+        c.drawString(cx, table_y, f"{unit_ht:.2f} EUR")
+        cx += col_unit_w
+        c.drawString(cx, table_y, f"{montant_ht:.2f} EUR")
+        cx += col_ht_w
+        c.drawString(cx, table_y, f"{tva_rate:.0f}%")
+
+        table_y -= 18
+
+    # --- Table bottom line ---
+    c.setStrokeColor(HexColor("#e0ddd8"))
+    c.setLineWidth(0.5)
+    c.line(margin, table_y + 4, w - margin, table_y + 4)
+    table_y -= 20
+
+    # --- Totals ---
+    total_ttc = total_ht + total_tva
+    totals_x = w - margin - 180
+
+    c.setFont("Helvetica", 9)
+    c.setFillColor(gray)
+    c.drawString(totals_x, table_y, "Total HT")
+    c.setFillColor(dark)
+    c.drawRightString(w - margin, table_y, f"{total_ht:.2f} EUR")
+    table_y -= 16
+
+    # TVA line
+    c.setFillColor(gray)
+    if total_tva > 0:
+        c.drawString(totals_x, table_y, "TVA")
+        c.setFillColor(dark)
+        c.drawRightString(w - margin, table_y, f"{total_tva:.2f} EUR")
+    else:
+        c.drawString(totals_x, table_y, "TVA non applicable - art. 293B du CGI")
+    table_y -= 20
+
+    # TTC
+    c.setFillColor(accent)
+    c.rect(totals_x - 10, table_y - 6, w - margin - totals_x + 20, 24, fill=1, stroke=0)
+    c.setFont("Helvetica-Bold", 11)
+    c.setFillColor(white)
+    c.drawString(totals_x, table_y, "Total TTC")
+    c.drawRightString(w - margin, table_y, f"{total_ttc:.2f} EUR")
+    table_y -= 30
+
+    # --- Payment status ---
+    status = invoice_data.get("status", "en_attente")
+    status_labels = {
+        "payee": ("Payee", green),
+        "en_attente": ("En attente", HexColor("#fbbf24")),
+        "en_retard": ("En retard", red),
+    }
+    label, color = status_labels.get(status, ("En attente", HexColor("#fbbf24")))
+
+    c.setFillColor(color)
+    c.circle(margin + 5, table_y + 3, 4, fill=1, stroke=0)
+    c.setFont("Helvetica-Bold", 9)
+    c.drawString(margin + 14, table_y, f"Statut : {label}")
+    table_y -= 25
+
+    # --- Notes ---
+    notes = invoice_data.get("notes", "")
+    if notes:
+        c.setFont("Helvetica", 8)
+        c.setFillColor(gray)
+        c.drawString(margin, table_y, "Notes :")
+        table_y -= 13
+        for note_line in notes.split("\n")[:5]:
+            c.drawString(margin, table_y, note_line.strip()[:90])
+            table_y -= 12
+        table_y -= 5
+
+    # --- Banking info ---
+    if user.get("company_iban"):
+        c.setFont("Helvetica", 8)
+        c.setFillColor(gray)
+        c.drawString(margin, table_y, "Informations bancaires :")
+        table_y -= 13
+        c.drawString(margin, table_y, f"IBAN : {user['company_iban']}")
+        table_y -= 12
+        if user.get("company_bic"):
+            c.drawString(margin, table_y, f"BIC : {user['company_bic']}")
+            table_y -= 12
+
+    # --- Footer ---
+    c.setFont("Helvetica", 7)
+    c.setFillColor(light_gray)
+    c.drawCentredString(w / 2, 30, "Document genere via mntrz")
+
+    c.showPage()
+    c.save()
+    buf.seek(0)
+    return buf.getvalue()
+
+
+@app.route("/api/invoices/generate", methods=["POST"])
+@login_required
+def generate_invoice():
+    """Generate a PDF invoice and return it as a downloadable file."""
+    import io
+
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    if not user:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 404
+
+    if not user.get("company_name"):
+        return jsonify({"success": False, "error": "Configure ton profil entreprise dans Parametres"}), 400
+
+    data = request.get_json(silent=True) or {}
+
+    # Validate required fields
+    client_name = (data.get("client_name") or "").strip()
+    if not client_name:
+        return jsonify({"success": False, "error": "Le nom du client est requis"}), 400
+
+    lines = data.get("lines", [])
+    if not lines:
+        return jsonify({"success": False, "error": "Au moins une ligne est requise"}), 400
+
+    # Increment counter and build invoice number
+    counter = db.increment_invoice_counter(user_id)
+    prefix = user.get("invoice_prefix", "INV") or "INV"
+    invoice_number = f"{prefix}-{counter:04d}"
+
+    # Build invoice data
+    invoice_data = {
+        "invoice_number": invoice_number,
+        "emission_date": datetime.utcnow().strftime("%d/%m/%Y"),
+        "due_date": data.get("due_date", ""),
+        "client_name": client_name,
+        "client_email": data.get("client_email", ""),
+        "client_address": data.get("client_address", ""),
+        "event_name": data.get("event_name", ""),
+        "lines": lines,
+        "status": data.get("status", "en_attente"),
+        "notes": data.get("notes", ""),
+    }
+
+    try:
+        pdf_bytes = _generate_invoice_pdf(invoice_data, user)
+        return send_file(
+            io.BytesIO(pdf_bytes),
+            mimetype="application/pdf",
+            as_attachment=True,
+            download_name=f"{invoice_number}.pdf",
+        )
+    except Exception as exc:
+        logger.error("Failed to generate invoice PDF: %s", exc)
+        return jsonify({"success": False, "error": "Erreur lors de la generation du PDF"}), 500
+
+
+# ============================================
 # ROUTES - NOTIFICATIONS
 # ============================================
 
@@ -2847,6 +3317,159 @@ def start_background_scanner():
     t = threading.Thread(target=_background_scanner, daemon=True)
     t.start()
     logger.info("Background scanner thread launched")
+
+
+# ============================================
+# EXTENSION API
+# ============================================
+
+import secrets as _secrets
+import hmac as _hmac
+
+def _ext_auth(f):
+    """Decorator: authenticate extension requests via X-Extension-Secret header."""
+    @wraps(f)
+    def _inner(*args, **kwargs):
+        incoming = request.headers.get("X-Extension-Secret", "")
+        if not incoming:
+            return jsonify({"error": "Missing X-Extension-Secret"}), 401
+        # Find user by ext_secret
+        conn = db.get_db()
+        try:
+            row = conn.execute(
+                "SELECT id FROM users WHERE ext_secret = ? AND ext_secret != ''",
+                (incoming,)
+            ).fetchone()
+        finally:
+            conn.close()
+        if not row:
+            return jsonify({"error": "Invalid extension secret"}), 403
+        request.ext_user_id = row["id"]
+        return f(*args, **kwargs)
+    return _inner
+
+
+@app.route("/api/extension/secret/generate", methods=["POST"])
+@login_required
+def ext_generate_secret():
+    """Generate (or regenerate) the extension secret for the current user."""
+    user_id = session["user_id"]
+    new_secret = _secrets.token_hex(32)
+    db.update_extension_config(user_id, ext_secret=new_secret)
+    return jsonify({"secret": new_secret})
+
+
+@app.route("/api/vinted-token", methods=["POST"])
+@_ext_auth
+def ext_sync_token():
+    """Extension posts the Vinted CSRF token here."""
+    data = request.get_json(silent=True) or {}
+    token = data.get("token", "").strip()
+    domain = data.get("domain", "fr").strip()
+    if not token:
+        return jsonify({"error": "token required"}), 400
+    db.upsert_vinted_session(request.ext_user_id, token, domain)
+    logger.info("Vinted token synced for user_id=%d domain=%s", request.ext_user_id, domain)
+    return jsonify({"ok": True, "domain": domain})
+
+
+@app.route("/api/vinted-token/status")
+@_ext_auth
+def ext_token_status():
+    """Extension polls this to know if its token is stored."""
+    sess = db.get_vinted_session(request.ext_user_id)
+    if not sess:
+        return jsonify({"connected": False})
+    return jsonify({
+        "connected": True,
+        "domain": sess["domain"],
+        "synced_at": sess["synced_at"],
+    })
+
+
+@app.route("/api/extension/config")
+@_ext_auth
+def ext_get_config():
+    """Return extension config (template, quota, poll interval)."""
+    cfg = db.get_extension_config(request.ext_user_id)
+    # Don't return the secret itself
+    cfg.pop("ext_secret", None)
+    return jsonify(cfg)
+
+
+@app.route("/api/extension/config", methods=["POST"])
+@_ext_auth
+def ext_update_config():
+    """Extension updates its own config (msg_enabled, etc.)."""
+    data = request.get_json(silent=True) or {}
+    allowed = {
+        "ext_msg_enabled": "msg_enabled",
+        "ext_msg_template": "msg_template",
+        "ext_msg_quota_daily": "msg_quota_daily",
+        "ext_poll_interval_min": "poll_interval_min",
+    }
+    update = {}
+    for db_col, json_key in allowed.items():
+        if json_key in data:
+            update[db_col] = data[json_key]
+    if update:
+        db.update_extension_config(request.ext_user_id, **update)
+    return jsonify({"ok": True})
+
+
+@app.route("/api/extension/log", methods=["POST"])
+@_ext_auth
+def ext_post_log():
+    """Extension posts an activity log entry."""
+    data = request.get_json(silent=True) or {}
+    db.create_extension_log(
+        user_id=request.ext_user_id,
+        action_type=data.get("action_type", "unknown"),
+        item_id=data.get("item_id"),
+        target_user_id=data.get("target_user_id"),
+        status=data.get("status", "ok"),
+        error=data.get("error"),
+    )
+    return jsonify({"ok": True})
+
+
+@app.route("/api/extension/logs")
+@login_required
+def ext_get_logs():
+    """Dashboard fetches extension logs for the current user."""
+    user_id = session["user_id"]
+    limit = min(int(request.args.get("limit", 50)), 200)
+    logs = db.get_extension_logs(user_id, limit=limit)
+    return jsonify({"logs": logs})
+
+
+@app.route("/api/extension/config/dashboard", methods=["GET", "POST"])
+@login_required
+def ext_config_dashboard():
+    """Dashboard reads/writes extension config (authenticated via session)."""
+    user_id = session["user_id"]
+    if request.method == "GET":
+        cfg = db.get_extension_config(user_id)
+        sess = db.get_vinted_session(user_id)
+        cfg["vinted_connected"] = sess is not None
+        cfg["vinted_domain"] = sess["domain"] if sess else None
+        cfg["vinted_synced_at"] = sess["synced_at"] if sess else None
+        return jsonify(cfg)
+
+    data = request.get_json(silent=True) or {}
+    allowed = {
+        "ext_msg_enabled": "msg_enabled",
+        "ext_msg_template": "msg_template",
+        "ext_msg_quota_daily": "msg_quota_daily",
+        "ext_poll_interval_min": "poll_interval_min",
+    }
+    update = {}
+    for db_col, json_key in allowed.items():
+        if json_key in data:
+            update[db_col] = data[json_key]
+    if update:
+        db.update_extension_config(user_id, **update)
+    return jsonify({"ok": True})
 
 
 # ============================================

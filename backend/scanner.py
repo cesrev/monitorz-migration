@@ -635,8 +635,10 @@ def organize_ticket_tabs(user_id: int) -> dict:
         tabs_updated = 0
 
         for event_name, event_rows in events.items():
-            # Sanitize tab name (max 100 chars, no special chars)
-            tab_name = re.sub(r'[^\w\s\-]', '', event_name)[:100].strip()
+            # Sanitize tab name: keep the original name, only replace
+            # characters forbidden in Google Sheets tab names
+            tab_name = event_name[:100].replace("/", "-").replace("\\", "-").replace("?", "").replace("*", "").replace("[", "(").replace("]", ")")
+            tab_name = tab_name.strip()
             if not tab_name:
                 tab_name = "Sans nom"
 
@@ -653,14 +655,21 @@ def organize_ticket_tabs(user_id: int) -> dict:
                     logger.warning("Could not create tab '%s': %s", tab_name, exc)
                     continue
             else:
+                # Clear existing tab data before rewriting
+                try:
+                    sheets_service.spreadsheets().values().clear(
+                        spreadsheetId=spreadsheet_id,
+                        range=f"'{tab_name}'!A:J",
+                    ).execute()
+                except Exception as exc:
+                    logger.warning("Could not clear tab '%s': %s", tab_name, exc)
                 tabs_updated += 1
 
             # Write headers + data to this tab
-            end_col = chr(ord("A") + len(headers) - 1)
             all_rows = [headers] + event_rows
             sheets_service.spreadsheets().values().update(
                 spreadsheetId=spreadsheet_id,
-                range=f"'{tab_name}'!A1:{end_col}{len(all_rows)}",
+                range=f"'{tab_name}'!A1",
                 valueInputOption="RAW",
                 body={"values": all_rows},
             ).execute()

@@ -64,6 +64,12 @@
           <span style="display: flex; align-items: center; gap: 6px;">Notifications <span id="sidebarNotifBadge" class="notif-count-badge" style="display: none;">0</span></span>
         </a>
         {% endif %}
+        {% if user.monitoring_type == 'vinted' %}
+        <a href="#" class="sidebar__link" data-section="extension">
+          <span class="sidebar__link-icon">🔌</span>
+          <span style="display:flex;align-items:center;gap:6px;">Extension <span id="sidebarExtDot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:none;flex-shrink:0;"></span></span>
+        </a>
+        {% endif %}
         <a href="#" class="sidebar__link" data-section="settings">
           <span class="sidebar__link-icon"><img src="/static/img/icon-settings.png" alt="Parametres"></span>
           <span>Parametres</span>
@@ -226,18 +232,6 @@
       <section class="dashboard__section animate-in animate-in--delay-6" id="sectionSheet">
         <div class="dashboard__section-header">
           <h3>📋 Mon Google Sheet</h3>
-          <div style="display: flex; align-items: center; gap: var(--space-sm);">
-            {% if user.monitoring_type == 'tickets' %}
-            <button class="search-toggle" onclick="toggleEventSearch()" title="Rechercher un event">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-            </button>
-            {% endif %}
-            {% if user.monitoring_type == 'tickets' and user.plan == 'pro' %}
-            <button class="btn btn--small" id="organizeTabsBtn" onclick="organizeTabs()" style="background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); color: #fff; border: none; cursor: pointer;">
-              Organiser par artiste
-            </button>
-            {% endif %}
-          </div>
         </div>
 
         <div class="sheet-card">
@@ -260,6 +254,11 @@
             <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap; margin-top: var(--space-sm);">
               <a href="{{ sheet.spreadsheet_url }}" target="_blank" class="btn btn--success btn--small">Ouvrir mon Sheet</a>
               <button class="btn btn--success btn--small" id="toggleSheetForm" onclick="toggleSheetView()">Changer de Sheet</button>
+              {% if user.monitoring_type == 'tickets' and user.plan == 'pro' %}
+              <button class="btn btn--success btn--small" id="organizeTabsBtn" onclick="organizeTabs()">
+                Organiser par artiste
+              </button>
+              {% endif %}
               <span class="btn btn--success btn--small" style="opacity: 0.7; cursor: default;">
                 {% if sheet.is_auto_created %}Cree auto{% else %}Lie manuellement{% endif %} — {{ sheet.created_at[:10] if sheet.created_at else '' }}
               </span>
@@ -293,18 +292,21 @@
         </div>
 
         {% if user.monitoring_type == 'tickets' %}
-        <!-- Event Search Panel -->
-        <div id="eventSearchPanel" class="card" style="display:none; margin-top: var(--space-md);">
-          <div style="padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--border-subtle);">
-            <div style="display:flex;align-items:center;gap:var(--space-sm);margin-bottom:var(--space-md);">
-              <button class="search-toggle" onclick="closeEventSearch()" title="Fermer">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-              </button>
-              <span style="font-size:0.88rem;font-weight:600;color:var(--text-primary);">Recherche par event</span>
-            </div>
-            <input class="input" type="text" id="eventSearchInput" placeholder="Rechercher un event..." oninput="filterEvents(this.value)">
+        <!-- Event Search Accordion -->
+        <div class="history-accordion" id="eventSearchAccordion" style="margin-top: var(--space-md);">
+          <div class="history-accordion__toggle" onclick="toggleEventSearch()">
+            <span style="display:flex;align-items:center;gap:var(--space-sm);">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <span>Recherche par event</span>
+            </span>
+            <svg class="history-accordion__chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
           </div>
-          <div id="eventsList"></div>
+          <div class="history-accordion__content" id="eventSearchContent">
+            <div style="padding: var(--space-md) var(--space-lg); border-top: 1px solid var(--border-subtle);">
+              <input class="input" type="text" id="eventSearchInput" placeholder="Rechercher un event..." oninput="filterEvents(this.value)">
+            </div>
+            <div id="eventsList"></div>
+          </div>
         </div>
 
         <!-- Event Detail Panel -->
@@ -318,6 +320,10 @@
               <button class="btn btn--success btn--small" id="createEventSheetBtn" onclick="createEventSheet()" title="Creer un onglet Sheet pour cet event">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
                 Organiser dans Sheet
+              </button>
+              <button class="btn btn--small" id="invoiceEventBtn" onclick="openInvoiceModal(_currentEventName)" title="Creer une facture pour cet event" style="background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); color: #fff;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+                Facturer
               </button>
             </div>
           </div>
@@ -504,11 +510,10 @@
         <div class="card" style="padding: 14px 16px; margin-bottom: var(--space-md);">
           <h4 style="margin-bottom: 10px; font-size: 0.82rem;">Generateur de description</h4>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
-            <div>
+            <div style="position: relative;">
               <label style="font-size: 0.72rem; color: var(--text-tertiary); display: block; margin-bottom: 3px;">Article</label>
-              <select id="descArticleSelect" class="input" style="width: 100%; padding: 7px 10px; font-size: 0.8rem;">
-                <option value="">Selectionner...</option>
-              </select>
+              <input type="text" id="descArticleInput" class="input" placeholder="Rechercher un article..." autocomplete="off" style="width: 100%; padding: 7px 10px; font-size: 0.8rem;" oninput="filterArticleSuggestions(this.value)" onfocus="showArticleSuggestions()">
+              <div id="articleSuggestions" class="article-suggestions" style="display:none;"></div>
             </div>
             <div>
               <label style="font-size: 0.72rem; color: var(--text-tertiary); display: block; margin-bottom: 3px;">Etat</label>
@@ -665,6 +670,91 @@
                 {% endif %}
               </div>
             </div>
+
+            {% if user.monitoring_type == 'tickets' %}
+            <!-- Company Profile -->
+            <div style="padding-top: var(--space-xl); border-top: 1px solid var(--border-subtle);">
+              <h4 style="margin-bottom: var(--space-lg);">Profil entreprise</h4>
+              <div class="company-profile-form" id="companyProfileForm">
+                <div>
+                  <label>Nom de l'entreprise</label>
+                  <input type="text" class="input" id="cpf_company_name" data-field="company_name" placeholder="Mon Entreprise">
+                </div>
+                <div>
+                  <label>Email professionnel</label>
+                  <input type="email" class="input" id="cpf_company_email" data-field="company_email" placeholder="contact@monentreprise.fr">
+                </div>
+                <div>
+                  <label>Telephone</label>
+                  <input type="tel" class="input" id="cpf_company_phone" data-field="company_phone" placeholder="+33 6 12 34 56 78">
+                </div>
+                <div>
+                  <label>SIRET</label>
+                  <input type="text" class="input" id="cpf_company_siret" data-field="company_siret" placeholder="123 456 789 00012">
+                </div>
+                <div>
+                  <label>N° TVA intracommunautaire</label>
+                  <input type="text" class="input" id="cpf_company_tva_number" data-field="company_tva_number" placeholder="FR12345678901">
+                </div>
+                <div>
+                  <label>Taux TVA (%)</label>
+                  <input type="number" class="input" id="cpf_company_tva_rate" data-field="company_tva_rate" value="20" step="0.1" min="0" max="100">
+                </div>
+                <div>
+                  <label>IBAN</label>
+                  <input type="text" class="input" id="cpf_company_iban" data-field="company_iban" placeholder="FR76 1234 5678 9012 3456 7890 123">
+                </div>
+                <div>
+                  <label>BIC</label>
+                  <input type="text" class="input" id="cpf_company_bic" data-field="company_bic" placeholder="BNPAFRPP">
+                </div>
+                <div>
+                  <label>Prefixe facture</label>
+                  <input type="text" class="input" id="cpf_invoice_prefix" data-field="invoice_prefix" value="INV" maxlength="10">
+                </div>
+                <div>
+                  <label>Adresse</label>
+                  <textarea class="input" id="cpf_company_address" data-field="company_address" placeholder="12 Rue Exemple&#10;75001 Paris" rows="2" style="resize:vertical;min-height:50px;"></textarea>
+                </div>
+                <div class="full-width">
+                  <label>Mention legale en pied de facture</label>
+                  <textarea class="input" id="cpf_invoice_footer" data-field="invoice_footer" placeholder="Pas d'escompte pour paiement anticipe. Penalites de retard..." rows="2" style="resize:vertical;min-height:50px;"></textarea>
+                </div>
+              </div>
+              <div style="margin-top: var(--space-sm); font-size: 0.72rem; color: var(--text-tertiary);" id="cpfStatus">Sauvegarde automatique</div>
+            </div>
+
+            <!-- Services -->
+            <div style="padding-top: var(--space-xl); border-top: 1px solid var(--border-subtle);">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-lg);">
+                <h4>Mes services</h4>
+                <button class="btn btn--primary btn--small" onclick="openAddService()">+ Ajouter</button>
+              </div>
+              <div id="serviceFormContainer" style="display:none; margin-bottom: var(--space-md);">
+                <div class="service-form-inline" id="serviceForm">
+                  <div>
+                    <label>Nom du service</label>
+                    <input type="text" class="input" id="sf_name" placeholder="Prestation DJ">
+                  </div>
+                  <div>
+                    <label>Prix HT (EUR)</label>
+                    <input type="number" class="input" id="sf_price" placeholder="500" step="0.01" min="0">
+                  </div>
+                  <div>
+                    <label>TVA (%)</label>
+                    <input type="number" class="input" id="sf_tva" value="20" step="0.1" min="0" max="100">
+                  </div>
+                  <div style="display:flex;gap:var(--space-sm);align-items:end;">
+                    <button class="btn btn--primary btn--small" onclick="saveService()" id="sfSaveBtn">Enregistrer</button>
+                    <button class="btn btn--ghost btn--small" onclick="cancelServiceForm()">Annuler</button>
+                  </div>
+                </div>
+              </div>
+              <div class="service-list" id="serviceList">
+                <p style="text-align:center;color:var(--text-tertiary);padding:var(--space-lg);font-size:0.84rem;">Aucun service configure</p>
+              </div>
+            </div>
+            {% endif %}
           </div>
 
           <!-- Right column: Frequency + Notifications + Danger zone (single card) -->
@@ -754,8 +844,202 @@
         </div>
       </section>
 
+      {% if user.monitoring_type == 'vinted' %}
+      <!-- Section: Extension (Vinted only) -->
+      <section class="dashboard__section" id="sectionExtension" style="display:none;">
+        <div class="dashboard__section-header">
+          <h3>🔌 Extension Chrome</h3>
+        </div>
+
+        <!-- Status widget -->
+        <div class="card" style="margin-bottom:var(--space-lg);">
+          <div style="display:flex;align-items:center;gap:var(--space-lg);flex-wrap:wrap;">
+            <div>
+              <p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:2px;">Statut Vinted</p>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <span id="extVintedDot" style="width:10px;height:10px;border-radius:50%;background:#ef4444;flex-shrink:0;"></span>
+                <span id="extVintedLabel" style="font-weight:600;">Non connecté</span>
+              </div>
+            </div>
+            <div>
+              <p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:2px;">Dernière sync</p>
+              <span id="extLastSync" style="font-weight:600;">—</span>
+            </div>
+            <div>
+              <p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:2px;">Domaine</p>
+              <span id="extDomain" style="font-weight:600;">—</span>
+            </div>
+            <div style="margin-left:auto;">
+              <button class="btn btn--secondary btn--small" onclick="loadExtensionSection()">↻ Rafraîchir</button>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-xl);align-items:start;">
+
+          <!-- Config messages -->
+          <div class="card">
+            <h4 style="margin-bottom:var(--space-md);">💬 Messages aux favoris</h4>
+
+            <label class="form-label">Activer l'envoi automatique</label>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:var(--space-md);">
+              <input type="checkbox" id="extMsgEnabled" style="width:18px;height:18px;cursor:pointer;">
+              <span id="extMsgEnabledLabel" style="font-size:0.85rem;color:var(--text-secondary);">Désactivé</span>
+            </div>
+
+            <label class="form-label">Template de message</label>
+            <textarea id="extMsgTemplate" rows="5" class="form-input"
+              placeholder="{Bonjour|Salut} @{user} ! Merci d'avoir mis &quot;{article}&quot; en favori. Ouvert à la négo !"
+              style="width:100%;resize:vertical;font-family:monospace;font-size:0.82rem;"></textarea>
+            <p style="font-size:0.75rem;color:var(--text-tertiary);margin-top:4px;">
+              Variables : <code>{user}</code> <code>{article}</code> <code>{prix}</code> <code>{lien}</code><br>
+              Randomisation : <code>{Bonjour|Salut|Hey}</code>
+            </p>
+            <div id="extMsgPreview" style="margin-top:var(--space-sm);padding:10px;background:var(--bg-tertiary);border-radius:8px;font-size:0.82rem;color:var(--text-secondary);display:none;"></div>
+            <button class="btn btn--secondary btn--small" style="margin-top:6px;" onclick="previewExtTemplate()">Prévisualiser</button>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-top:var(--space-md);">
+              <div>
+                <label class="form-label">Quota journalier</label>
+                <input type="number" id="extQuotaDaily" class="form-input" min="1" max="200" value="50">
+              </div>
+              <div>
+                <label class="form-label">Intervalle poll (min)</label>
+                <input type="number" id="extPollInterval" class="form-input" min="1" max="60" value="5">
+              </div>
+            </div>
+
+            <button class="btn btn--primary" style="margin-top:var(--space-md);width:100%;" onclick="saveExtConfig()">Sauvegarder</button>
+          </div>
+
+          <!-- Secret + Logs -->
+          <div style="display:flex;flex-direction:column;gap:var(--space-lg);">
+            <div class="card">
+              <h4 style="margin-bottom:var(--space-md);">🔑 Clé d'authentification</h4>
+              <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:var(--space-sm);">
+                Copiez cette clé dans les paramètres de l'extension Chrome.
+              </p>
+              <div style="display:flex;gap:8px;">
+                <input type="text" id="extSecretDisplay" class="form-input" readonly
+                  style="font-family:monospace;font-size:0.78rem;flex:1;"
+                  placeholder="Cliquez sur Générer pour créer une clé">
+                <button class="btn btn--secondary btn--small" onclick="copyExtSecret()">Copier</button>
+              </div>
+              <button class="btn btn--danger btn--small" style="margin-top:var(--space-sm);" onclick="regenerateExtSecret()">
+                Générer / Regénérer
+              </button>
+            </div>
+
+            <div class="card">
+              <h4 style="margin-bottom:var(--space-md);">📋 Activité récente</h4>
+              <div id="extLogsContainer" style="max-height:260px;overflow-y:auto;">
+                <p style="font-size:0.82rem;color:var(--text-tertiary);">Chargement...</p>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+      {% endif %}
+
     </main>
   </div>
+
+  {% if user.monitoring_type == 'tickets' %}
+  <!-- Invoice Modal -->
+  <div class="invoice-modal" id="invoiceModal">
+    <div class="invoice-modal__card">
+      <div class="invoice-modal__header">
+        <h3>Nouvelle facture</h3>
+        <button class="invoice-modal__close" onclick="closeInvoiceModal()">&times;</button>
+      </div>
+
+      <!-- Client -->
+      <div class="invoice-modal__section">
+        <div class="invoice-modal__section-title">Client</div>
+        <div class="invoice-modal__grid">
+          <div>
+            <label style="font-size:0.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;">Nom *</label>
+            <input type="text" class="input" id="inv_client_name" placeholder="Nom du client">
+          </div>
+          <div>
+            <label style="font-size:0.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;">Email</label>
+            <input type="email" class="input" id="inv_client_email" placeholder="email@client.com">
+          </div>
+          <div class="full-width">
+            <label style="font-size:0.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;">Adresse</label>
+            <input type="text" class="input" id="inv_client_address" placeholder="Adresse du client">
+          </div>
+        </div>
+      </div>
+
+      <!-- Event & date -->
+      <div class="invoice-modal__section">
+        <div class="invoice-modal__grid">
+          <div>
+            <label style="font-size:0.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;">Evenement lie</label>
+            <input type="text" class="input" id="inv_event_name" placeholder="Nom de l'event">
+          </div>
+          <div>
+            <label style="font-size:0.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;">Date d'echeance</label>
+            <input type="date" class="input" id="inv_due_date">
+          </div>
+          <div>
+            <label style="font-size:0.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;">Statut</label>
+            <select class="input" id="inv_status" style="padding:10px 14px;">
+              <option value="en_attente">En attente</option>
+              <option value="payee">Payee</option>
+              <option value="en_retard">En retard</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Lines -->
+      <div class="invoice-modal__section">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:var(--space-md);">
+          <div class="invoice-modal__section-title" style="margin-bottom:0;">Lignes</div>
+          <div style="display:flex;gap:var(--space-sm);">
+            <button class="btn btn--small btn--success" onclick="addInvoiceLineFromService()">+ Service</button>
+            <button class="btn btn--small btn--outline" onclick="addInvoiceLine()">+ Ligne libre</button>
+          </div>
+        </div>
+        <table class="invoice-modal__lines" id="invoiceLinesTable">
+          <thead>
+            <tr>
+              <th style="width:40%;">Description</th>
+              <th style="width:12%;">Qte</th>
+              <th style="width:18%;">Prix unit. HT</th>
+              <th style="width:12%;">TVA %</th>
+              <th style="width:14%;">Montant HT</th>
+              <th style="width:4%;"></th>
+            </tr>
+          </thead>
+          <tbody id="invoiceLinesBody"></tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="invoice-modal__totals">
+          <div><span>Total HT</span><span id="inv_total_ht">0.00 EUR</span></div>
+          <div><span>TVA</span><span id="inv_total_tva">0.00 EUR</span></div>
+          <div class="invoice-modal__total-ttc"><span>Total TTC</span><span id="inv_total_ttc">0.00 EUR</span></div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="invoice-modal__section">
+        <label style="font-size:0.72rem;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:0.06em;display:block;margin-bottom:4px;">Notes / Mention legale</label>
+        <textarea class="input" id="inv_notes" rows="2" style="resize:vertical;min-height:50px;width:100%;background:var(--bg-elevated);border:1px solid var(--border-subtle);border-radius:var(--radius-sm);padding:10px 14px;color:var(--text-primary);"></textarea>
+      </div>
+
+      <!-- Footer -->
+      <div class="invoice-modal__footer">
+        <button class="btn btn--ghost" onclick="closeInvoiceModal()">Annuler</button>
+        <button class="btn btn--primary" onclick="generateInvoice()" id="invoiceGenerateBtn">Generer le PDF</button>
+      </div>
+    </div>
+  </div>
+  {% endif %}
 
   <script src="/static/js/app.js"></script>
   <script>
@@ -862,7 +1146,7 @@
         var section = this.dataset.section;
 
         // Show/hide sections based on selection
-        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}'sectionSettings'];
+        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}{% if user.monitoring_type == 'vinted' %}'sectionExtension', {% endif %}'sectionSettings'];
 
         // Show/hide analytics cards based on section
         var analyticsEl = document.getElementById('analyticsCards');
@@ -918,11 +1202,21 @@
             if (el) el.style.display = id === 'sectionNotifications' ? '' : 'none';
           });
           loadNotifSection();
+        } else if (section === 'extension') {
+          allSections.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.style.display = id === 'sectionExtension' ? '' : 'none';
+          });
+          loadExtensionSection();
         } else if (section === 'settings') {
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = id === 'sectionSettings' ? '' : 'none';
           });
+          {% if user.monitoring_type == 'tickets' %}
+          loadCompanyProfile();
+          loadServices();
+          {% endif %}
         }
 
         // Close mobile sidebar
@@ -1163,19 +1457,21 @@
     var _eventSearchDebounce = null;
 
     function toggleEventSearch() {
-      var panel = document.getElementById('eventSearchPanel');
+      var acc = document.getElementById('eventSearchAccordion');
       var detail = document.getElementById('eventDetail');
+      var isOpen = acc.classList.contains('history-accordion--open');
 
-      if (panel.style.display === 'none') {
-        panel.style.display = '';
+      if (isOpen) {
+        acc.classList.remove('history-accordion--open');
+        detail.style.display = 'none';
+      } else {
+        acc.classList.add('history-accordion--open');
         detail.style.display = 'none';
         if (!_eventsLoaded) loadEventsList();
         setTimeout(function() {
           var input = document.getElementById('eventSearchInput');
           if (input) input.focus();
         }, 100);
-      } else {
-        closeEventSearch();
       }
     }
 
@@ -1231,14 +1527,14 @@
     }
 
     async function showEventDetail(eventName) {
-      var panel = document.getElementById('eventSearchPanel');
+      var acc = document.getElementById('eventSearchAccordion');
       var detail = document.getElementById('eventDetail');
       var title = document.getElementById('eventDetailTitle');
       var statsCards = document.getElementById('eventStatsCards');
       var tbody = document.getElementById('eventBilletsBody');
 
       _currentEventName = eventName;
-      panel.style.display = 'none';
+      acc.classList.remove('history-accordion--open');
       detail.style.display = '';
       title.textContent = eventName;
       statsCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-tertiary);font-size:0.84rem;padding:var(--space-md);"><div class="spinner" style="margin:0 auto var(--space-sm);"></div>Chargement...</div>';
@@ -1297,11 +1593,13 @@
 
     function backToEventsList() {
       document.getElementById('eventDetail').style.display = 'none';
-      document.getElementById('eventSearchPanel').style.display = '';
+      var acc = document.getElementById('eventSearchAccordion');
+      acc.classList.add('history-accordion--open');
     }
 
     function closeEventSearch() {
-      document.getElementById('eventSearchPanel').style.display = 'none';
+      var acc = document.getElementById('eventSearchAccordion');
+      acc.classList.remove('history-accordion--open');
       document.getElementById('eventDetail').style.display = 'none';
     }
 
@@ -1660,41 +1958,95 @@
 
     // ===== Description Generator (Vinted only) =====
     var _descArticlesLoaded = false;
+    var _descArticles = [];
+    var _selectedArticle = null;
 
     async function loadVintedArticles() {
       if (_descArticlesLoaded) return;
-      var select = document.getElementById('descArticleSelect');
-      if (!select) return;
-      select.innerHTML = '<option value="">Chargement...</option>';
       try {
         var res = await fetch('/api/vinted-articles');
         var data = await res.json();
         if (data.success && data.articles.length > 0) {
-          select.innerHTML = '<option value="">-- Choisir un article --</option>';
-          data.articles.forEach(function(a) {
-            var opt = document.createElement('option');
-            opt.value = a.name;
-            opt.textContent = a.name;
-            if (a.purchase_price) opt.dataset.price = a.purchase_price;
-            select.appendChild(opt);
-          });
+          _descArticles = data.articles;
           _descArticlesLoaded = true;
-        } else {
-          select.innerHTML = '<option value="">Aucun article trouve</option>';
         }
       } catch (err) {
-        select.innerHTML = '<option value="">Erreur de chargement</option>';
+        console.error('Failed to load articles:', err);
       }
     }
 
+    function showArticleSuggestions() {
+      if (!_descArticlesLoaded) {
+        loadVintedArticles().then(function() {
+          filterArticleSuggestions(document.getElementById('descArticleInput').value);
+        });
+        return;
+      }
+      filterArticleSuggestions(document.getElementById('descArticleInput').value);
+    }
+
+    function filterArticleSuggestions(query) {
+      var container = document.getElementById('articleSuggestions');
+      if (!container) return;
+
+      var q = (query || '').trim().toLowerCase();
+      var filtered = _descArticles.filter(function(a) {
+        if (!q) return true;
+        return a.name.toLowerCase().indexOf(q) !== -1;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = '<div class="article-suggestions__item" style="color:var(--text-tertiary);cursor:default;">Aucun article trouve</div>';
+        container.style.display = '';
+        return;
+      }
+
+      container.innerHTML = '';
+      filtered.forEach(function(a) {
+        var item = document.createElement('div');
+        item.className = 'article-suggestions__item';
+        var label = document.createElement('span');
+        label.textContent = a.name;
+        item.appendChild(label);
+        if (a.purchase_price) {
+          var price = document.createElement('span');
+          price.className = 'article-suggestions__item-price';
+          price.textContent = a.purchase_price + '\u20ac';
+          item.appendChild(price);
+        }
+        item.addEventListener('mousedown', function(e) {
+          e.preventDefault();
+          selectArticle(a);
+        });
+        container.appendChild(item);
+      });
+      container.style.display = '';
+    }
+
+    function selectArticle(article) {
+      _selectedArticle = article;
+      var input = document.getElementById('descArticleInput');
+      input.value = article.name;
+      document.getElementById('articleSuggestions').style.display = 'none';
+    }
+
+    // Close suggestions on click outside
+    document.addEventListener('click', function(e) {
+      var input = document.getElementById('descArticleInput');
+      var suggestions = document.getElementById('articleSuggestions');
+      if (input && suggestions && !input.contains(e.target) && !suggestions.contains(e.target)) {
+        suggestions.style.display = 'none';
+      }
+    });
+
     async function generateDescription() {
-      var select = document.getElementById('descArticleSelect');
+      var input = document.getElementById('descArticleInput');
       var priceInput = document.getElementById('descPrice');
       var conditionSelect = document.getElementById('descCondition');
       var preview = document.getElementById('descPreview');
       var descText = document.getElementById('descText');
 
-      var article = select.value;
+      var article = input.value.trim();
       if (!article) {
         showToast('Selectionne un article', 'error');
         return;
@@ -1716,13 +2068,15 @@
       lines.push('Envoi sous 48H bien emballe \uD83D\uDCE6');
 
       // Show description immediately while hashtags load
-      descText.textContent = lines.join('\n') + '\n\n⏳ Generation des hashtags...';
+      descText.textContent = lines.join('\n') + '\n\n\u23F3 Generation des hashtags...';
       preview.style.display = '';
 
       // Calculate ROI estimate
       var roiBadge = document.getElementById('descRoiBadge');
-      var selectedOpt = select.options[select.selectedIndex];
-      var purchasePrice = parseFloat((selectedOpt.dataset.price || '').replace(',', '.').replace(/[^\d.]/g, ''));
+      var purchasePrice = 0;
+      if (_selectedArticle && _selectedArticle.purchase_price) {
+        purchasePrice = parseFloat((_selectedArticle.purchase_price || '').replace(',', '.').replace(/[^\d.]/g, ''));
+      }
       var salePrice = parseFloat(price);
 
       if (purchasePrice > 0 && salePrice > 0) {
@@ -1751,11 +2105,9 @@
           var hashtagText = data.items[0].text;
           descText.textContent = lines.join('\n') + '\n\n' + hashtagText;
         } else {
-          // No hashtags — just show description without the loading message
           descText.textContent = lines.join('\n');
         }
       } catch (err) {
-        // Fallback: show description without hashtags
         descText.textContent = lines.join('\n');
       }
     }
@@ -1926,6 +2278,555 @@
         showToast('Erreur de connexion', 'error');
       }
     }
+
+    // ===== BILLING: Company Profile, Services, Invoice =====
+    {% if user.monitoring_type == 'tickets' %}
+
+    var _cpfDebounceTimer = null;
+    var _cpfLoaded = false;
+    var _servicesData = [];
+    var _editingServiceId = null;
+
+    // ---- Company Profile ----
+    async function loadCompanyProfile() {
+      if (_cpfLoaded) return;
+      try {
+        var res = await fetch('/api/user/company-profile');
+        var data = await res.json();
+        if (!data.success) return;
+
+        var form = document.getElementById('companyProfileForm');
+        if (!form) return;
+        var inputs = form.querySelectorAll('[data-field]');
+        inputs.forEach(function(inp) {
+          var field = inp.getAttribute('data-field');
+          if (data[field] !== undefined && data[field] !== null) {
+            inp.value = data[field];
+          }
+          inp.addEventListener('input', function() { debounceSaveCompanyProfile(); });
+        });
+        _cpfLoaded = true;
+      } catch(e) { console.error('loadCompanyProfile:', e); }
+    }
+
+    function debounceSaveCompanyProfile() {
+      clearTimeout(_cpfDebounceTimer);
+      var statusEl = document.getElementById('cpfStatus');
+      if (statusEl) statusEl.textContent = 'Sauvegarde en cours...';
+      _cpfDebounceTimer = setTimeout(saveCompanyProfile, 800);
+    }
+
+    async function saveCompanyProfile() {
+      var form = document.getElementById('companyProfileForm');
+      if (!form) return;
+      var payload = {};
+      form.querySelectorAll('[data-field]').forEach(function(inp) {
+        payload[inp.getAttribute('data-field')] = inp.value;
+      });
+
+      try {
+        var res = await fetch('/api/user/company-profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        var statusEl = document.getElementById('cpfStatus');
+        if (data.success) {
+          if (statusEl) statusEl.textContent = 'Sauvegarde OK';
+          setTimeout(function() { if (statusEl) statusEl.textContent = 'Sauvegarde automatique'; }, 2000);
+        } else {
+          if (statusEl) statusEl.textContent = 'Erreur de sauvegarde';
+        }
+      } catch(e) {
+        var statusEl = document.getElementById('cpfStatus');
+        if (statusEl) statusEl.textContent = 'Erreur de connexion';
+      }
+    }
+
+    // ---- Services CRUD ----
+    async function loadServices() {
+      try {
+        var res = await fetch('/api/services');
+        var data = await res.json();
+        if (data.success) {
+          _servicesData = data.services;
+          renderServices();
+        }
+      } catch(e) { console.error('loadServices:', e); }
+    }
+
+    function renderServices() {
+      var container = document.getElementById('serviceList');
+      if (!container) return;
+
+      if (!_servicesData || _servicesData.length === 0) {
+        container.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-lg);font-size:0.84rem;">Aucun service configure</p>';
+        return;
+      }
+
+      var html = '';
+      _servicesData.forEach(function(svc) {
+        html += '<div class="service-item" data-id="' + svc.id + '">' +
+          '<div class="service-item__info">' +
+            '<div class="service-item__name">' + escapeHtml(svc.name) + '</div>' +
+            '<div class="service-item__meta">' + parseFloat(svc.unit_price_ht).toFixed(2) + ' EUR HT · TVA ' + parseFloat(svc.tva_rate).toFixed(0) + '%' +
+              (svc.description ? ' · ' + escapeHtml(svc.description.substring(0, 40)) : '') +
+            '</div>' +
+          '</div>' +
+          '<div class="service-item__actions">' +
+            '<button class="btn btn--ghost btn--small" onclick="editService(\'' + svc.id + '\')">Modifier</button>' +
+            '<button class="btn btn--danger btn--small" onclick="deleteService(\'' + svc.id + '\')">Supprimer</button>' +
+          '</div>' +
+        '</div>';
+      });
+      container.innerHTML = html;
+    }
+
+    function escapeHtml(str) {
+      var div = document.createElement('div');
+      div.appendChild(document.createTextNode(str));
+      return div.innerHTML;
+    }
+
+    function openAddService() {
+      _editingServiceId = null;
+      document.getElementById('sf_name').value = '';
+      document.getElementById('sf_price').value = '';
+      document.getElementById('sf_tva').value = '20';
+      document.getElementById('sfSaveBtn').textContent = 'Enregistrer';
+      document.getElementById('serviceFormContainer').style.display = '';
+      document.getElementById('sf_name').focus();
+    }
+
+    function editService(id) {
+      var svc = _servicesData.find(function(s) { return s.id === id; });
+      if (!svc) return;
+      _editingServiceId = id;
+      document.getElementById('sf_name').value = svc.name;
+      document.getElementById('sf_price').value = svc.unit_price_ht;
+      document.getElementById('sf_tva').value = svc.tva_rate;
+      document.getElementById('sfSaveBtn').textContent = 'Mettre a jour';
+      document.getElementById('serviceFormContainer').style.display = '';
+      document.getElementById('sf_name').focus();
+    }
+
+    function cancelServiceForm() {
+      document.getElementById('serviceFormContainer').style.display = 'none';
+      _editingServiceId = null;
+    }
+
+    async function saveService() {
+      var name = document.getElementById('sf_name').value.trim();
+      var price = parseFloat(document.getElementById('sf_price').value) || 0;
+      var tva = parseFloat(document.getElementById('sf_tva').value) || 20;
+
+      if (!name) { showToast('Nom du service requis', 'error'); return; }
+
+      var payload = { name: name, unit_price_ht: price, tva_rate: tva };
+
+      try {
+        var url = _editingServiceId ? '/api/services/' + _editingServiceId : '/api/services';
+        var method = _editingServiceId ? 'PATCH' : 'POST';
+        var res = await fetch(url, {
+          method: method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        var data = await res.json();
+        if (data.success) {
+          showToast(_editingServiceId ? 'Service mis a jour' : 'Service ajoute', 'success');
+          cancelServiceForm();
+          loadServices();
+        } else {
+          showToast(data.error || 'Erreur', 'error');
+        }
+      } catch(e) { showToast('Erreur de connexion', 'error'); }
+    }
+
+    async function deleteService(id) {
+      if (!confirm('Supprimer ce service ?')) return;
+      try {
+        var res = await fetch('/api/services/' + id, { method: 'DELETE' });
+        var data = await res.json();
+        if (data.success) {
+          showToast('Service supprime', 'info');
+          loadServices();
+        } else {
+          showToast(data.error || 'Erreur', 'error');
+        }
+      } catch(e) { showToast('Erreur de connexion', 'error'); }
+    }
+
+    // ---- Invoice Modal ----
+
+    function openInvoiceModal(eventName) {
+      // Check company profile
+      var cpName = document.getElementById('cpf_company_name');
+      if (cpName && !cpName.value.trim()) {
+        showToast('Configure ton profil entreprise dans Parametres', 'error');
+        return;
+      }
+
+      var modal = document.getElementById('invoiceModal');
+      if (!modal) return;
+
+      // Reset form
+      document.getElementById('inv_client_name').value = '';
+      document.getElementById('inv_client_email').value = '';
+      document.getElementById('inv_client_address').value = '';
+      document.getElementById('inv_event_name').value = eventName || '';
+      document.getElementById('inv_status').value = 'en_attente';
+
+      // Default due date: +30 days
+      var due = new Date();
+      due.setDate(due.getDate() + 30);
+      document.getElementById('inv_due_date').value = due.toISOString().split('T')[0];
+
+      // Pre-fill notes from invoice_footer
+      var footerEl = document.getElementById('cpf_invoice_footer');
+      document.getElementById('inv_notes').value = footerEl ? footerEl.value : '';
+
+      // Clear lines
+      document.getElementById('invoiceLinesBody').innerHTML = '';
+      recalcInvoiceTotals();
+
+      modal.classList.add('invoice-modal--open');
+    }
+
+    function closeInvoiceModal() {
+      var modal = document.getElementById('invoiceModal');
+      if (modal) modal.classList.remove('invoice-modal--open');
+    }
+
+    function addInvoiceLine(desc, qty, price, tva) {
+      var tbody = document.getElementById('invoiceLinesBody');
+      var row = document.createElement('tr');
+      row.innerHTML =
+        '<td><input type="text" class="input" placeholder="Description" value="' + (desc || '') + '" oninput="recalcInvoiceTotals()"></td>' +
+        '<td><input type="number" class="input" value="' + (qty || 1) + '" min="1" step="1" style="width:60px;" oninput="recalcInvoiceTotals()"></td>' +
+        '<td><input type="number" class="input" value="' + (price || 0) + '" min="0" step="0.01" style="width:100px;" oninput="recalcInvoiceTotals()"></td>' +
+        '<td><input type="number" class="input" value="' + (tva !== undefined ? tva : 20) + '" min="0" max="100" step="0.1" style="width:60px;" oninput="recalcInvoiceTotals()"></td>' +
+        '<td style="font-weight:600;font-size:0.88rem;color:var(--text-primary);" class="line-montant">0.00</td>' +
+        '<td><span class="line-remove" onclick="this.closest(\'tr\').remove();recalcInvoiceTotals();">&times;</span></td>';
+      tbody.appendChild(row);
+      recalcInvoiceTotals();
+    }
+
+    function addInvoiceLineFromService() {
+      if (!_servicesData || _servicesData.length === 0) {
+        showToast('Aucun service configure. Ajoute-en dans Parametres.', 'error');
+        return;
+      }
+      // Add a dropdown to pick a service
+      var tbody = document.getElementById('invoiceLinesBody');
+      var row = document.createElement('tr');
+
+      var options = '<option value="">-- Choisir un service --</option>';
+      _servicesData.forEach(function(svc) {
+        options += '<option value="' + svc.id + '">' + escapeHtml(svc.name) + ' (' + parseFloat(svc.unit_price_ht).toFixed(2) + ' EUR)</option>';
+      });
+
+      row.innerHTML =
+        '<td><select class="input" onchange="applyServiceToLine(this)" style="min-width:120px;">' + options + '</select></td>' +
+        '<td><input type="number" class="input" value="1" min="1" step="1" style="width:60px;" oninput="recalcInvoiceTotals()"></td>' +
+        '<td><input type="number" class="input" value="0" min="0" step="0.01" style="width:100px;" oninput="recalcInvoiceTotals()"></td>' +
+        '<td><input type="number" class="input" value="20" min="0" max="100" step="0.1" style="width:60px;" oninput="recalcInvoiceTotals()"></td>' +
+        '<td style="font-weight:600;font-size:0.88rem;color:var(--text-primary);" class="line-montant">0.00</td>' +
+        '<td><span class="line-remove" onclick="this.closest(\'tr\').remove();recalcInvoiceTotals();">&times;</span></td>';
+      tbody.appendChild(row);
+    }
+
+    function applyServiceToLine(select) {
+      var id = select.value;
+      var svc = _servicesData.find(function(s) { return s.id === id; });
+      if (!svc) return;
+
+      var row = select.closest('tr');
+      var inputs = row.querySelectorAll('input');
+      // inputs: [qty, price, tva]
+      inputs[0].value = 1;
+      inputs[1].value = svc.unit_price_ht;
+      inputs[2].value = svc.tva_rate;
+
+      // Replace select with text input showing the service name
+      var td = select.parentElement;
+      td.innerHTML = '<input type="text" class="input" value="' + escapeHtml(svc.name) + '" oninput="recalcInvoiceTotals()">';
+      recalcInvoiceTotals();
+    }
+
+    function recalcInvoiceTotals() {
+      var tbody = document.getElementById('invoiceLinesBody');
+      if (!tbody) return;
+      var rows = tbody.querySelectorAll('tr');
+      var totalHt = 0;
+      var totalTva = 0;
+
+      rows.forEach(function(row) {
+        var inputs = row.querySelectorAll('input[type="number"]');
+        if (inputs.length < 3) return;
+        var qty = parseFloat(inputs[0].value) || 0;
+        var price = parseFloat(inputs[1].value) || 0;
+        var tva = parseFloat(inputs[2].value) || 0;
+        var montant = qty * price;
+        totalHt += montant;
+        totalTva += montant * tva / 100;
+
+        var montantEl = row.querySelector('.line-montant');
+        if (montantEl) montantEl.textContent = montant.toFixed(2);
+      });
+
+      document.getElementById('inv_total_ht').textContent = totalHt.toFixed(2) + ' EUR';
+      document.getElementById('inv_total_tva').textContent = totalTva.toFixed(2) + ' EUR';
+      document.getElementById('inv_total_ttc').textContent = (totalHt + totalTva).toFixed(2) + ' EUR';
+    }
+
+    async function generateInvoice() {
+      var clientName = document.getElementById('inv_client_name').value.trim();
+      if (!clientName) { showToast('Le nom du client est requis', 'error'); return; }
+
+      var tbody = document.getElementById('invoiceLinesBody');
+      var rows = tbody.querySelectorAll('tr');
+      if (rows.length === 0) { showToast('Ajoute au moins une ligne', 'error'); return; }
+
+      var lines = [];
+      rows.forEach(function(row) {
+        var descInput = row.querySelector('input[type="text"]');
+        var numInputs = row.querySelectorAll('input[type="number"]');
+        if (numInputs.length < 3) return;
+        lines.push({
+          description: descInput ? descInput.value : '',
+          quantity: parseFloat(numInputs[0].value) || 1,
+          unit_price_ht: parseFloat(numInputs[1].value) || 0,
+          tva_rate: parseFloat(numInputs[2].value) || 0,
+        });
+      });
+
+      if (lines.length === 0) { showToast('Aucune ligne valide', 'error'); return; }
+
+      var dueDateInput = document.getElementById('inv_due_date').value;
+      var dueDate = '';
+      if (dueDateInput) {
+        var parts = dueDateInput.split('-');
+        dueDate = parts[2] + '/' + parts[1] + '/' + parts[0];
+      }
+
+      var payload = {
+        client_name: clientName,
+        client_email: document.getElementById('inv_client_email').value.trim(),
+        client_address: document.getElementById('inv_client_address').value.trim(),
+        event_name: document.getElementById('inv_event_name').value.trim(),
+        due_date: dueDate,
+        status: document.getElementById('inv_status').value,
+        notes: document.getElementById('inv_notes').value.trim(),
+        lines: lines,
+      };
+
+      var btn = document.getElementById('invoiceGenerateBtn');
+      var origText = btn.textContent;
+      btn.innerHTML = '<div class="spinner"></div>';
+      btn.disabled = true;
+
+      try {
+        var res = await fetch('/api/invoices/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+
+        if (res.ok) {
+          var blob = await res.blob();
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement('a');
+          var disposition = res.headers.get('Content-Disposition') || '';
+          var filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+          a.download = filenameMatch ? filenameMatch[1] : 'facture.pdf';
+          a.href = url;
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+          showToast('Facture generee !', 'success');
+          closeInvoiceModal();
+        } else {
+          var data = await res.json();
+          showToast(data.error || 'Erreur lors de la generation', 'error');
+        }
+      } catch(e) {
+        showToast('Erreur de connexion', 'error');
+      }
+
+      btn.textContent = origText;
+      btn.disabled = false;
+    }
+
+    {% endif %}
+
+    {% if user.monitoring_type == 'vinted' %}
+    // ── Extension Chrome functions ──────────────────────────────────────────
+
+    var _extCfg = {};
+
+    function loadExtensionSection() {
+      fetch('/api/extension/config/dashboard')
+        .then(function(r) { return r.json(); })
+        .then(function(cfg) {
+          _extCfg = cfg;
+
+          // Status widget
+          var dot = document.getElementById('extVintedDot');
+          var label = document.getElementById('extVintedLabel');
+          var sidebarDot = document.getElementById('sidebarExtDot');
+
+          if (cfg.vinted_connected) {
+            if (dot) { dot.style.background = '#22c55e'; }
+            if (label) label.textContent = 'Connecté (vinted.' + (cfg.vinted_domain || 'fr') + ')';
+            if (sidebarDot) sidebarDot.style.display = 'none';
+          } else {
+            if (dot) { dot.style.background = '#ef4444'; }
+            if (label) label.textContent = 'Non connecté';
+            if (sidebarDot) sidebarDot.style.display = 'inline-block';
+          }
+
+          var syncEl = document.getElementById('extLastSync');
+          if (syncEl) {
+            if (cfg.vinted_synced_at) {
+              var diff = Math.floor((Date.now() - new Date(cfg.vinted_synced_at + 'Z').getTime()) / 1000);
+              syncEl.textContent = diff < 60 ? 'il y a ' + diff + 's'
+                : diff < 3600 ? 'il y a ' + Math.floor(diff/60) + 'min'
+                : 'il y a ' + Math.floor(diff/3600) + 'h';
+            } else {
+              syncEl.textContent = '—';
+            }
+          }
+
+          var domEl = document.getElementById('extDomain');
+          if (domEl) domEl.textContent = cfg.vinted_domain ? 'vinted.' + cfg.vinted_domain : '—';
+
+          // Config fields
+          var chk = document.getElementById('extMsgEnabled');
+          if (chk) {
+            chk.checked = !!cfg.msg_enabled;
+            var lbl = document.getElementById('extMsgEnabledLabel');
+            if (lbl) lbl.textContent = cfg.msg_enabled ? 'Activé' : 'Désactivé';
+          }
+          var tmpl = document.getElementById('extMsgTemplate');
+          if (tmpl) tmpl.value = cfg.msg_template || '';
+          var quota = document.getElementById('extQuotaDaily');
+          if (quota) quota.value = cfg.msg_quota_daily || 50;
+          var poll = document.getElementById('extPollInterval');
+          if (poll) poll.value = cfg.poll_interval_min || 5;
+          var sec = document.getElementById('extSecretDisplay');
+          if (sec) sec.value = cfg.ext_secret || '';
+        })
+        .catch(function() { showToast('Erreur chargement config extension', 'error'); });
+
+      loadExtLogs();
+    }
+
+    function loadExtLogs() {
+      fetch('/api/extension/logs?limit=30')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          var container = document.getElementById('extLogsContainer');
+          if (!container) return;
+          var logs = data.logs || [];
+          if (!logs.length) {
+            container.innerHTML = '<p style="font-size:0.82rem;color:var(--text-tertiary);">Aucune activité enregistrée.</p>';
+            return;
+          }
+          var icons = { message_sent: '💬', label_downloaded: '📦', error: '❌', sync: '🔄' };
+          container.innerHTML = logs.map(function(l) {
+            var icon = icons[l.action_type] || '•';
+            var dt = new Date(l.created_at + 'Z');
+            var timeStr = dt.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) + ' ' + dt.toLocaleDateString('fr-FR', {day:'numeric',month:'short'});
+            var color = l.status === 'ok' ? 'var(--text-primary)' : '#ef4444';
+            return '<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border-subtle);">'
+              + '<span style="flex-shrink:0;">' + icon + '</span>'
+              + '<div style="flex:1;min-width:0;">'
+              + '<span style="font-size:0.78rem;font-weight:600;color:' + color + ';">' + (l.action_type || '') + '</span>'
+              + (l.error ? '<br><span style="font-size:0.72rem;color:#ef4444;">' + l.error + '</span>' : '')
+              + (l.item_id ? '<br><span style="font-size:0.7rem;color:var(--text-tertiary);">item:' + l.item_id + '</span>' : '')
+              + '</div>'
+              + '<span style="font-size:0.7rem;color:var(--text-tertiary);flex-shrink:0;">' + timeStr + '</span>'
+              + '</div>';
+          }).join('');
+        })
+        .catch(function() {});
+    }
+
+    function saveExtConfig() {
+      var payload = {
+        msg_enabled: document.getElementById('extMsgEnabled') ? document.getElementById('extMsgEnabled').checked : true,
+        msg_template: document.getElementById('extMsgTemplate') ? document.getElementById('extMsgTemplate').value : '',
+        msg_quota_daily: parseInt(document.getElementById('extQuotaDaily') ? document.getElementById('extQuotaDaily').value : 50),
+        poll_interval_min: parseInt(document.getElementById('extPollInterval') ? document.getElementById('extPollInterval').value : 5),
+      };
+      fetch('/api/extension/config/dashboard', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+        .then(function(r) { return r.json(); })
+        .then(function() { showToast('Config extension sauvegardée', 'success'); })
+        .catch(function() { showToast('Erreur sauvegarde', 'error'); });
+    }
+
+    function regenerateExtSecret() {
+      if (!confirm('Regénérer la clé ? L\'extension devra être reconfig avec la nouvelle clé.')) return;
+      fetch('/api/extension/secret/generate', { method: 'POST' })
+        .then(function(r) { return r.json(); })
+        .then(function(d) {
+          var el = document.getElementById('extSecretDisplay');
+          if (el) el.value = d.secret || '';
+          showToast('Nouvelle clé générée', 'success');
+        })
+        .catch(function() { showToast('Erreur', 'error'); });
+    }
+
+    function copyExtSecret() {
+      var el = document.getElementById('extSecretDisplay');
+      if (!el || !el.value) return;
+      navigator.clipboard.writeText(el.value).then(function() {
+        showToast('Clé copiée', 'success');
+      });
+    }
+
+    function previewExtTemplate() {
+      var tmpl = document.getElementById('extMsgTemplate') ? document.getElementById('extMsgTemplate').value : '';
+      if (!tmpl) return;
+      // Simple client-side preview
+      var result = tmpl.replace(/\{([^}|]+(?:\|[^}|]+)+)\}/g, function(m, g) {
+        var opts = g.split('|').map(function(s) { return s.trim(); }).filter(Boolean);
+        return opts[Math.floor(Math.random() * opts.length)];
+      });
+      result = result
+        .replace(/\{user\}/g, 'jean_dupont42')
+        .replace(/\{article\}/g, 'Veste North Face M noir')
+        .replace(/\{prix\}/g, '45,00 €')
+        .replace(/\{lien\}/g, 'https://vinted.fr/items/123456');
+      var prev = document.getElementById('extMsgPreview');
+      if (prev) { prev.textContent = result; prev.style.display = 'block'; }
+    }
+
+    // Auto-toggle label on checkbox change
+    (function() {
+      var chk = document.getElementById('extMsgEnabled');
+      if (chk) {
+        chk.addEventListener('change', function() {
+          var lbl = document.getElementById('extMsgEnabledLabel');
+          if (lbl) lbl.textContent = chk.checked ? 'Activé' : 'Désactivé';
+        });
+      }
+    })();
+
+    // Handle deep-link #extension on page load
+    if (window.location.hash === '#extension') {
+      var extLink = document.querySelector('.sidebar__link[data-section="extension"]');
+      if (extLink) extLink.click();
+    }
+
+    {% endif %}
   </script>
 </body>
 </html>
