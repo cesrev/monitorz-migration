@@ -136,6 +136,17 @@ def _build_credentials_from_account(account: dict) -> Optional[Credentials]:
     return creds
 
 
+def _parse_price(val):
+    """Parse a price string like '12,50€' or '12.50' to float."""
+    if not val:
+        return 0.0
+    cleaned = val.replace("\u20ac", "").replace(",", ".").replace("\u00a0", "").strip()
+    try:
+        return float(cleaned)
+    except (ValueError, TypeError):
+        return 0.0
+
+
 def _create_spreadsheet_for_user(user_id: int, monitoring_type: str, plan: str = "starter") -> Optional[dict]:
     """Create a Google Sheet in the user's Drive and register it in DB.
 
@@ -798,6 +809,98 @@ def event_stats():
         })
     except Exception as exc:
         logger.error("Failed to load event stats: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
+
+
+@app.route("/api/create-event-sheet", methods=["POST"])
+@login_required
+def create_event_sheet():
+    """Create a new sheet tab for a specific event with its tickets."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    data = request.get_json(silent=True)
+    event_name = (data or {}).get("event", "").strip()
+
+    if not event_name:
+        return jsonify({"success": False, "error": "Parametre event requis"}), 400
+
+    if not user or user.get("monitoring_type") != "tickets":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs tickets"}), 403
+
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        # Read all data from Commandes
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:J",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": False, "error": "Aucune donnee dans le Sheet"}), 400
+
+        headers = rows[0]
+
+        # Filter rows for this event (column 0 = Evenement)
+        event_rows = [row for row in rows[1:] if row and row[0] and row[0].strip().lower() == event_name.lower()]
+
+        if not event_rows:
+            return jsonify({"success": False, "error": f"Aucun billet trouve pour '{event_name}'"}), 404
+
+        # Sanitize tab name (max 100 chars, no special sheet chars)
+        tab_name = event_name[:100].replace("/", "-").replace("\\", "-").replace("?", "").replace("*", "").replace("[", "(").replace("]", ")")
+
+        # Check if tab already exists
+        meta = sheets_service.spreadsheets().get(spreadsheetId=spreadsheet_id).execute()
+        existing_tabs = [s["properties"]["title"] for s in meta.get("sheets", [])]
+
+        if tab_name in existing_tabs:
+            # Tab exists — clear and rewrite
+            sheets_service.spreadsheets().values().clear(
+                spreadsheetId=spreadsheet_id,
+                range=f"'{tab_name}'!A:J",
+            ).execute()
+        else:
+            # Create new tab
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": [{"addSheet": {"properties": {"title": tab_name}}}]},
+            ).execute()
+
+        # Write headers + event rows
+        write_data = [headers] + event_rows
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=f"'{tab_name}'!A1",
+            valueInputOption="RAW",
+            body={"values": write_data},
+        ).execute()
+
+        logger.info("Created event sheet tab '%s' with %d rows for user id=%d", tab_name, len(event_rows), user_id)
+        return jsonify({
+            "success": True,
+            "tab_name": tab_name,
+            "rows_count": len(event_rows),
+            "message": f"Onglet '{tab_name}' cree avec {len(event_rows)} billet(s)",
+        })
+    except Exception as exc:
+        logger.error("Failed to create event sheet: %s", exc)
         return jsonify({"success": False, "error": str(exc)}), 500
 
 
@@ -2213,6 +2316,117 @@ def vinted_sell_times():
 
     except Exception as exc:
         logger.error("Failed to get sell times: %s", exc)
+        return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
+
+
+# ============================================
+# ROUTES - VINTED ANALYTICS (monthly stats)
+# ============================================
+
+@app.route("/api/vinted-analytics")
+@login_required
+def vinted_analytics():
+    """Return monthly analytics for Vinted: spent, received, profit."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+
+    if not user or user.get("monitoring_type") != "vinted":
+        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Vinted"}), 403
+
+    mtype = user["monitoring_type"]
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Commandes!A:I",
+        ).execute()
+        rows = result.get("values", [])
+
+        if len(rows) < 2:
+            return jsonify({"success": True, "spent": 0, "received": 0, "profit": 0})
+
+        headers = rows[0]
+        is_pro = len(headers) >= 7
+
+        now = datetime.now()
+        current_month = now.month
+        current_year = now.year
+
+        total_spent = 0.0
+        total_received = 0.0
+
+        for row in rows[1:]:
+            if not row or not row[0].strip():
+                continue
+
+            if is_pro:
+                # Pro: Article | Prix Achat | Date Achat | Prix Vente | Date Vente | ...
+                purchase_price_str = row[1].strip() if len(row) > 1 else ""
+                purchase_date_str = row[2].strip() if len(row) > 2 else ""
+                sale_price_str = row[3].strip() if len(row) > 3 else ""
+                sale_date_str = row[4].strip() if len(row) > 4 else ""
+            else:
+                # Starter: Article | Prix Vente | Date Vente | Compte
+                purchase_price_str = ""
+                purchase_date_str = ""
+                sale_price_str = row[1].strip() if len(row) > 1 else ""
+                sale_date_str = row[2].strip() if len(row) > 2 else ""
+
+            # Parse date to check if it's current month
+            def _parse_month_year(d):
+                if not d:
+                    return None, None
+                d = d.strip()
+                m = re.match(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})", d)
+                if m:
+                    return int(m.group(2)), int(m.group(3))
+                m2 = re.match(r"(\d{4})-(\d{2})-(\d{2})", d)
+                if m2:
+                    return int(m2.group(2)), int(m2.group(1))
+                return None, None
+
+            # Spent this month (purchases)
+            if purchase_price_str and purchase_date_str:
+                p_month, p_year = _parse_month_year(purchase_date_str)
+                if p_month == current_month and p_year == current_year:
+                    val = _parse_price(purchase_price_str)
+                    if val > 0:
+                        total_spent += val
+
+            # Received this month (sales)
+            if sale_price_str and sale_date_str:
+                s_month, s_year = _parse_month_year(sale_date_str)
+                if s_month == current_month and s_year == current_year:
+                    val = _parse_price(sale_price_str)
+                    if val > 0:
+                        total_received += val
+
+        profit = total_received - total_spent
+
+        return jsonify({
+            "success": True,
+            "spent": round(total_spent, 2),
+            "received": round(total_received, 2),
+            "profit": round(profit, 2),
+        })
+
+    except Exception as exc:
+        logger.error("Failed to get vinted analytics: %s", exc)
         return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
 
 

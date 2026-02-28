@@ -55,10 +55,6 @@
         </a>
         <a href="#" class="sidebar__link" data-section="hashtags">
           <span class="sidebar__link-icon"><img src="/static/img/icon-hashtag.png" alt="Hashtags"></span>
-          <span>Hashtags</span>
-        </a>
-        <a href="#" class="sidebar__link" data-section="description">
-          <span class="sidebar__link-icon"><img src="/static/img/icon-description.png" alt="Description"></span>
           <span>Description</span>
         </a>
         {% endif %}
@@ -169,6 +165,27 @@
           <div class="stat-card__label">Monitoring</div>
         </div>
       </div>
+
+      <!-- Analytics Cards (Vinted only) -->
+      {% if user.monitoring_type == 'vinted' %}
+      <div class="dashboard__stats" id="analyticsCards" style="margin-top: 0;">
+        <div class="stat-card animate-in animate-in--delay-2">
+          <div class="stat-card__icon">💸</div>
+          <div class="stat-card__value" id="analyticsSpent">--</div>
+          <div class="stat-card__label">Depense ce mois</div>
+        </div>
+        <div class="stat-card animate-in animate-in--delay-3">
+          <div class="stat-card__icon">💰</div>
+          <div class="stat-card__value" id="analyticsReceived">--</div>
+          <div class="stat-card__label">Recu ce mois</div>
+        </div>
+        <div class="stat-card animate-in animate-in--delay-4">
+          <div class="stat-card__icon">📈</div>
+          <div class="stat-card__value" id="analyticsProfit">--</div>
+          <div class="stat-card__label">Benefice ce mois</div>
+        </div>
+      </div>
+      {% endif %}
 
       <!-- Section: Gmail Accounts -->
       <section class="dashboard__section animate-in animate-in--delay-5" id="sectionGmail">
@@ -310,7 +327,11 @@
                   <button class="search-toggle" onclick="backToEventsList()" title="Retour">
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
                   </button>
-                  <span style="font-size:0.88rem;font-weight:600;color:var(--text-primary);" id="eventDetailTitle"></span>
+                  <span style="font-size:0.88rem;font-weight:600;color:var(--text-primary);flex:1;" id="eventDetailTitle"></span>
+                  <button class="btn btn--success btn--small" id="createEventSheetBtn" onclick="createEventSheet()" title="Creer un onglet Sheet pour cet event">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                    Organiser dans Sheet
+                  </button>
                 </div>
               </div>
               <div style="padding: var(--space-lg);">
@@ -474,19 +495,59 @@
       {% if user.monitoring_type == 'vinted' %}
       <section class="dashboard__section" id="sectionHashtags" style="display: none;">
         <div class="dashboard__section-header">
-          <h3># Farm a Hashtags</h3>
-          <span style="font-size: 0.75rem; color: var(--text-tertiary);">v2 - 15 max / article</span>
+          <h3>Description</h3>
         </div>
 
-        <!-- Custom tags -->
-        <div class="card" style="margin-bottom: var(--space-md); padding: 12px 14px;">
-          <h4 style="margin-bottom: 8px; font-size: 0.82rem;">Hashtags personnalises</h4>
-          <div style="display: flex; gap: 6px; align-items: center;">
-            <input type="text" class="input" id="customTagInput" placeholder="Ex: MonShop, Paris" style="flex: 1; padding: 6px 10px; font-size: 0.8rem;">
-            <button class="btn btn--primary btn--small" style="padding: 5px 12px; font-size: 0.75rem;" onclick="addCustomTag()">Ajouter</button>
+        <!-- Description Generator -->
+        <div class="card" style="padding: 14px 16px; margin-bottom: var(--space-md);">
+          <h4 style="margin-bottom: 10px; font-size: 0.82rem;">Generateur de description</h4>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+            <div>
+              <label style="font-size: 0.72rem; color: var(--text-tertiary); display: block; margin-bottom: 3px;">Article</label>
+              <select id="descArticleSelect" class="input" style="width: 100%; padding: 7px 10px; font-size: 0.8rem;">
+                <option value="">Selectionner...</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.72rem; color: var(--text-tertiary); display: block; margin-bottom: 3px;">Etat</label>
+              <select id="descCondition" class="input" style="width: 100%; padding: 7px 10px; font-size: 0.8rem;">
+                <option value="Neuf avec etiquette">Neuf avec etiquette</option>
+                <option value="Neuf sans etiquette">Neuf sans etiquette</option>
+                <option value="Tres bon etat" selected>Tres bon etat</option>
+                <option value="Bon etat">Bon etat</option>
+                <option value="Satisfaisant">Satisfaisant</option>
+              </select>
+            </div>
           </div>
-          <div id="customTagsList" style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 6px;"></div>
+          <div style="display: flex; gap: var(--space-sm); margin-top: var(--space-sm); align-items: flex-end;">
+            <div style="flex: 1;">
+              <label style="font-size: 0.72rem; color: var(--text-tertiary); display: block; margin-bottom: 3px;">Prix de vente</label>
+              <input type="number" class="input" id="descPrice" placeholder="€" style="width: 100%; padding: 7px 10px; font-size: 0.8rem;">
+            </div>
+            <button class="btn btn--primary" onclick="generateDescription()" style="padding: 7px 20px; white-space: nowrap;">Generer</button>
+          </div>
         </div>
+
+        <!-- Description + Hashtags Preview -->
+        <div id="descPreview" class="card desc-preview" style="display: none; margin-bottom: var(--space-md); padding: 14px 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <span style="display:flex;align-items:center;gap:var(--space-sm);">
+              <span style="font-size: 0.78rem; color: var(--text-tertiary);">Apercu</span>
+              <span id="descRoiBadge" style="display:none;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;"></span>
+            </span>
+            <button class="hashtag-copy-btn" id="descCopyBtn" onclick="copyDescription()" title="Copier tout">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            </button>
+          </div>
+          <pre id="descText" class="desc-preview__text"></pre>
+        </div>
+
+        <hr style="border: none; border-top: 1px solid var(--border-subtle); margin-bottom: var(--space-md);">
+
+        <h4 style="font-size: 0.82rem; margin-bottom: var(--space-sm); display: flex; align-items: center; justify-content: space-between;">
+          <span>Farm a Hashtags</span>
+          <span style="font-size: 0.68rem; color: var(--text-tertiary); font-weight: 400;">15 max / article</span>
+        </h4>
 
         <!-- Single item generator -->
         <div class="card" style="margin-bottom: var(--space-md); padding: 12px 14px;">
@@ -523,59 +584,7 @@
         </div>
       </section>
 
-      <!-- Section: Description Generator (Vinted only) -->
-      <section class="dashboard__section" id="sectionDescription" style="display: none;">
-        <div class="dashboard__section-header">
-          <h3>📝 Generateur de description</h3>
-        </div>
-
-        <div class="card" style="padding: 14px 16px;">
-          <div style="display: flex; flex-direction: column; gap: var(--space-md);">
-            <!-- Article selector -->
-            <div>
-              <label style="font-size: 0.78rem; color: var(--text-tertiary); display: block; margin-bottom: 4px;">Article</label>
-              <select id="descArticleSelect" class="input" style="width: 100%; padding: 8px 10px; font-size: 0.82rem;">
-                <option value="">Chargement...</option>
-              </select>
-            </div>
-
-            <!-- Price -->
-            <div>
-              <label style="font-size: 0.78rem; color: var(--text-tertiary); display: block; margin-bottom: 4px;">Prix</label>
-              <input type="number" class="input" id="descPrice" placeholder="Prix en €" style="width: 100%; padding: 8px 10px; font-size: 0.82rem;">
-            </div>
-
-            <!-- Condition -->
-            <div>
-              <label style="font-size: 0.78rem; color: var(--text-tertiary); display: block; margin-bottom: 4px;">Etat</label>
-              <select id="descCondition" class="input" style="width: 100%; padding: 8px 10px; font-size: 0.82rem;">
-                <option value="Neuf avec etiquette">Neuf avec etiquette</option>
-                <option value="Neuf sans etiquette">Neuf sans etiquette</option>
-                <option value="Tres bon etat" selected>Tres bon etat</option>
-                <option value="Bon etat">Bon etat</option>
-                <option value="Satisfaisant">Satisfaisant</option>
-              </select>
-            </div>
-
-            <!-- Generate button -->
-            <button class="btn btn--primary" onclick="generateDescription()" style="width: 100%;">Generer</button>
-          </div>
-        </div>
-
-        <!-- Preview -->
-        <div id="descPreview" class="card desc-preview" style="display: none; margin-top: var(--space-md); padding: 14px 16px;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
-            <span style="display:flex;align-items:center;gap:var(--space-sm);">
-              <span style="font-size: 0.78rem; color: var(--text-tertiary);">Apercu</span>
-              <span id="descRoiBadge" style="display:none;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;"></span>
-            </span>
-            <button class="hashtag-copy-btn" id="descCopyBtn" onclick="copyDescription()" title="Copier">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
-            </button>
-          </div>
-          <pre id="descText" class="desc-preview__text"></pre>
-        </div>
-      </section>
+      <!-- sectionDescription removed — merged into sectionHashtags -->
       {% endif %}
 
       <!-- Section: Notifications (Tickets only) -->
@@ -815,6 +824,28 @@
             tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);">Erreur de chargement</td></tr>';
           }
         });
+
+      {% if user.monitoring_type == 'vinted' %}
+      // Load Vinted analytics (monthly stats)
+      fetch('/api/vinted-analytics')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) return;
+          var spentEl = document.getElementById('analyticsSpent');
+          var receivedEl = document.getElementById('analyticsReceived');
+          var profitEl = document.getElementById('analyticsProfit');
+          if (spentEl) spentEl.textContent = data.spent.toFixed(0) + '\u20ac';
+          if (receivedEl) receivedEl.textContent = data.received.toFixed(0) + '\u20ac';
+          if (profitEl) {
+            var profit = data.profit;
+            profitEl.textContent = (profit >= 0 ? '+' : '') + profit.toFixed(0) + '\u20ac';
+            profitEl.style.color = profit >= 0 ? 'var(--success)' : 'var(--error)';
+          }
+        })
+        .catch(function(err) {
+          console.error('Failed to load analytics:', err);
+        });
+      {% endif %}
     });
 
     // Sidebar navigation
@@ -829,12 +860,16 @@
         var section = this.dataset.section;
 
         // Show/hide sections based on selection
-        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', 'sectionDescription', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}'sectionSettings'];
+        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}'sectionSettings'];
+
+        // Show/hide analytics cards based on section
+        var analyticsEl = document.getElementById('analyticsCards');
+        if (analyticsEl) analyticsEl.style.display = (section === 'overview') ? '' : 'none';
 
         if (section === 'overview') {
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
-            if (el) el.style.display = (id === 'sectionSettings' || id === 'sectionNotifications' || id === 'sectionDescription') ? 'none' : '';
+            if (el) el.style.display = (id === 'sectionSettings' || id === 'sectionNotifications') ? 'none' : '';
           });
         } else if (section === 'gmail') {
           allSections.forEach(function(id) {
@@ -873,11 +908,6 @@
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
             if (el) el.style.display = id === 'sectionHashtags' ? '' : 'none';
-          });
-        } else if (section === 'description') {
-          allSections.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.style.display = id === 'sectionDescription' ? '' : 'none';
           });
           loadVintedArticles();
         } else if (section === 'notifications') {
@@ -1131,15 +1161,26 @@
     var _eventSearchDebounce = null;
 
     function toggleEventSearch() {
+      var acc = document.getElementById('historyAccordion');
       var panel = document.getElementById('eventSearchPanel');
       var table = document.getElementById('scanHistoryTable');
       var detail = document.getElementById('eventDetail');
+
+      // Always open the accordion first
+      if (!acc.classList.contains('history-accordion--open')) {
+        acc.classList.add('history-accordion--open');
+      }
 
       if (panel.style.display === 'none') {
         panel.style.display = '';
         table.style.display = 'none';
         detail.style.display = 'none';
         if (!_eventsLoaded) loadEventsList();
+        // Focus the search input
+        setTimeout(function() {
+          var input = document.getElementById('eventSearchInput');
+          if (input) input.focus();
+        }, 100);
       } else {
         backToScanHistory();
       }
@@ -1203,6 +1244,7 @@
       var statsCards = document.getElementById('eventStatsCards');
       var tbody = document.getElementById('eventBilletsBody');
 
+      _currentEventName = eventName;
       panel.style.display = 'none';
       detail.style.display = '';
       title.textContent = eventName;
@@ -1269,6 +1311,37 @@
       document.getElementById('eventSearchPanel').style.display = 'none';
       document.getElementById('eventDetail').style.display = 'none';
       document.getElementById('scanHistoryTable').style.display = '';
+    }
+
+    var _currentEventName = '';
+
+    async function createEventSheet() {
+      var btn = document.getElementById('createEventSheetBtn');
+      var origHTML = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner" style="width:14px;height:14px;"></div> Creation...';
+      btn.disabled = true;
+
+      try {
+        var res = await fetch('/api/create-event-sheet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ event: _currentEventName }),
+        });
+        var data = await res.json();
+        if (data.success) {
+          showToast(data.message, 'success');
+          btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px;"><polyline points="20 6 9 17 4 12"/></svg> Cree !';
+          setTimeout(function() { btn.innerHTML = origHTML; btn.disabled = false; }, 2000);
+        } else {
+          showToast(data.error || 'Erreur', 'error');
+          btn.innerHTML = origHTML;
+          btn.disabled = false;
+        }
+      } catch (err) {
+        showToast('Erreur de connexion', 'error');
+        btn.innerHTML = origHTML;
+        btn.disabled = false;
+      }
     }
     {% endif %}
 
@@ -1450,43 +1523,6 @@
     // ===== Hashtag Farm v2 Logic =====
     var customTags = [];
 
-    function addCustomTag() {
-      var input = document.getElementById('customTagInput');
-      var val = input.value.trim();
-      if (!val) return;
-
-      // Split by comma for multiple tags
-      var tags = val.split(',').map(function(t) { return t.trim(); }).filter(Boolean);
-      tags.forEach(function(tag) {
-        if (!tag.startsWith('#')) tag = '#' + tag;
-        if (customTags.indexOf(tag) === -1) {
-          customTags.push(tag);
-        }
-      });
-
-      input.value = '';
-      renderCustomTags();
-    }
-
-    function removeCustomTag(tag) {
-      customTags = customTags.filter(function(t) { return t !== tag; });
-      renderCustomTags();
-    }
-
-    function renderCustomTags() {
-      var container = document.getElementById('customTagsList');
-      if (!container) return;
-      container.innerHTML = '';
-      customTags.forEach(function(tag) {
-        var chip = document.createElement('span');
-        chip.className = 'badge badge--accent';
-        chip.style.cssText = 'cursor: pointer; display: inline-flex; align-items: center; gap: 4px;';
-        chip.innerHTML = tag + ' <span style="opacity:0.6;">x</span>';
-        chip.onclick = function() { removeCustomTag(tag); };
-        container.appendChild(chip);
-      });
-    }
-
     async function generateSingleHashtags() {
       var title = document.getElementById('hashtagItemTitle').value.trim();
       if (!title) {
@@ -1659,7 +1695,7 @@
       }
     }
 
-    function generateDescription() {
+    async function generateDescription() {
       var select = document.getElementById('descArticleSelect');
       var priceInput = document.getElementById('descPrice');
       var conditionSelect = document.getElementById('descCondition');
@@ -1687,7 +1723,8 @@
       lines.push('Pour plus d\'infos / photos dispo dm \u2705');
       lines.push('Envoi sous 48H bien emballe \uD83D\uDCE6');
 
-      descText.textContent = lines.join('\n');
+      // Show description immediately while hashtags load
+      descText.textContent = lines.join('\n') + '\n\n⏳ Generation des hashtags...';
       preview.style.display = '';
 
       // Calculate ROI estimate
@@ -1705,6 +1742,29 @@
         roiBadge.style.color = isPositive ? '#22c55e' : '#ef4444';
       } else {
         roiBadge.style.display = 'none';
+      }
+
+      // Auto-generate hashtags for this article
+      try {
+        var res = await fetch('/api/generate-hashtags', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: article,
+            custom_tags: customTags.map(function(t) { return t.replace('#', ''); })
+          })
+        });
+        var data = await res.json();
+        if (data.success && data.items && data.items.length > 0) {
+          var hashtagText = data.items[0].text;
+          descText.textContent = lines.join('\n') + '\n\n' + hashtagText;
+        } else {
+          // No hashtags — just show description without the loading message
+          descText.textContent = lines.join('\n');
+        }
+      } catch (err) {
+        // Fallback: show description without hashtags
+        descText.textContent = lines.join('\n');
       }
     }
 
