@@ -31,8 +31,6 @@ from parsers.vinted import (
     parse_vinted_purchase_email,
     parse_vinted_email,
     find_matching_item,
-    calculate_benefit,
-    calculate_time_in_stock,
     VINTED_SALE_QUERIES,
     VINTED_PURCHASE_QUERIES,
 )
@@ -138,24 +136,20 @@ TICKET_HEADERS = [
     "N° Commande", "Lien", "Compte", "Prix Vente", "Bénéfice",
 ]
 
-VINTED_HEADERS_STARTER = [
-    "Article", "Prix Vente", "Date Vente", "Compte",
+# Same template for starter and pro — Bénéfice(F), ROI %(G), Temps en stock(H) are formula cols
+VINTED_HEADERS = [
+    "Article", "Prix Achat", "Date Achat", "Prix Vente", "Date Vente",
+    "Bénéfice", "ROI %", "Temps en stock", "Compte",
 ]
 
-VINTED_HEADERS_PRO = [
-    "Article", "Prix Achat", "Date Achat", "Prix Vente", "Date Vente",
-    "Benefice", "ROI %", "Temps en stock", "Compte",
-]
+# Keep legacy alias for any existing references
+VINTED_HEADERS_PRO     = VINTED_HEADERS
+VINTED_HEADERS_STARTER = VINTED_HEADERS
 
 
 def _ensure_sheet_headers(sheets_service, spreadsheet_id: str, monitoring_type: str, plan: str = "starter") -> None:
     """Ensure the first row has correct headers."""
-    if monitoring_type == "tickets":
-        headers = TICKET_HEADERS
-    elif plan == "pro":
-        headers = VINTED_HEADERS_PRO
-    else:
-        headers = VINTED_HEADERS_STARTER
+    headers = TICKET_HEADERS if monitoring_type == "tickets" else VINTED_HEADERS
 
     try:
         result = sheets_service.spreadsheets().values().get(
@@ -166,7 +160,7 @@ def _ensure_sheet_headers(sheets_service, spreadsheet_id: str, monitoring_type: 
         if existing and existing[0] == headers[0]:
             return  # headers already set
     except Exception:
-        pass  # sheet might not exist yet, we'll write anyway
+        pass
 
     end_col = chr(ord("A") + len(headers) - 1)
     sheets_service.spreadsheets().values().update(
@@ -177,8 +171,24 @@ def _ensure_sheet_headers(sheets_service, spreadsheet_id: str, monitoring_type: 
     ).execute()
 
 
+def _next_empty_row(sheets_service, spreadsheet_id: str, col: str = "A") -> int:
+    """Return the row number of the next empty cell in `col` (1-indexed).
+
+    Scans only the given column — formula columns that return '' are invisible
+    to values().get(), so only rows with actual data are counted.
+    """
+    try:
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range=f"Commandes!{col}:{col}",
+        ).execute()
+        return len(result.get("values", [])) + 1
+    except Exception:
+        return 2  # fallback: first data row
+
+
 def _get_existing_order_ids(sheets_service, spreadsheet_id: str) -> set[str]:
-    """Get the set of order IDs already in the sheet (column F for tickets)."""
+    """Return set of N° Commande values already in the sheet (column F = index 5)."""
     try:
         result = sheets_service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
@@ -191,209 +201,163 @@ def _get_existing_order_ids(sheets_service, spreadsheet_id: str) -> set[str]:
 
 
 def _write_ticket_orders(sheets_service, spreadsheet_id: str, orders: list[dict]) -> int:
-    """Write ticket orders to the sheet. Returns count of rows written."""
+    """Write ticket orders to the sheet. Returns count of rows written.
+
+    Columns A-I are data; J (Bénéfice) is a pre-seeded formula — we do NOT write to it.
+    Uses targeted update() instead of append() to avoid overwriting formula rows.
+    """
     if not orders:
         return 0
 
     _ensure_sheet_headers(sheets_service, spreadsheet_id, "tickets")
 
-    # Deduplicate against existing sheet rows
+    # Deduplicate by N° Commande (col F)
     existing_ids = _get_existing_order_ids(sheets_service, spreadsheet_id)
     new_orders = [o for o in orders if o.get("order_id") and o["order_id"] not in existing_ids]
 
     if not new_orders:
         return 0
 
-    rows = []
-    for order in new_orders:
-        rows.append([
-            order.get("event", ""),
-            order.get("category", ""),
-            order.get("venue", ""),
-            order.get("event_date", ""),
-            order.get("price", ""),
-            order.get("order_id", ""),
-            order.get("order_link", ""),
-            order.get("account", ""),
-            "",  # Prix Vente
-            "",  # Benefice
-        ])
+    start_row = _next_empty_row(sheets_service, spreadsheet_id, col="A")
 
-    sheets_service.spreadsheets().values().append(
+    batch = []
+    for i, order in enumerate(new_orders):
+        r = start_row + i
+        # Write A-I only (J = Bénéfice is a formula, leave untouched)
+        batch.append({
+            "range": f"Commandes!A{r}:I{r}",
+            "values": [[
+                order.get("event", ""),
+                order.get("category", ""),
+                order.get("venue", ""),
+                order.get("event_date", ""),
+                order.get("price", ""),
+                order.get("order_id", ""),
+                order.get("order_link", ""),
+                order.get("account", ""),
+                "",  # Prix Vente (I) — filled in later by user
+            ]],
+        })
+
+    sheets_service.spreadsheets().values().batchUpdate(
         spreadsheetId=spreadsheet_id,
-        range="Commandes!A:J",
-        valueInputOption="RAW",
-        insertDataOption="INSERT_ROWS",
-        body={"values": rows},
+        body={"valueInputOption": "RAW", "data": batch},
     ).execute()
 
-    logger.info("Wrote %d ticket orders to sheet %s", len(rows), spreadsheet_id)
-    return len(rows)
+    logger.info("Wrote %d ticket orders to sheet %s", len(new_orders), spreadsheet_id)
+    return len(new_orders)
 
 
-def _write_vinted_orders_starter(sheets_service, spreadsheet_id: str, orders: list[dict]) -> int:
-    """Write Vinted sale orders to the sheet (Starter plan). Returns count of rows written."""
-    if not orders:
-        return 0
+def _write_vinted_orders(sheets_service, spreadsheet_id: str, orders: list[dict], plan: str = "starter") -> int:
+    """Write Vinted orders to the sheet (starter & pro use the same template).
 
-    _ensure_sheet_headers(sheets_service, spreadsheet_id, "vinted", "starter")
+    Columns layout: Article(A) | Prix Achat(B) | Date Achat(C) | Prix Vente(D) |
+                    Date Vente(E) | Bénéfice(F-formula) | ROI %(G-formula) |
+                    Temps en stock(H-formula) | Compte(I)
 
-    appended_rows = []
-    for order in orders:
-        if order.get("type") != "sale":
-            continue
-        appended_rows.append([
-            order.get("title", ""),
-            order.get("price", ""),
-            order.get("date", datetime.utcnow().strftime("%Y-%m-%d")),
-            order.get("account", ""),
-        ])
+    Strategy:
+    - Purchases  → write A-C + I; leave D-E empty, F-H are pre-seeded formulas.
+    - Sales match → write D-E only; F-H auto-calculate from the formula.
+    - Sale-only  → write A + D-E + I; B-C empty (no purchase data), F-H auto-calc.
 
-    if appended_rows:
-        sheets_service.spreadsheets().values().append(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:D",
-            valueInputOption="RAW",
-            insertDataOption="INSERT_ROWS",
-            body={"values": appended_rows},
-        ).execute()
-
-    logger.info("Wrote %d Vinted orders (starter) to sheet %s", len(appended_rows), spreadsheet_id)
-    return len(appended_rows)
-
-
-def _write_vinted_orders_pro(sheets_service, spreadsheet_id: str, orders: list[dict]) -> int:
-    """Write Vinted orders to the sheet (Pro plan).
-
-    Pro columns: Article | Prix Achat | Date Achat | Prix Vente | Date Vente | Benefice | ROI % | Temps en stock | Compte
-
-    Logic:
-    - Purchase emails → write Article + Prix Achat + Date Achat
-    - Sale emails → fuzzy match to existing purchase row, fill Prix Vente + Date Vente + auto-calc Benefice/ROI/Temps
+    Uses targeted update() / batchUpdate() instead of append() so the pre-seeded
+    formula rows in F-H are never overwritten with empty strings.
     """
     if not orders:
         return 0
 
-    _ensure_sheet_headers(sheets_service, spreadsheet_id, "vinted", "pro")
+    _ensure_sheet_headers(sheets_service, spreadsheet_id, "vinted")
 
-    # Separate purchases and sales
     purchases = [o for o in orders if o.get("type") == "purchase"]
-    sales = [o for o in orders if o.get("type") == "sale"]
+    sales     = [o for o in orders if o.get("type") == "sale"]
+    written   = 0
 
-    written = 0
+    # ── 1. Purchase rows (write A-C + I; skip D-H which are formula cols) ────
+    if purchases:
+        start_row = _next_empty_row(sheets_service, spreadsheet_id, col="A")
+        batch = []
+        for i, order in enumerate(purchases):
+            r = start_row + i
+            batch.append({
+                "range": f"Commandes!A{r}:C{r}",
+                "values": [[
+                    order.get("title", ""),
+                    order.get("price", ""),
+                    order.get("date", ""),
+                ]],
+            })
+            batch.append({
+                "range": f"Commandes!I{r}",
+                "values": [[order.get("account", "")]],
+            })
 
-    # 1. Append purchase rows
-    purchase_rows = []
-    for order in purchases:
-        purchase_rows.append([
-            order.get("title", ""),           # Article
-            order.get("price", ""),            # Prix Achat
-            order.get("date", ""),             # Date Achat
-            "",                                # Prix Vente
-            "",                                # Date Vente
-            "",                                # Benefice
-            "",                                # ROI %
-            "",                                # Temps en stock
-            order.get("account", ""),          # Compte
-        ])
-
-    if purchase_rows:
-        sheets_service.spreadsheets().values().append(
+        sheets_service.spreadsheets().values().batchUpdate(
             spreadsheetId=spreadsheet_id,
-            range="Commandes!A:I",
-            valueInputOption="RAW",
-            insertDataOption="INSERT_ROWS",
-            body={"values": purchase_rows},
+            body={"valueInputOption": "RAW", "data": batch},
         ).execute()
-        written += len(purchase_rows)
+        written += len(purchases)
 
-    # 2. Match sales to existing purchase rows (fill in vente columns + calc benefice/ROI/temps)
+    # ── 2. Match sales → find purchase row, write D-E only (F-H auto-calc) ──
     if sales:
         try:
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=spreadsheet_id,
-                range="Commandes!A:I",
+                range="Commandes!A:E",
             ).execute()
             existing_rows = result.get("values", [])
         except Exception:
             existing_rows = []
 
-        # Build list of items without a sale price (column D = Prix Vente)
+        # Items with Article name but no Prix Vente yet (col D)
         items_without_sale: list[dict] = []
         for i, row in enumerate(existing_rows[1:], start=2):
-            if len(row) >= 1:
-                title = row[0].strip()
-                prix_vente = row[3].strip() if len(row) > 3 else ""
-                prix_achat = row[1].strip() if len(row) > 1 else ""
-                date_achat = row[2].strip() if len(row) > 2 else ""
-                if title and not prix_vente:
-                    items_without_sale.append({
-                        "title": title,
-                        "row": i,
-                        "prix_achat": prix_achat,
-                        "date_achat": date_achat,
-                    })
+            title      = row[0].strip() if len(row) > 0 else ""
+            prix_vente = row[3].strip() if len(row) > 3 else ""
+            if title and not prix_vente:
+                items_without_sale.append({"title": title, "row": i})
 
+        sale_updates = []
         for order in sales:
             vinted_title = order.get("title", "")
-            sale_price = order.get("price", "")
-            sale_date = order.get("date", "")
+            sale_price   = order.get("price", "")
+            sale_date    = order.get("date", "")
 
             match = find_matching_item(vinted_title, items_without_sale) if items_without_sale else None
 
             if match:
-                row_num = match["row"]
-                purchase_price_str = match.get("prix_achat", "0")
-                purchase_date = match.get("date_achat", "")
-
-                # Calculate benefit & ROI
-                try:
-                    purchase_price = float(purchase_price_str)
-                    sale_price_f = float(sale_price)
-                    calc = calculate_benefit(purchase_price, sale_price_f)
-                    benefit_str = f"{calc['benefit']}€"
-                    roi_str = f"{calc['roi_percent']}%"
-                except (ValueError, TypeError):
-                    benefit_str = ""
-                    roi_str = ""
-
-                # Calculate time in stock
-                time_stock = calculate_time_in_stock(purchase_date, sale_date)
-                time_str = time_stock["display"]
-
-                # Update columns D-H (Prix Vente, Date Vente, Benefice, ROI, Temps en stock)
-                sheets_service.spreadsheets().values().update(
-                    spreadsheetId=spreadsheet_id,
-                    range=f"Commandes!D{row_num}:H{row_num}",
-                    valueInputOption="RAW",
-                    body={"values": [[sale_price, sale_date, benefit_str, roi_str, time_str]]},
-                ).execute()
-
-                items_without_sale = [it for it in items_without_sale if it["row"] != row_num]
+                r = match["row"]
+                # Write Prix Vente (D) + Date Vente (E) — Bénéfice/ROI/Temps auto-calc
+                sale_updates.append({
+                    "range": f"Commandes!D{r}:E{r}",
+                    "values": [[sale_price, sale_date]],
+                })
+                items_without_sale = [it for it in items_without_sale if it["row"] != r]
                 written += 1
             else:
-                # No matching purchase found — append as sale-only row
-                sheets_service.spreadsheets().values().append(
-                    spreadsheetId=spreadsheet_id,
-                    range="Commandes!A:I",
-                    valueInputOption="RAW",
-                    insertDataOption="INSERT_ROWS",
-                    body={"values": [[
-                        vinted_title, "", "", sale_price, sale_date,
-                        "", "", "", order.get("account", ""),
-                    ]]},
-                ).execute()
+                # No matching purchase → new row with sale data only
+                r = _next_empty_row(sheets_service, spreadsheet_id, col="A")
+                sale_updates.append({
+                    "range": f"Commandes!A{r}",
+                    "values": [[vinted_title]],
+                })
+                sale_updates.append({
+                    "range": f"Commandes!D{r}:E{r}",
+                    "values": [[sale_price, sale_date]],
+                })
+                sale_updates.append({
+                    "range": f"Commandes!I{r}",
+                    "values": [[order.get("account", "")]],
+                })
                 written += 1
 
-    logger.info("Wrote %d Vinted orders (pro) to sheet %s", written, spreadsheet_id)
+        if sale_updates:
+            sheets_service.spreadsheets().values().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"valueInputOption": "RAW", "data": sale_updates},
+            ).execute()
+
+    logger.info("Wrote %d Vinted orders to sheet %s", written, spreadsheet_id)
     return written
-
-
-def _write_vinted_orders(sheets_service, spreadsheet_id: str, orders: list[dict], plan: str = "starter") -> int:
-    """Write Vinted orders — dispatches to starter or pro logic."""
-    if plan == "pro":
-        return _write_vinted_orders_pro(sheets_service, spreadsheet_id, orders)
-    return _write_vinted_orders_starter(sheets_service, spreadsheet_id, orders)
 
 
 # ============================================

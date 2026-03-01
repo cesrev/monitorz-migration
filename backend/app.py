@@ -152,6 +152,8 @@ def _create_spreadsheet_for_user(user_id: int, monitoring_type: str, plan: str =
     """Create a Google Sheet in the user's Drive and register it in DB.
 
     Uses the primary gmail account's credentials.
+    Vinted (starter & pro) and Tickets each get their own column layout with
+    pre-seeded formulas for the calculated columns (Bénéfice, ROI %, Temps en stock).
     Returns the spreadsheet dict or None.
     """
     accounts = db.get_gmail_accounts(user_id)
@@ -165,21 +167,57 @@ def _create_spreadsheet_for_user(user_id: int, monitoring_type: str, plan: str =
 
     sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
 
+    # ── Column definitions ────────────────────────────────────────────────────
+    # Tickets:  A  Événement | B Catégorie | C Lieu | D Date | E Prix Achat
+    #           F  N° Commande | G Lien | H Compte | I Prix Vente | J Bénéfice(formula)
+    #
+    # Vinted (all plans):
+    #           A  Article | B Prix Achat | C Date Achat | D Prix Vente | E Date Vente
+    #           F  Bénéfice(formula) | G ROI %(formula) | H Temps en stock(formula) | I Compte
+
+    FORMULA_ROWS = 500  # pre-seed this many data rows with formulas
+
     if monitoring_type == "tickets":
-        title = "Billets Monitor - Commandes"
+        title   = "Billets Monitor - Commandes"
         headers = [
             "Événement", "Catégorie", "Lieu", "Date", "Prix Achat",
             "N° Commande", "Lien", "Compte", "Prix Vente", "Bénéfice",
         ]
-    elif plan == "pro":
-        title = "Vinted Monitor Pro - Achats & Ventes"
-        headers = [
-            "Article", "Prix Achat", "Date Achat", "Prix Vente", "Date Vente",
-            "Benefice", "ROI %", "Temps en stock", "Compte",
+        # J = Bénéfice = Prix Vente (I) - Prix Achat (E)
+        formula_range  = f"Commandes!J2:J{FORMULA_ROWS + 1}"
+        formula_values = [
+            [f'=IF(OR(E{r}="",I{r}=""),"",I{r}-E{r})']
+            for r in range(2, FORMULA_ROWS + 2)
+        ]
+        # Column number formats: J = currency
+        col_formats = [
+            {"col": 9, "pattern": '"€"#,##0.00'},   # J Bénéfice
         ]
     else:
-        title = "Vinted Monitor - Ventes"
-        headers = ["Article", "Prix Vente", "Date Vente", "Compte"]
+        # Vinted — same template for starter and pro
+        title   = "Vinted Monitor - Achats & Ventes"
+        headers = [
+            "Article", "Prix Achat", "Date Achat", "Prix Vente", "Date Vente",
+            "Bénéfice", "ROI %", "Temps en stock", "Compte",
+        ]
+        # F = Bénéfice = Prix Vente (D) - Prix Achat (B)
+        # G = ROI %    = Bénéfice (F) / Prix Achat (B) * 100
+        # H = Temps en stock (days) = Date Vente (E) - Date Achat (C), or TODAY() if unsold
+        formula_range  = f"Commandes!F2:H{FORMULA_ROWS + 1}"
+        formula_values = [
+            [
+                f'=IF(OR(B{r}="",D{r}=""),"",D{r}-B{r})',
+                f'=IF(OR(B{r}=0,F{r}=""),"",ROUND(F{r}/B{r}*100,1))',
+                f'=IF(C{r}="","",IF(E{r}="",TODAY()-C{r},E{r}-C{r}))',
+            ]
+            for r in range(2, FORMULA_ROWS + 2)
+        ]
+        # Column number formats
+        col_formats = [
+            {"col": 5, "pattern": '"€"#,##0.00'},   # F Bénéfice
+            {"col": 6, "pattern": '0.0"%"'},         # G ROI %
+            {"col": 7, "pattern": '0" j"'},          # H Temps en stock (e.g. "14 j")
+        ]
 
     spreadsheet_body = {
         "properties": {"title": title},
@@ -207,40 +245,71 @@ def _create_spreadsheet_for_user(user_id: int, monitoring_type: str, plan: str =
     try:
         result = sheets_service.spreadsheets().create(body=spreadsheet_body).execute()
         spreadsheet_id = result["spreadsheetId"]
-        sheet_id = result["sheets"][0]["properties"]["sheetId"]
+        sheet_id       = result["sheets"][0]["properties"]["sheetId"]
         spreadsheet_url = f"https://docs.google.com/spreadsheets/d/{spreadsheet_id}"
 
-        # Format row 1: bold + gray background
-        format_request = {
-            "requests": [
-                {
-                    "repeatCell": {
-                        "range": {
-                            "sheetId": sheet_id,
-                            "startRowIndex": 0,
-                            "endRowIndex": 1,
-                        },
-                        "cell": {
-                            "userEnteredFormat": {
-                                "backgroundColor": {
-                                    "red": 0.85,
-                                    "green": 0.85,
-                                    "blue": 0.85,
-                                },
-                                "textFormat": {"bold": True},
-                            }
-                        },
-                        "fields": "userEnteredFormat(backgroundColor,textFormat.bold)",
-                    }
+        # ── 1. Format header row + formula columns ────────────────────────────
+        format_requests = [
+            # Header row: bold + light grey background
+            {
+                "repeatCell": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "startRowIndex": 0,
+                        "endRowIndex": 1,
+                    },
+                    "cell": {
+                        "userEnteredFormat": {
+                            "backgroundColor": {"red": 0.85, "green": 0.85, "blue": 0.85},
+                            "textFormat": {"bold": True},
+                        }
+                    },
+                    "fields": "userEnteredFormat(backgroundColor,textFormat.bold)",
                 }
-            ]
-        }
+            },
+        ]
+        # Number formats for formula columns
+        for fmt in col_formats:
+            format_requests.append({
+                "repeatCell": {
+                    "range": {
+                        "sheetId": sheet_id,
+                        "startRowIndex": 1,
+                        "endRowIndex": FORMULA_ROWS + 1,
+                        "startColumnIndex": fmt["col"],
+                        "endColumnIndex":   fmt["col"] + 1,
+                    },
+                    "cell": {
+                        "userEnteredFormat": {
+                            "numberFormat": {"type": "NUMBER", "pattern": fmt["pattern"]}
+                        }
+                    },
+                    "fields": "userEnteredFormat.numberFormat",
+                }
+            })
+
         try:
             sheets_service.spreadsheets().batchUpdate(
-                spreadsheetId=spreadsheet_id, body=format_request
+                spreadsheetId=spreadsheet_id,
+                body={"requests": format_requests},
             ).execute()
         except Exception as fmt_exc:
-            logger.warning("Failed to format header row: %s", fmt_exc)
+            logger.warning("Failed to format sheet: %s", fmt_exc)
+
+        # ── 2. Pre-seed formula rows ──────────────────────────────────────────
+        try:
+            sheets_service.spreadsheets().values().update(
+                spreadsheetId=spreadsheet_id,
+                range=formula_range,
+                valueInputOption="USER_ENTERED",
+                body={"values": formula_values},
+            ).execute()
+            logger.info(
+                "Pre-seeded %d formula rows in sheet %s (range %s)",
+                FORMULA_ROWS, spreadsheet_id, formula_range,
+            )
+        except Exception as fml_exc:
+            logger.warning("Failed to seed formulas: %s", fml_exc)
 
         row_id = db.create_spreadsheet(
             user_id=user_id,
@@ -1850,18 +1919,142 @@ def hashtag_categories():
 # ROUTES - WTS TEMPLATE (Tickets)
 # ============================================
 
+
+def _clean_cell(value):
+    """Collapse newlines and multiple spaces from a Google Sheet cell."""
+    import re
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _parse_unsold_tickets(sheets_service, spreadsheet_id):
+    """Read Google Sheet and return list of unsold ticket dicts.
+
+    Returns (unsold_items, error_msg).  error_msg is None on success.
+    """
+    result = sheets_service.spreadsheets().values().get(
+        spreadsheetId=spreadsheet_id,
+        range="Commandes!A:J",
+    ).execute()
+    rows = result.get("values", [])
+
+    if len(rows) < 2:
+        return [], "Aucun billet dans le Sheet"
+
+    unsold_items = []
+    for row in rows[1:]:
+        if not row or not row[0]:
+            continue
+
+        event = _clean_cell(row[0]) if len(row) > 0 else ""
+        category = _clean_cell(row[1]) if len(row) > 1 else ""
+        lieu = _clean_cell(row[2]) if len(row) > 2 else ""
+        date = _clean_cell(row[3]) if len(row) > 3 else ""
+        prix_achat = _clean_cell(row[4]) if len(row) > 4 else ""
+        prix_vente = _clean_cell(row[8]) if len(row) > 8 else ""
+
+        if prix_vente:
+            continue
+
+        unsold_items.append({
+            "event": event,
+            "category": category,
+            "lieu": lieu,
+            "date": date,
+            "prix_achat": prix_achat,
+        })
+
+    return unsold_items, None
+
+
+def _build_wts_text(unsold_items):
+    """Build WTS text using Template B format.
+
+    Format:
+        WTS
+
+        ARTIST NAME
+        *Venue Date:*          (bold sub-header when multiple venue/date combos)
+        x{count} {category} - {price}€ ea
+
+        DM pour infos
+    """
+    from collections import OrderedDict
+
+    # Group by event (preserve insertion order)
+    events = OrderedDict()
+    for item in unsold_items:
+        ev = item["event"]
+        if ev not in events:
+            events[ev] = []
+        events[ev].append(item)
+
+    lines = ["WTS"]
+
+    for event, tickets in events.items():
+        lines.append("")  # blank line before each artist
+
+        # Group by (lieu, date) within this event
+        venue_dates = OrderedDict()
+        for t in tickets:
+            key = (t["lieu"], t["date"])
+            if key not in venue_dates:
+                venue_dates[key] = []
+            venue_dates[key].append(t)
+
+        has_multiple_groups = len(venue_dates) > 1
+
+        # --- Event header ---
+        if not has_multiple_groups:
+            single_lieu = list(venue_dates.keys())[0][0]
+            # Append lieu if it exists and isn't already in the event name
+            if single_lieu and single_lieu.lower() not in event.lower():
+                lines.append(f"{event.upper()} - {single_lieu}")
+            else:
+                lines.append(event.upper())
+        else:
+            lines.append(event.upper())
+
+        # --- Sub-groups ---
+        for (lieu, date), group_tickets in venue_dates.items():
+            if has_multiple_groups:
+                if lieu and date:
+                    lines.append(f"*{lieu} {date}:*")
+                elif date:
+                    lines.append(date)
+                elif lieu:
+                    lines.append(f"*{lieu}:*")
+            else:
+                if date:
+                    lines.append(date)
+
+            # Aggregate by (category, price)
+            cat_price = OrderedDict()
+            for t in group_tickets:
+                key = (t["category"], t["prix_achat"])
+                if key not in cat_price:
+                    cat_price[key] = 0
+                cat_price[key] += 1
+
+            for (cat, price), count in cat_price.items():
+                if cat and price:
+                    lines.append(f"x{count} {cat} - {price}€ ea")
+                elif cat:
+                    lines.append(f"x{count} {cat}")
+                elif price:
+                    lines.append(f"x{count} - {price}€ ea")
+                else:
+                    lines.append(f"x{count}")
+
+    lines.append("")
+    lines.append("DM pour infos")
+
+    return "\n".join(lines)
+
+
 @app.route("/api/generate-wts")
 @login_required
 def generate_wts():
-    """Generate a WTS (Want To Sell) template from unsold tickets in the Sheet.
-
-    Format:
-    WTS
-    Artiste
-    Date - Categorie x1 - prix EUR/place
-
-    One line per sheet row where "Prix Vente" column is empty.
-    """
+    """Generate a WTS (Want To Sell) template from unsold tickets in the Sheet."""
     user_id = session["user_id"]
     user = db.get_user_by_id(user_id)
 
@@ -1889,41 +2082,9 @@ def generate_wts():
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
         spreadsheet_id = sheets[0]["spreadsheet_id"]
 
-        # Tickets headers: Evenement | Categorie | Lieu | Date | Prix Achat | N Commande | Lien | Compte | Prix Vente | Benefice
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:J",
-        ).execute()
-        rows = result.get("values", [])
-
-        if len(rows) < 2:
-            return jsonify({"success": True, "wts_text": "", "items": [], "message": "Aucun billet dans le Sheet"})
-
-        # Parse unsold tickets
-        unsold_items = []
-        for row in rows[1:]:
-            if not row or not row[0]:
-                continue
-
-            event = row[0] if len(row) > 0 else ""
-            category = row[1] if len(row) > 1 else ""
-            lieu = row[2] if len(row) > 2 else ""
-            date = row[3] if len(row) > 3 else ""
-            prix_achat = row[4] if len(row) > 4 else ""
-            # Index 8 = Prix Vente
-            prix_vente = row[8] if len(row) > 8 else ""
-
-            # Skip sold tickets (prix_vente is filled)
-            if prix_vente and prix_vente.strip():
-                continue
-
-            unsold_items.append({
-                "event": event,
-                "category": category,
-                "lieu": lieu,
-                "date": date,
-                "prix_achat": prix_achat,
-            })
+        unsold_items, err = _parse_unsold_tickets(sheets_service, spreadsheet_id)
+        if err:
+            return jsonify({"success": True, "wts_text": "", "items": [], "message": err})
 
         if not unsold_items:
             return jsonify({
@@ -1933,27 +2094,7 @@ def generate_wts():
                 "message": "Toutes les places sont vendues !",
             })
 
-        # Build WTS text: one line per ticket row
-        lines = ["WTS"]
-        for item in unsold_items:
-            # Format: Artiste
-            #         Date - Categorie x1 - prix EUR/place
-            price_str = f"{item['prix_achat']}EUR/place" if item["prix_achat"] else ""
-            cat_str = item["category"] if item["category"] else ""
-            date_str = item["date"] if item["date"] else ""
-
-            parts = []
-            if date_str:
-                parts.append(date_str)
-            if cat_str:
-                parts.append(f"{cat_str} x1")
-            if price_str:
-                parts.append(price_str)
-
-            line = f"{item['event']}\n{' - '.join(parts)}" if parts else item["event"]
-            lines.append(line)
-
-        wts_text = "\n\n".join(lines)
+        wts_text = _build_wts_text(unsold_items)
 
         return jsonify({
             "success": True,
@@ -1967,15 +2108,14 @@ def generate_wts():
         return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
 
 
-@app.route("/api/generate-wts-ai")
+@app.route("/api/generate-wts-ai", methods=["GET", "POST"])
 @login_required
 def generate_wts_ai():
     """Generate an AI-enhanced WTS post using Claude API.
 
-    Reads unsold tickets from Google Sheets, sends them to Claude to produce
-    a compelling, emoji-rich Twitter/X WTS post in French.
-    Restricted to monitoring_type='tickets' and plan='pro'.
-    Falls back to the basic template if Claude API fails.
+    POST body (optional): { "items": [ {event, lieu, date, category, count, prix_wts}, ... ] }
+    If items are provided in the body, uses those (with custom prices from the UI).
+    Otherwise falls back to reading from the Sheet.
     """
     user_id = session["user_id"]
     user = db.get_user_by_id(user_id)
@@ -1986,66 +2126,60 @@ def generate_wts_ai():
     if user.get("plan") != "pro":
         return jsonify({"success": False, "error": "Feature reservee au plan Pro"}), 403
 
-    mtype = user["monitoring_type"]
-    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
-    if not sheets:
-        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
-
-    accounts = db.get_gmail_accounts(user_id)
-    if not accounts:
-        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
-
-    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
-    creds = _build_credentials_from_account(primary)
-    if not creds:
-        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
-
     try:
-        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
-        spreadsheet_id = sheets[0]["spreadsheet_id"]
+        # Get items: from POST body (custom prices) or from Sheet
+        custom_items = None
+        if request.method == "POST" and request.is_json:
+            body = request.get_json(silent=True) or {}
+            custom_items = body.get("items")
 
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:J",
-        ).execute()
-        rows = result.get("values", [])
-
-        if len(rows) < 2:
-            return jsonify({"success": True, "wts_text": "", "items": [], "message": "Aucun billet dans le Sheet"})
-
-        # Parse unsold tickets
-        unsold_items = []
-        for row in rows[1:]:
-            if not row or not row[0]:
-                continue
-
-            event = row[0] if len(row) > 0 else ""
-            category = row[1] if len(row) > 1 else ""
-            lieu = row[2] if len(row) > 2 else ""
-            date = row[3] if len(row) > 3 else ""
-            prix_achat = row[4] if len(row) > 4 else ""
-            prix_vente = row[8] if len(row) > 8 else ""
-
-            if prix_vente and prix_vente.strip():
-                continue
-
-            unsold_items.append({
-                "event": event,
-                "category": category,
-                "lieu": lieu,
-                "date": date,
-                "prix_achat": prix_achat,
-            })
+        if custom_items:
+            # Build template from custom items sent by the UI
+            wts_items = []
+            for it in custom_items:
+                wts_items.append({
+                    "event": str(it.get("event", "")).strip(),
+                    "lieu": str(it.get("lieu", "")).strip(),
+                    "date": str(it.get("date", "")).strip(),
+                    "category": str(it.get("category", "")).strip(),
+                    "prix_achat": str(it.get("prix_wts", "")).strip(),
+                    "count": int(it.get("count", 1)),
+                })
+            # Expand grouped items into individual items for _build_wts_text
+            unsold_items = []
+            for it in wts_items:
+                for _ in range(it["count"]):
+                    unsold_items.append({
+                        "event": it["event"],
+                        "lieu": it["lieu"],
+                        "date": it["date"],
+                        "category": it["category"],
+                        "prix_achat": it["prix_achat"],
+                    })
+        else:
+            # Fallback: read from Sheet
+            mtype = user["monitoring_type"]
+            sheets_list = db.get_spreadsheets(user_id, monitoring_type=mtype)
+            if not sheets_list:
+                return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+            accounts = db.get_gmail_accounts(user_id)
+            if not accounts:
+                return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+            primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+            creds = _build_credentials_from_account(primary)
+            if not creds:
+                return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+            sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+            unsold_items, err = _parse_unsold_tickets(sheets_service, sheets_list[0]["spreadsheet_id"])
+            if err:
+                return jsonify({"success": True, "wts_text": "", "items": [], "message": err})
 
         if not unsold_items:
-            return jsonify({
-                "success": True,
-                "wts_text": "",
-                "items": [],
-                "message": "Toutes les places sont vendues !",
-            })
+            return jsonify({"success": True, "wts_text": "", "items": [], "message": "Aucun billet"})
 
-        # Build ticket list for the prompt
+        basic_template = _build_wts_text(unsold_items)
+
+        # Build ticket list for AI context
         ticket_lines = []
         for item in unsold_items:
             parts = [f"Evenement: {item['event']}"]
@@ -2062,21 +2196,24 @@ def generate_wts_ai():
         tickets_text = "\n".join(ticket_lines)
 
         prompt = (
-            "Tu es un expert en revente de billets. "
-            "Genere un post WTS (Want To Sell) professionnel et accrocheur pour Twitter/X en francais.\n\n"
-            f"Voici mes billets non vendus:\n{tickets_text}\n\n"
-            "Regles:\n"
-            "- Format concis pour Twitter/X (max 280 caracteres si possible, sinon reste court)\n"
-            "- Utilise des emojis pertinents (🎟, 📍, 📅, 💰)\n"
-            "- Groupe par artiste/evenement si plusieurs billets pour le meme evenement\n"
-            "- Mentionne le prix, la date et la categorie\n"
-            "- Ajoute \"DM pour info\" a la fin\n"
-            "- Commence par \"WTS 🎟\"\n"
-            "- Ne mets pas de hashtags\n"
-            "- Reponds UNIQUEMENT avec le texte du post, sans explication"
+            "Tu es un expert en revente de billets sur Twitter/X.\n"
+            "Genere un post WTS (Want To Sell) en francais en respectant EXACTEMENT ce format:\n\n"
+            "FORMAT OBLIGATOIRE:\n"
+            "- Commence par \"WTS\" seul sur la premiere ligne\n"
+            "- Nom de l'artiste en MAJUSCULES\n"
+            "- Si un artiste a plusieurs dates au meme lieu: sous-titre en gras *Lieu Date:*\n"
+            "- Si un artiste a une seule date: juste la date sur une ligne\n"
+            "- Pour chaque categorie: x{nombre} {categorie} - {prix}€ ea\n"
+            "- Termine par \"DM pour infos\" sur la derniere ligne\n"
+            "- PAS d'emojis, PAS de hashtags\n"
+            "- Separe chaque artiste par une ligne vide\n\n"
+            f"Voici le template de base a ameliorer:\n{basic_template}\n\n"
+            f"Voici les donnees brutes:\n{tickets_text}\n\n"
+            "Tu peux ameliorer la lisibilite, detecter des doublons a fusionner, "
+            "et reformuler les categories pour plus de clarte. "
+            "Reponds UNIQUEMENT avec le texte du post, sans explication."
         )
 
-        # Attempt Claude API call
         ai_generated = True
         try:
             if not ANTHROPIC_API_KEY:
@@ -2092,38 +2229,18 @@ def generate_wts_ai():
         except Exception as ai_exc:
             logger.warning("Claude API call failed, falling back to basic template: %s", ai_exc)
             ai_generated = False
-
-            # Fallback: build basic WTS text (same logic as /api/generate-wts)
-            lines = ["WTS"]
-            for item in unsold_items:
-                price_str = f"{item['prix_achat']}EUR/place" if item["prix_achat"] else ""
-                cat_str = item["category"] if item["category"] else ""
-                date_str = item["date"] if item["date"] else ""
-
-                parts = []
-                if date_str:
-                    parts.append(date_str)
-                if cat_str:
-                    parts.append(f"{cat_str} x1")
-                if price_str:
-                    parts.append(price_str)
-
-                line = f"{item['event']}\n{' - '.join(parts)}" if parts else item["event"]
-                lines.append(line)
-
-            wts_text = "\n\n".join(lines)
+            wts_text = basic_template
 
         return jsonify({
             "success": True,
             "wts_text": wts_text,
-            "items": unsold_items,
             "unsold_count": len(unsold_items),
             "ai_generated": ai_generated,
         })
 
     except Exception as exc:
         logger.error("Failed to generate WTS AI: %s", exc)
-        return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
+        return jsonify({"success": False, "error": "Erreur lors de la generation"}), 500
 
 
 # ============================================

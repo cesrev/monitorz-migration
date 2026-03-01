@@ -230,8 +230,9 @@
 
       <!-- Section: Google Sheet -->
       <section class="dashboard__section animate-in animate-in--delay-6" id="sectionSheet">
-        <div class="dashboard__section-header">
+        <div class="dashboard__section-header" style="display:flex;align-items:center;justify-content:space-between;">
           <h3>📋 Mon Google Sheet</h3>
+          <button class="btn btn--primary btn--small" id="scanNowBtn2" onclick="triggerScanSheet()">🔄 Scanner</button>
         </div>
 
         <div class="sheet-card">
@@ -393,12 +394,7 @@
         <div class="dashboard__section-header">
           <h3>Template WTS</h3>
           {% if user.plan == 'pro' %}
-          <div style="display: flex; gap: var(--space-sm);">
-            <button class="btn btn--primary btn--small" id="generateWtsBtn" onclick="generateWts()">Generer</button>
-            <button class="btn btn--small" id="generateWtsAiBtn" onclick="generateWtsAI()" style="background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); color: #fff; border: none; cursor: pointer;">
-              <span id="generateWtsAiLabel">Generer avec IA</span>
-            </button>
-          </div>
+          <button class="btn btn--primary btn--small" id="loadWtsBtn" onclick="loadWtsTickets()">Charger les billets</button>
           {% else %}
           <span class="badge badge--neutral" style="font-size: 0.72rem;">PRO</span>
           {% endif %}
@@ -407,18 +403,20 @@
         <div class="card">
           {% if user.plan == 'pro' %}
           <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-lg);">
-            Genere un message WTS pret a poster avec toutes tes places non vendues. Les billets avec un prix de vente renseigne dans le Sheet sont exclus.
+            Definis le prix de vente pour chaque billet, puis genere ton WTS pret a poster.
           </p>
-          {% else %}
-          <div style="text-align: center; padding: var(--space-2xl);">
-            <p style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm);">Feature Pro</p>
-            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-lg);">
-              Genere automatiquement des templates WTS avec IA pour tes places non vendues. Passe au plan Pro pour debloquer cette feature.
-            </p>
-          </div>
-          {% endif %}
 
-          {% if user.plan == 'pro' %}
+          <!-- WTS Ticket Form (hidden until loaded) -->
+          <div id="wtsForm" style="display: none;">
+            <div id="wtsTicketList" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--space-lg);"></div>
+            <div style="display: flex; gap: var(--space-sm);">
+              <button class="btn btn--primary" onclick="buildWtsText()" style="flex: 1;">Generer le WTS</button>
+              <button class="btn" onclick="buildWtsTextAI()" style="flex: 1; background: linear-gradient(135deg, var(--accent-start), var(--accent-end)); color: #fff; border: none; cursor: pointer;">
+                <span id="wtsAiLabel">Generer avec IA</span>
+              </button>
+            </div>
+          </div>
+
           <!-- WTS Output -->
           <div id="wtsOutput" style="display: none;">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md);">
@@ -436,7 +434,14 @@
           </div>
 
           <div id="wtsPlaceholder" style="text-align: center; padding: var(--space-xl); color: var(--text-tertiary);">
-            <p>Clique sur "Generer" pour creer ton template WTS</p>
+            <p>Clique sur "Charger les billets" pour commencer</p>
+          </div>
+          {% else %}
+          <div style="text-align: center; padding: var(--space-2xl);">
+            <p style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-sm);">Feature Pro</p>
+            <p style="font-size: 0.88rem; color: var(--text-secondary); margin-bottom: var(--space-lg);">
+              Genere automatiquement des templates WTS avec IA pour tes places non vendues. Passe au plan Pro pour debloquer cette feature.
+            </p>
           </div>
           {% endif %}
         </div>
@@ -1661,84 +1666,259 @@
         btn.disabled = false;
       }
     }
+
+    async function triggerScanSheet() {
+      var btn = document.getElementById('scanNowBtn2');
+      var originalHTML = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div> Scan...';
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/scan-now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        var data = await res.json();
+        if (data.success) {
+          showToast(data.message || (data.orders_found + ' commande(s) trouvee(s)'), data.orders_found > 0 ? 'success' : 'info');
+          setTimeout(function() { window.location.reload(); }, 1500);
+        } else {
+          showToast(data.error || 'Erreur pendant le scan', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur de connexion au serveur', 'error');
+      } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+      }
+    }
     // ===== WTS Template Logic =====
-    async function generateWts() {
-      var btn = document.getElementById('generateWtsBtn');
+    var _wtsGroups = [];
+
+    async function loadWtsTickets() {
+      var btn = document.getElementById('loadWtsBtn');
       if (btn) { btn.innerHTML = '<div class="spinner"></div>'; btn.disabled = true; }
 
       try {
         var res = await fetch('/api/generate-wts');
         var data = await res.json();
 
-        var output = document.getElementById('wtsOutput');
-        var empty = document.getElementById('wtsEmpty');
+        var form = document.getElementById('wtsForm');
         var placeholder = document.getElementById('wtsPlaceholder');
+        var empty = document.getElementById('wtsEmpty');
+        var output = document.getElementById('wtsOutput');
 
         if (placeholder) placeholder.style.display = 'none';
+        if (output) output.style.display = 'none';
 
-        if (data.success) {
-          if (data.wts_text) {
-            document.getElementById('wtsText').textContent = data.wts_text;
-            document.getElementById('wtsCount').textContent = data.unsold_count + ' place(s) non vendue(s)';
-            var aiBadge = document.getElementById('wtsBadgeAi');
-            if (aiBadge) aiBadge.style.display = 'none';
-            if (output) output.style.display = '';
-            if (empty) empty.style.display = 'none';
-            showToast('Template WTS genere', 'success');
+        if (!data.success) { showToast(data.error || 'Erreur', 'error'); return; }
+
+        if (!data.items || data.items.length === 0) {
+          if (form) form.style.display = 'none';
+          if (empty) empty.style.display = '';
+          showToast(data.message || 'Aucune place non vendue', 'info');
+          return;
+        }
+
+        _wtsGroups = groupWtsTickets(data.items);
+        renderWtsForm(_wtsGroups);
+        if (form) form.style.display = '';
+        if (empty) empty.style.display = 'none';
+        showToast(data.items.length + ' billet(s) charge(s)', 'success');
+      } catch (err) {
+        showToast('Erreur de connexion', 'error');
+      } finally {
+        if (btn) { btn.innerHTML = 'Charger les billets'; btn.disabled = false; }
+      }
+    }
+
+    function groupWtsTickets(items) {
+      var map = {};
+      var order = [];
+      items.forEach(function(t) {
+        var key = [t.event, t.lieu, t.date, t.category, t.prix_achat].join('|||');
+        if (!map[key]) {
+          map[key] = { event: t.event, lieu: t.lieu, date: t.date, category: t.category, prix_achat: t.prix_achat, count: 0 };
+          order.push(key);
+        }
+        map[key].count++;
+      });
+      return order.map(function(k) { return map[k]; });
+    }
+
+    function renderWtsForm(groups) {
+      var container = document.getElementById('wtsTicketList');
+      container.innerHTML = '';
+
+      groups.forEach(function(g, i) {
+        var prixNum = parseFloat(String(g.prix_achat).replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+
+        var label = g.event;
+        if (g.date) label += ' \u00b7 ' + g.date;
+        if (g.lieu) label += ' \u00b7 ' + g.lieu;
+        if (g.category) label += ' \u00b7 ' + g.category;
+        label += ' (x' + g.count + ')';
+
+        var row = document.createElement('div');
+        row.style.cssText = 'display:grid;grid-template-columns:1fr auto auto auto;gap:8px;align-items:center;padding:8px 10px;border-radius:var(--radius-sm);background:var(--bg-elevated);border:1px solid var(--border-subtle);';
+
+        var labelEl = document.createElement('span');
+        labelEl.style.cssText = 'font-size:0.78rem;color:var(--text-secondary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+        labelEl.textContent = label;
+        labelEl.title = label;
+
+        var refEl = document.createElement('span');
+        refEl.style.cssText = 'font-size:0.72rem;color:var(--text-tertiary);white-space:nowrap;';
+        refEl.textContent = prixNum > 0 ? 'Achat: ' + g.prix_achat + '\u20ac' : '';
+
+        var priceInput = document.createElement('input');
+        priceInput.type = 'number';
+        priceInput.className = 'input';
+        priceInput.placeholder = '\u20ac';
+        priceInput.value = prixNum > 0 ? prixNum : '';
+        priceInput.dataset.index = i;
+        priceInput.style.cssText = 'width:80px;padding:5px 8px;font-size:0.8rem;text-align:right;';
+        priceInput.oninput = function() { updateWtsRoi(i); };
+
+        var roiBadge = document.createElement('span');
+        roiBadge.id = 'wtsRoi' + i;
+        roiBadge.style.cssText = 'font-size:0.68rem;font-weight:600;padding:2px 8px;border-radius:4px;white-space:nowrap;min-width:60px;text-align:center;';
+
+        row.appendChild(labelEl);
+        row.appendChild(refEl);
+        row.appendChild(priceInput);
+        row.appendChild(roiBadge);
+        container.appendChild(row);
+      });
+    }
+
+    function updateWtsRoi(index) {
+      var g = _wtsGroups[index];
+      var badge = document.getElementById('wtsRoi' + index);
+      if (!badge) return;
+
+      var prixAchat = parseFloat(String(g.prix_achat).replace(',', '.').replace(/[^\d.]/g, '')) || 0;
+      var input = document.querySelector('#wtsTicketList input[data-index="' + index + '"]');
+      var prixWts = input ? (parseFloat(input.value) || 0) : 0;
+
+      if (prixAchat > 0 && prixWts > 0) {
+        var roi = ((prixWts - prixAchat) / prixAchat * 100).toFixed(1);
+        var isPos = roi >= 0;
+        badge.textContent = (isPos ? '+' : '') + roi + '% ROI';
+        badge.style.background = isPos ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+        badge.style.color = isPos ? '#22c55e' : '#ef4444';
+      } else {
+        badge.textContent = '';
+        badge.style.background = 'none';
+      }
+    }
+
+    function getWtsGroupsWithPrices() {
+      return _wtsGroups.map(function(g, i) {
+        var input = document.querySelector('#wtsTicketList input[data-index="' + i + '"]');
+        var prixWts = input ? input.value.trim() : '';
+        return { event: g.event, lieu: g.lieu, date: g.date, category: g.category, count: g.count, prix_wts: prixWts || g.prix_achat };
+      });
+    }
+
+    function buildWtsTextFromGroups(groups) {
+      var eventMap = {};
+      var eventOrder = [];
+      groups.forEach(function(g) {
+        if (!eventMap[g.event]) { eventMap[g.event] = []; eventOrder.push(g.event); }
+        eventMap[g.event].push(g);
+      });
+
+      var lines = ['WTS'];
+
+      eventOrder.forEach(function(event) {
+        var tickets = eventMap[event];
+        lines.push('');
+
+        var vdMap = {};
+        var vdOrder = [];
+        tickets.forEach(function(t) {
+          var key = t.lieu + '|||' + t.date;
+          if (!vdMap[key]) { vdMap[key] = { lieu: t.lieu, date: t.date, items: [] }; vdOrder.push(key); }
+          vdMap[key].items.push(t);
+        });
+
+        var hasMultiple = vdOrder.length > 1;
+
+        if (!hasMultiple) {
+          var singleLieu = vdMap[vdOrder[0]].lieu;
+          if (singleLieu && event.toLowerCase().indexOf(singleLieu.toLowerCase()) === -1) {
+            lines.push(event.toUpperCase() + ' - ' + singleLieu);
           } else {
-            if (output) output.style.display = 'none';
-            if (empty) empty.style.display = '';
-            showToast(data.message || 'Aucune place non vendue', 'info');
+            lines.push(event.toUpperCase());
           }
         } else {
-          showToast(data.error || 'Erreur', 'error');
+          lines.push(event.toUpperCase());
+        }
+
+        vdOrder.forEach(function(key) {
+          var vd = vdMap[key];
+          if (hasMultiple) {
+            if (vd.lieu && vd.date) lines.push('*' + vd.lieu + ' ' + vd.date + ':*');
+            else if (vd.date) lines.push(vd.date);
+            else if (vd.lieu) lines.push('*' + vd.lieu + ':*');
+          } else {
+            if (vd.date) lines.push(vd.date);
+          }
+
+          vd.items.forEach(function(t) {
+            var price = String(t.prix_wts).replace(/[^\d.,]/g, '');
+            if (t.category && price) lines.push('x' + t.count + ' ' + t.category + ' - ' + price + '\u20ac ea');
+            else if (t.category) lines.push('x' + t.count + ' ' + t.category);
+            else if (price) lines.push('x' + t.count + ' - ' + price + '\u20ac ea');
+            else lines.push('x' + t.count);
+          });
+        });
+      });
+
+      lines.push('');
+      lines.push('DM pour infos');
+      return lines.join('\n');
+    }
+
+    function buildWtsText() {
+      var groups = getWtsGroupsWithPrices();
+      var text = buildWtsTextFromGroups(groups);
+      document.getElementById('wtsText').textContent = text;
+      document.getElementById('wtsCount').textContent = groups.reduce(function(s, g) { return s + g.count; }, 0) + ' place(s)';
+      var aiBadge = document.getElementById('wtsBadgeAi');
+      if (aiBadge) aiBadge.style.display = 'none';
+      document.getElementById('wtsOutput').style.display = '';
+      showToast('Template WTS genere', 'success');
+    }
+
+    async function buildWtsTextAI() {
+      var label = document.getElementById('wtsAiLabel');
+      var originalText = label ? label.textContent : 'Generer avec IA';
+      if (label) label.innerHTML = '<div class="spinner" style="width:14px;height:14px;border-width:2px;display:inline-block;vertical-align:middle;"></div> Generation IA...';
+
+      var groups = getWtsGroupsWithPrices();
+      try {
+        var res = await fetch('/api/generate-wts-ai', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ items: groups }),
+        });
+        var data = await res.json();
+
+        if (data.success && data.wts_text) {
+          document.getElementById('wtsText').textContent = data.wts_text;
+          document.getElementById('wtsCount').textContent = groups.reduce(function(s, g) { return s + g.count; }, 0) + ' place(s)';
+          var aiBadge = document.getElementById('wtsBadgeAi');
+          if (aiBadge) aiBadge.style.display = 'inline-block';
+          document.getElementById('wtsOutput').style.display = '';
+          showToast('Template WTS genere par IA', 'success');
+        } else {
+          showToast(data.error || 'Erreur IA', 'error');
         }
       } catch (err) {
         showToast('Erreur de connexion', 'error');
       } finally {
-        if (btn) { btn.innerHTML = 'Generer'; btn.disabled = false; }
-      }
-    }
-
-    async function generateWtsAI() {
-      var btn = document.getElementById('generateWtsAiBtn');
-      var label = document.getElementById('generateWtsAiLabel');
-      var originalText = label ? label.textContent : 'Generer avec IA';
-      if (btn) { btn.disabled = true; }
-      if (label) { label.innerHTML = '<div class="spinner" style="width: 14px; height: 14px; border-width: 2px; display: inline-block; vertical-align: middle;"></div> Generation IA...'; }
-
-      try {
-        var res = await fetch('/api/generate-wts-ai');
-        var data = await res.json();
-
-        var output = document.getElementById('wtsOutput');
-        var empty = document.getElementById('wtsEmpty');
-        var placeholder = document.getElementById('wtsPlaceholder');
-
-        if (placeholder) placeholder.style.display = 'none';
-
-        if (data.success) {
-          if (data.wts_text) {
-            document.getElementById('wtsText').textContent = data.wts_text;
-            document.getElementById('wtsCount').textContent = data.unsold_count + ' place(s) non vendue(s)';
-            var aiBadge = document.getElementById('wtsBadgeAi');
-            if (aiBadge) aiBadge.style.display = 'inline-block';
-            if (output) output.style.display = '';
-            if (empty) empty.style.display = 'none';
-            showToast('Template WTS genere par IA', 'success');
-          } else {
-            if (output) output.style.display = 'none';
-            if (empty) empty.style.display = '';
-            showToast(data.message || 'Aucune place non vendue', 'info');
-          }
-        } else {
-          showToast(data.error || 'Erreur lors de la generation IA', 'error');
-        }
-      } catch (err) {
-        showToast('Erreur de connexion au serveur. Reessayez.', 'error');
-      } finally {
-        if (label) { label.textContent = originalText; }
-        if (btn) { btn.disabled = false; }
+        if (label) label.textContent = originalText;
       }
     }
 
@@ -2074,8 +2254,16 @@
       // Calculate ROI estimate
       var roiBadge = document.getElementById('descRoiBadge');
       var purchasePrice = 0;
+      // If no article selected from suggestions, try to match by name
+      if (!_selectedArticle && article) {
+        var match = _descArticles.find(function(a) {
+          return a.name.toLowerCase().trim() === article.toLowerCase().trim();
+        });
+        if (match) _selectedArticle = match;
+      }
       if (_selectedArticle && _selectedArticle.purchase_price) {
-        purchasePrice = parseFloat((_selectedArticle.purchase_price || '').replace(',', '.').replace(/[^\d.]/g, ''));
+        var pp = String(_selectedArticle.purchase_price).replace(',', '.').replace(/[^\d.]/g, '');
+        purchasePrice = parseFloat(pp) || 0;
       }
       var salePrice = parseFloat(price);
 
