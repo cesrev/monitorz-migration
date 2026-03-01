@@ -31,12 +31,49 @@ TICKET_QUERIES: list[tuple[str, str]] = [
 
 
 def _format_category(raw: str) -> str:
-    """Normalize a category string."""
-    cat = raw.strip().lower()
-    cat = cat.replace(" nord", " N").replace(" sud", " S")
-    cat = cat.replace(" est", " E").replace(" ouest", " O")
-    cat = cat.replace("categorie", "cat").replace("catégorie", "cat")
+    """Normalize a category string: collapse whitespace, abbreviate directions."""
+    cat = re.sub(r"\s+", " ", raw).strip()
+    cat = re.sub(r"\b[Nn]ord\b", "N", cat)
+    cat = re.sub(r"\b[Ss]ud\b", "S", cat)
+    cat = re.sub(r"\b[Ee]st\b", "E", cat)
+    cat = re.sub(r"\b[Oo]uest\b", "O", cat)
+    cat = re.sub(r"[Cc]at[ée]gorie", "cat", cat)
     return cat
+
+
+def _extract_cat(lines: list[str], patterns: list[str], merge_next: bool = False) -> str:
+    """Search lines for category patterns.  Returns first match or empty string.
+
+    Iterates patterns first (priority order), then lines, so higher-priority
+    patterns win even if a lower-priority one appears on an earlier line.
+
+    If merge_next=True, when a match is found, the next line is appended
+    (Ticketmaster sometimes splits category info across two lines).
+    """
+    for pat in patterns:
+        for idx, line in enumerate(lines):
+            m = re.search(pat, line, re.IGNORECASE)
+            if m:
+                raw = m.group(1).strip()
+                # Append next line if it looks like a category continuation
+                if merge_next and idx + 1 < len(lines):
+                    nxt = lines[idx + 1].strip()
+                    # Only merge if next line looks like a category part
+                    # (short, not a date, not a known venue, not a price)
+                    _skip = (
+                        not nxt
+                        or len(nxt) > 40
+                        or re.match(r"^\d{1,2}[\s/]", nxt)
+                        or re.search(r"\d+[,.]?\d*\s*€", nxt)
+                        or re.search(r"(?i)\b(stade|velodrome|accor|bercy|zenith|olympia|arena|chatrier|lenglen|roland.garros)\b", nxt)
+                    )
+                    if not _skip:
+                        raw = raw + " " + nxt
+                # Strip trailing quantity/price noise
+                raw = re.sub(r"\s*\d+\s*x\s*\d+.*$", "", raw, flags=re.IGNORECASE).strip()
+                raw = re.sub(r"\s*\d+[,.]?\d*\s*€.*$", "", raw).strip()
+                return _format_category(raw)
+    return ""
 
 
 # ============================================
@@ -119,25 +156,32 @@ def parse_ticketmaster_email(subject: str, html: str) -> Optional[dict]:
         price = m.group(1)
 
     # --- Category ---
-    category = ""
-    category_patterns = [
-        r"(Cat[ée]gorie\s*\d+)",
-        r"(CAT\s*\d+)",
-        r"(Carr[ée]\s*Or\s*\w*)",
-        r"(Pelouse\s*\w*)",
-        r"(Fosse\s*\w*)",
-        r"(VIP\s*\w*)",
-        r"(Tribune\s*\w+)",
-        r"(Premium\s*\w*)",
-        r"(Gold\s*\w*)",
-        r"(Silver\s*\w*)",
-        r"(Placement\s*Libre)",
-    ]
-    for pattern in category_patterns:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            category = _format_category(m.group(1))
-            break
+    # Pass 1: specific seat/zone keywords (high priority) — single lines only
+    category = _extract_cat(lines, [
+        r"(Cat[ée]gorie\s*\d+.*)",
+        r"(CAT\s*\d+.*)",
+        r"(Carr[ée]\s*Or\b.*)",
+        r"(Pelouse\b.*)",
+        r"(Fosse\b.*)",
+        r"(Tribune\b.*)",
+        r"(Gradins\b.*)",
+        r"(Parterre\b.*)",
+        r"(Balcon\b.*)",
+        r"(VIP\b.*)",
+        r"(Premium\b.*)",
+        r"(Gold\b.*)",
+        r"(Silver\b.*)",
+    ])
+
+    # Pass 2: broader fallback with merge_next to catch split categories
+    # (e.g. "EARLY ENTRANCE" + "Placement 19" → "EARLY ENTRANCE Placement 19")
+    if not category:
+        category = _extract_cat(lines, [
+            r"(Placement\s*Libre\b.*)",
+            r"(EARLY\s+ENTRANCE\b.*)",
+            r"(Placement\s+\d+.*)",
+            r"(TARIF\b.*)",
+        ], merge_next=True)
 
     # --- Order link ---
     order_link = ""
@@ -287,19 +331,21 @@ def parse_stade_de_france_email(subject: str, html: str) -> Optional[dict]:
         price = m.group(1)
 
     # --- Category ---
-    category = ""
-    for pattern in [
-        r"(Cat[ée]gorie\s*\d+)",
-        r"(Pelouse\s*\w*)",
-        r"(Fosse\s*\w*)",
-        r"(VIP\s*\w*)",
-        r"(Tribune\s*\w+)",
-        r"(Carr[ée]\s*Or\s*\w*)",
-    ]:
-        m = re.search(pattern, text, re.IGNORECASE)
-        if m:
-            category = _format_category(m.group(1))
-            break
+    category = _extract_cat(lines, [
+        r"(Cat[ée]gorie\s*\d+.*)",
+        r"(Pelouse\b.*)",
+        r"(Fosse\b.*)",
+        r"(Tribune\b.*)",
+        r"(Carr[ée]\s*Or\b.*)",
+        r"(Gradins\b.*)",
+        r"(VIP\b.*)",
+        r"(Premium\b.*)",
+    ])
+    if not category:
+        category = _extract_cat(lines, [
+            r"(Placement\s*Libre\b.*)",
+            r"(TARIF\b.*)",
+        ])
 
     # --- Order link ---
     order_link = ""

@@ -232,7 +232,10 @@
       <section class="dashboard__section animate-in animate-in--delay-6" id="sectionSheet">
         <div class="dashboard__section-header" style="display:flex;align-items:center;justify-content:space-between;">
           <h3>📋 Mon Google Sheet</h3>
-          <button class="btn btn--primary btn--small" id="scanNowBtn2" onclick="triggerScanSheet()">🔄 Scanner</button>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn--small" id="fixFormulasBtn" onclick="fixFormulas()" style="background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);font-size:0.75rem;">⚙️ Reparer formules</button>
+            <button class="btn btn--primary btn--small" id="scanNowBtn2" onclick="triggerScanSheet()">🔄 Scanner</button>
+          </div>
         </div>
 
         <div class="sheet-card">
@@ -1686,6 +1689,30 @@
         }
       } catch (err) {
         showToast('Erreur de connexion au serveur', 'error');
+      } finally {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+      }
+    }
+
+    async function fixFormulas() {
+      var btn = document.getElementById('fixFormulasBtn');
+      var originalHTML = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div> Reparation...';
+      btn.disabled = true;
+      try {
+        var res = await fetch('/api/fix-formulas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        var data = await res.json();
+        if (data.success) {
+          showToast('Formules (Benefice, ROI, Temps en stock) injectees !', 'success');
+        } else {
+          showToast(data.error || 'Erreur', 'error');
+        }
+      } catch (err) {
+        showToast('Erreur de connexion', 'error');
       } finally {
         btn.innerHTML = originalHTML;
         btn.disabled = false;

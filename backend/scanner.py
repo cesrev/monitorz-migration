@@ -241,7 +241,7 @@ def _write_ticket_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
 
     sheets_service.spreadsheets().values().batchUpdate(
         spreadsheetId=spreadsheet_id,
-        body={"valueInputOption": "RAW", "data": batch},
+        body={"valueInputOption": "USER_ENTERED", "data": batch},
     ).execute()
 
     logger.info("Wrote %d ticket orders to sheet %s", len(new_orders), spreadsheet_id)
@@ -293,7 +293,7 @@ def _write_vinted_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
 
         sheets_service.spreadsheets().values().batchUpdate(
             spreadsheetId=spreadsheet_id,
-            body={"valueInputOption": "RAW", "data": batch},
+            body={"valueInputOption": "USER_ENTERED", "data": batch},
         ).execute()
         written += len(purchases)
 
@@ -353,7 +353,7 @@ def _write_vinted_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
         if sale_updates:
             sheets_service.spreadsheets().values().batchUpdate(
                 spreadsheetId=spreadsheet_id,
-                body={"valueInputOption": "RAW", "data": sale_updates},
+                body={"valueInputOption": "USER_ENTERED", "data": sale_updates},
             ).execute()
 
     logger.info("Wrote %d Vinted orders to sheet %s", written, spreadsheet_id)

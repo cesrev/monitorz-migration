@@ -200,22 +200,19 @@ def _create_spreadsheet_for_user(user_id: int, monitoring_type: str, plan: str =
             "Article", "Prix Achat", "Date Achat", "Prix Vente", "Date Vente",
             "Bénéfice", "ROI %", "Temps en stock", "Compte",
         ]
-        # F = Bénéfice = Prix Vente (D) - Prix Achat (B)
-        # G = ROI %    = Bénéfice (F) / Prix Achat (B) * 100
-        # H = Temps en stock (days) = Date Vente (E) - Date Achat (C), or TODAY() if unsold
-        formula_range  = f"Commandes!F2:H{FORMULA_ROWS + 1}"
-        formula_values = [
-            [
-                f'=IF(OR(B{r}="",D{r}=""),"",D{r}-B{r})',
-                f'=IF(OR(B{r}=0,F{r}=""),"",ROUND(F{r}/B{r}*100,1))',
-                f'=IF(C{r}="","",IF(E{r}="",TODAY()-C{r},E{r}-C{r}))',
-            ]
-            for r in range(2, FORMULA_ROWS + 2)
-        ]
+        # F2 = ARRAYFORMULA Bénéfice = Prix Vente (D) - Prix Achat (B)
+        # G2 = ARRAYFORMULA ROI % = (D - B) / B  (format %)
+        # H2 = ARRAYFORMULA Temps en stock
+        formula_range  = "Commandes!F2:H2"
+        formula_values = [[
+            '=ARRAYFORMULA(SI(B2:B="","",D2:D-B2:B))',
+            '=ARRAYFORMULA(SI(B2:B="","",(D2:D-B2:B)/B2:B))',
+            '=ARRAYFORMULA(SI(C2:C="","",SI(E2:E="",AUJOURDHUI()-C2:C,E2:E-C2:C)))',
+        ]]
         # Column number formats
         col_formats = [
             {"col": 5, "pattern": '"€"#,##0.00'},   # F Bénéfice
-            {"col": 6, "pattern": '0.0"%"'},         # G ROI %
+            {"col": 6, "pattern": '0.0%'},            # G ROI % (format pourcentage)
             {"col": 7, "pattern": '0" j"'},          # H Temps en stock (e.g. "14 j")
         ]
 
@@ -681,6 +678,133 @@ def link_sheet():
         "spreadsheet_url": canonical_url,
         "sheet_title": sheet_title,
     })
+
+
+# ============================================
+# ROUTES - FIX FORMULAS
+# ============================================
+
+@app.route("/api/fix-formulas", methods=["POST"])
+@login_required
+def fix_formulas():
+    """Re-inject Bénéfice / ROI / Temps en stock formulas into the user's Sheet."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    mtype = user.get("monitoring_type", "tickets")
+
+    sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
+    if not sheets:
+        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+    accounts = db.get_gmail_accounts(user_id)
+    if not accounts:
+        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+
+    primary = next((a for a in accounts if a["is_primary"]), accounts[0])
+    creds = _build_credentials_from_account(primary)
+    if not creds:
+        return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    try:
+        sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+        spreadsheet_id = sheets[0]["spreadsheet_id"]
+        FORMULA_ROWS = 500
+
+        # Step 1: Re-write existing price/date data as USER_ENTERED to fix text→number
+        if mtype == "tickets":
+            price_range = "Commandes!E2:E501"  # Prix Achat
+            price_range2 = "Commandes!I2:I501"  # Prix Vente
+        else:
+            price_range = "Commandes!B2:B501"   # Prix Achat
+            price_range2 = "Commandes!D2:D501"  # Prix Vente
+
+        for pr in [price_range, price_range2]:
+            result = sheets_service.spreadsheets().values().get(
+                spreadsheetId=spreadsheet_id,
+                range=pr,
+            ).execute()
+            vals = result.get("values", [])
+            if vals:
+                # Re-write same values but as USER_ENTERED so Sheets parses numbers
+                sheets_service.spreadsheets().values().update(
+                    spreadsheetId=spreadsheet_id,
+                    range=pr,
+                    valueInputOption="USER_ENTERED",
+                    body={"values": vals},
+                ).execute()
+
+        # Step 2: Clear old per-row formulas in F:H, then inject ARRAYFORMULA
+        if mtype == "tickets":
+            formula_range = f"Commandes!J2:J{FORMULA_ROWS + 1}"
+            formula_values = [
+                [f'=IF(OR(E{r}="",I{r}=""),"",I{r}-E{r})']
+                for r in range(2, FORMULA_ROWS + 2)
+            ]
+        else:
+            # Clear old per-row formulas in F3:H501 (keep F2:H2 for ARRAYFORMULA)
+            clear_range = f"Commandes!F3:H{FORMULA_ROWS + 1}"
+            sheets_service.spreadsheets().values().clear(
+                spreadsheetId=spreadsheet_id,
+                range=clear_range,
+            ).execute()
+
+            formula_range = "Commandes!F2:H2"
+            formula_values = [[
+                '=ARRAYFORMULA(SI(B2:B="","",D2:D-B2:B))',
+                '=ARRAYFORMULA(SI(B2:B="","",(D2:D-B2:B)/B2:B))',
+                '=ARRAYFORMULA(SI(C2:C="","",SI(E2:E="",AUJOURDHUI()-C2:C,E2:E-C2:C)))',
+            ]]
+
+        sheets_service.spreadsheets().values().update(
+            spreadsheetId=spreadsheet_id,
+            range=formula_range,
+            valueInputOption="USER_ENTERED",
+            body={"values": formula_values},
+        ).execute()
+
+        # Step 3: Apply number formats (Vinted only)
+        if mtype != "tickets":
+            # Get sheet ID
+            meta = sheets_service.spreadsheets().get(
+                spreadsheetId=spreadsheet_id,
+                fields="sheets.properties",
+            ).execute()
+            sheet_id = meta["sheets"][0]["properties"]["sheetId"]
+
+            fmt_requests = []
+            vinted_formats = [
+                {"col": 5, "pattern": '"€"#,##0.00'},  # F Bénéfice
+                {"col": 6, "pattern": "0.0%"},           # G ROI %
+                {"col": 7, "pattern": '0" j"'},          # H Temps en stock
+            ]
+            for fmt in vinted_formats:
+                fmt_requests.append({
+                    "repeatCell": {
+                        "range": {
+                            "sheetId": sheet_id,
+                            "startRowIndex": 1,
+                            "endRowIndex": 502,
+                            "startColumnIndex": fmt["col"],
+                            "endColumnIndex": fmt["col"] + 1,
+                        },
+                        "cell": {
+                            "userEnteredFormat": {
+                                "numberFormat": {"type": "NUMBER", "pattern": fmt["pattern"]}
+                            }
+                        },
+                        "fields": "userEnteredFormat.numberFormat",
+                    }
+                })
+            sheets_service.spreadsheets().batchUpdate(
+                spreadsheetId=spreadsheet_id,
+                body={"requests": fmt_requests},
+            ).execute()
+
+        return jsonify({"success": True, "message": "Donnees converties et formules injectees"})
+
+    except Exception as exc:
+        logger.error("fix-formulas error: %s", exc)
+        return jsonify({"success": False, "error": str(exc)}), 500
 
 
 # ============================================
