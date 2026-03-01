@@ -1774,7 +1774,7 @@
         priceInput.type = 'number';
         priceInput.className = 'input';
         priceInput.placeholder = '\u20ac';
-        priceInput.value = prixNum > 0 ? prixNum : '';
+        priceInput.value = '';
         priceInput.dataset.index = i;
         priceInput.style.cssText = 'width:80px;padding:5px 8px;font-size:0.8rem;text-align:right;';
         priceInput.oninput = function() { updateWtsRoi(i); };
@@ -1816,7 +1816,7 @@
       return _wtsGroups.map(function(g, i) {
         var input = document.querySelector('#wtsTicketList input[data-index="' + i + '"]');
         var prixWts = input ? input.value.trim() : '';
-        return { event: g.event, lieu: g.lieu, date: g.date, category: g.category, count: g.count, prix_wts: prixWts || g.prix_achat };
+        return { event: g.event, lieu: g.lieu, date: g.date, category: g.category, count: g.count, prix_achat: g.prix_achat, prix_wts: prixWts };
       });
     }
 
@@ -2261,17 +2261,28 @@
         });
         if (match) _selectedArticle = match;
       }
+      // Also try partial match if exact match failed
+      if (!_selectedArticle && article && _descArticles.length > 0) {
+        var partialMatch = _descArticles.find(function(a) {
+          return a.name.toLowerCase().includes(article.toLowerCase()) || article.toLowerCase().includes(a.name.toLowerCase());
+        });
+        if (partialMatch) _selectedArticle = partialMatch;
+      }
+      console.log('[ROI Debug] _selectedArticle:', _selectedArticle);
+      console.log('[ROI Debug] _descArticles count:', _descArticles.length);
       if (_selectedArticle && _selectedArticle.purchase_price) {
         var pp = String(_selectedArticle.purchase_price).replace(',', '.').replace(/[^\d.]/g, '');
         purchasePrice = parseFloat(pp) || 0;
+        console.log('[ROI Debug] purchase_price raw:', _selectedArticle.purchase_price, '-> parsed:', purchasePrice);
       }
       var salePrice = parseFloat(price);
+      console.log('[ROI Debug] purchasePrice:', purchasePrice, 'salePrice:', salePrice);
 
       if (purchasePrice > 0 && salePrice > 0) {
         var roi = ((salePrice - purchasePrice) / purchasePrice * 100).toFixed(1);
-        var isPositive = roi >= 0;
+        var isPositive = parseFloat(roi) >= 0;
         roiBadge.textContent = (isPositive ? '+' : '') + roi + '% ROI';
-        roiBadge.style.display = '';
+        roiBadge.style.display = 'inline-block';
         roiBadge.style.background = isPositive ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
         roiBadge.style.color = isPositive ? '#22c55e' : '#ef4444';
       } else {
@@ -2280,6 +2291,7 @@
 
       // Auto-generate hashtags for this article
       try {
+        console.log('[Hashtags] Generating for:', article);
         var res = await fetch('/api/generate-hashtags', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2288,14 +2300,18 @@
             custom_tags: customTags.map(function(t) { return t.replace('#', ''); })
           })
         });
+        console.log('[Hashtags] Response status:', res.status);
         var data = await res.json();
+        console.log('[Hashtags] Response data:', data);
         if (data.success && data.items && data.items.length > 0) {
           var hashtagText = data.items[0].text;
           descText.textContent = lines.join('\n') + '\n\n' + hashtagText;
         } else {
+          console.warn('[Hashtags] No items returned:', data);
           descText.textContent = lines.join('\n');
         }
       } catch (err) {
+        console.error('[Hashtags] Error:', err);
         descText.textContent = lines.join('\n');
       }
     }
