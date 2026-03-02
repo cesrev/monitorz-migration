@@ -30,6 +30,34 @@ body {
   min-height: 100vh;
 }
 
+/* ---------- Global Scrollbar (Dark + Accent) ---------- */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 166, 35, 0.2) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(245, 166, 35, 0.2);
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 166, 35, 0.35);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 a {
   text-decoration: none;
   color: inherit;
@@ -436,10 +464,6 @@ p {
   box-shadow: var(--shadow-lg);
 }
 
-.card--accent {
-  border-color: var(--border-accent);
-}
-
 .card--accent::before {
   content: '';
   position: absolute;
@@ -449,6 +473,16 @@ p {
   height: 2px;
   background: var(--accent-gradient);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.card--accent:hover {
+  border-color: var(--border-accent);
+}
+
+.card--accent:hover::before {
+  opacity: 1;
 }
 
 .card__icon {
@@ -1138,7 +1172,7 @@ p {
 }
 
 .nav__logo-img {
-  height: 48px;
+  height: 60px;
   width: auto;
   object-fit: contain;
 }
@@ -1414,10 +1448,54 @@ p {
   padding: var(--space-5xl) 0;
 }
 
-.features__grid {
+.features__scroll {
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  margin: 0 calc(var(--space-lg) * -1);
+  padding: 0 var(--space-lg);
+  cursor: grab;
+}
+
+.features__scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.features__scroll:active {
+  cursor: grabbing;
+}
+
+.features__track {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(2, auto);
+  grid-auto-flow: column;
+  grid-auto-columns: calc((100% - 2 * var(--space-lg)) / 3);
   gap: var(--space-lg);
+  padding-bottom: var(--space-sm);
+}
+
+.features__scrollbar {
+  position: relative;
+  height: 4px;
+  background: var(--glass-border);
+  border-radius: 2px;
+  margin-top: var(--space-xl);
+  max-width: 320px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.features__scrollbar-thumb {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  min-width: 40px;
+  background: linear-gradient(135deg, var(--accent-start), var(--accent-end));
+  border-radius: 2px;
+  transition: width 0.1s;
 }
 
 .feature {
@@ -1474,17 +1552,7 @@ p {
   position: relative;
 }
 
-.pricing-card:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--shadow-lg);
-}
-
-.pricing-card--featured {
-  border-color: var(--border-accent);
-  background: rgba(245, 166, 35, 0.03);
-}
-
-.pricing-card--featured::before {
+.pricing-card::before {
   content: '';
   position: absolute;
   top: 0;
@@ -1493,6 +1561,19 @@ p {
   height: 2px;
   background: var(--accent-gradient);
   border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  opacity: 0;
+  transition: opacity var(--transition-base);
+}
+
+.pricing-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+  border-color: var(--border-accent);
+  background: rgba(245, 166, 35, 0.03);
+}
+
+.pricing-card:hover::before {
+  opacity: 1;
 }
 
 .pricing-card__badge {
@@ -1561,6 +1642,50 @@ p {
   background-size: 12px;
   background-repeat: no-repeat;
   background-position: center;
+}
+
+/* ---------- PRICING TOGGLE ---------- */
+.pricing__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-2xl);
+}
+
+.pricing__toggle-save {
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-left: 0.35rem;
+  vertical-align: middle;
+  padding: 0.15rem 0.4rem;
+}
+
+.segmented-control--small .segmented-control__btn {
+  padding: 0.5rem 1.2rem;
+  font-size: 0.82rem;
+}
+
+.pricing-card__amount {
+  transition: opacity 0.2s ease;
+}
+
+.pricing-card__save-badge {
+  display: none;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--accent-start);
+  background: rgba(245, 166, 35, 0.12);
+  border: 1px solid rgba(245, 166, 35, 0.25);
+  padding: 0.15rem 0.5rem;
+  border-radius: 20px;
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  letter-spacing: 0.02em;
+}
+
+.pricing-card__save-badge.visible {
+  display: inline-block;
 }
 
 /* ---------- FAQ ---------- */
@@ -1719,7 +1844,7 @@ p {
 }
 
 .footer__logo-img {
-  height: 30px;
+  height: 44px;
   width: auto;
   object-fit: contain;
 }
@@ -2199,8 +2324,8 @@ p {
     display: none;
   }
 
-  .features__grid {
-    grid-template-columns: repeat(2, 1fr);
+  .features__track {
+    grid-auto-columns: calc((100% - var(--space-lg)) / 2);
   }
 
   .pricing__grid {
@@ -2259,8 +2384,8 @@ p {
     width: 100%;
   }
 
-  .features__grid {
-    grid-template-columns: 1fr;
+  .features__track {
+    grid-auto-columns: 85%;
   }
 
   .dashboard__stats {
@@ -2368,29 +2493,10 @@ p {
   background: rgba(239, 68, 68, 0.1);
 }
 
-/* Settings scrollable cards — thin dark scrollbar */
+/* Settings scrollable cards */
 .settings-scroll {
   max-height: 520px;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.08) transparent;
-}
-
-.settings-scroll::-webkit-scrollbar {
-  width: 4px;
-}
-
-.settings-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.settings-scroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 4px;
-}
-
-.settings-scroll::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.18);
 }
 
 /* ===== Hashtag rows (accordion) ===== */
@@ -2492,11 +2598,30 @@ p {
   z-index: 50;
   max-height: 200px;
   overflow-y: auto;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-light);
   border-top: none;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  scrollbar-width: thin;
+  scrollbar-color: rgba(245, 166, 35, 0.3) transparent;
+}
+
+.article-suggestions::-webkit-scrollbar {
+  width: 5px;
+}
+
+.article-suggestions::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.article-suggestions::-webkit-scrollbar-thumb {
+  background: rgba(245, 166, 35, 0.25);
+  border-radius: 5px;
+}
+
+.article-suggestions::-webkit-scrollbar-thumb:hover {
+  background: rgba(245, 166, 35, 0.4);
 }
 
 .article-suggestions__item {

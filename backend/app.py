@@ -397,6 +397,10 @@ def auth_google():
     if plan not in ("starter", "pro"):
         plan = "starter"
 
+    billing = request.args.get("billing", "monthly")
+    if billing not in ("monthly", "yearly"):
+        billing = "monthly"
+
     redirect_uri = f"{APP_URL}/oauth/callback"
     flow = _get_oauth_flow(redirect_uri)
 
@@ -409,6 +413,7 @@ def auth_google():
     session["oauth_state"] = state
     session["oauth_monitoring_type"] = monitoring_type
     session["oauth_plan"] = plan
+    session["oauth_billing"] = billing
 
     return redirect(authorization_url)
 
@@ -421,6 +426,7 @@ def oauth_callback():
     """
     monitoring_type = session.pop("oauth_monitoring_type", "tickets")
     plan = session.pop("oauth_plan", "starter")
+    billing = session.pop("oauth_billing", "monthly")
 
     redirect_uri = f"{APP_URL}/oauth/callback"
     flow = _get_oauth_flow(redirect_uri)
@@ -451,9 +457,9 @@ def oauth_callback():
     user = db.get_user_by_email(email)
     if user:
         user_id = user["id"]
-        db.update_user(user_id, name=name, picture=picture, plan=plan, monitoring_type=monitoring_type)
+        db.update_user(user_id, name=name, picture=picture, plan=plan, monitoring_type=monitoring_type, billing_period=billing)
     else:
-        user_id = db.create_user(email, name, picture, monitoring_type, plan)
+        user_id = db.create_user(email, name, picture, monitoring_type, plan, billing_period=billing)
 
     # Create or update gmail account
     existing_accounts = db.get_gmail_accounts(user_id)
@@ -2573,32 +2579,44 @@ def vinted_sell_times():
 
 
 # ============================================
-# ROUTES - VINTED ANALYTICS (monthly stats)
+# ROUTES - ANALYTICS (monthly stats — tickets & vinted)
 # ============================================
 
-@app.route("/api/vinted-analytics")
+@app.route("/api/analytics")
 @login_required
-def vinted_analytics():
-    """Return monthly analytics for Vinted: spent, received, profit."""
+def analytics():
+    """Return monthly analytics: spent, received, profit. Works for both tickets and vinted."""
     user_id = session["user_id"]
     user = db.get_user_by_id(user_id)
 
-    if not user or user.get("monitoring_type") != "vinted":
-        return jsonify({"success": False, "error": "Feature reservee aux utilisateurs Vinted"}), 403
+    if not user:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 403
 
-    mtype = user["monitoring_type"]
+    mtype = user.get("monitoring_type", "tickets")
     sheets = db.get_spreadsheets(user_id, monitoring_type=mtype)
     if not sheets:
-        return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+        return jsonify({"success": True, "spent": 0, "received": 0, "profit": 0})
 
     accounts = db.get_gmail_accounts(user_id)
     if not accounts:
-        return jsonify({"success": False, "error": "Aucun compte Gmail connecte"}), 400
+        return jsonify({"success": True, "spent": 0, "received": 0, "profit": 0})
 
     primary = next((a for a in accounts if a["is_primary"]), accounts[0])
     creds = _build_credentials_from_account(primary)
     if not creds:
         return jsonify({"success": False, "error": "Erreur d'authentification Google"}), 500
+
+    def _parse_month_year(d):
+        if not d:
+            return None, None
+        d = d.strip()
+        m = re.match(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})", d)
+        if m:
+            return int(m.group(2)), int(m.group(3))
+        m2 = re.match(r"(\d{4})-(\d{2})-(\d{2})", d)
+        if m2:
+            return int(m2.group(2)), int(m2.group(1))
+        return None, None
 
     try:
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
@@ -2606,15 +2624,12 @@ def vinted_analytics():
 
         result = sheets_service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
-            range="Commandes!A:I",
+            range="Commandes!A:J",
         ).execute()
         rows = result.get("values", [])
 
         if len(rows) < 2:
             return jsonify({"success": True, "spent": 0, "received": 0, "profit": 0})
-
-        headers = rows[0]
-        is_pro = len(headers) >= 7
 
         now = datetime.now()
         current_month = now.month
@@ -2623,51 +2638,47 @@ def vinted_analytics():
         total_spent = 0.0
         total_received = 0.0
 
-        for row in rows[1:]:
-            if not row or not row[0].strip():
-                continue
+        if mtype == "tickets":
+            # Tickets: A=Événement B=Catégorie C=Lieu D=Date E=Prix Achat
+            #          F=N° Commande G=Lien H=Compte I=Prix Vente
+            for row in rows[1:]:
+                if not row or not row[0].strip():
+                    continue
+                date_str = row[3].strip() if len(row) > 3 else ""
+                purchase_price_str = row[4].strip() if len(row) > 4 else ""
+                sale_price_str = row[8].strip() if len(row) > 8 else ""
 
-            if is_pro:
-                # Pro: Article | Prix Achat | Date Achat | Prix Vente | Date Vente | ...
+                r_month, r_year = _parse_month_year(date_str)
+                if r_month == current_month and r_year == current_year:
+                    val = _parse_price(purchase_price_str)
+                    if val > 0:
+                        total_spent += val
+                    val_sale = _parse_price(sale_price_str)
+                    if val_sale > 0:
+                        total_received += val_sale
+        else:
+            # Vinted: A=Article B=Prix Achat C=Date Achat D=Prix Vente E=Date Vente
+            for row in rows[1:]:
+                if not row or not row[0].strip():
+                    continue
                 purchase_price_str = row[1].strip() if len(row) > 1 else ""
                 purchase_date_str = row[2].strip() if len(row) > 2 else ""
                 sale_price_str = row[3].strip() if len(row) > 3 else ""
                 sale_date_str = row[4].strip() if len(row) > 4 else ""
-            else:
-                # Starter: Article | Prix Vente | Date Vente | Compte
-                purchase_price_str = ""
-                purchase_date_str = ""
-                sale_price_str = row[1].strip() if len(row) > 1 else ""
-                sale_date_str = row[2].strip() if len(row) > 2 else ""
 
-            # Parse date to check if it's current month
-            def _parse_month_year(d):
-                if not d:
-                    return None, None
-                d = d.strip()
-                m = re.match(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})", d)
-                if m:
-                    return int(m.group(2)), int(m.group(3))
-                m2 = re.match(r"(\d{4})-(\d{2})-(\d{2})", d)
-                if m2:
-                    return int(m2.group(2)), int(m2.group(1))
-                return None, None
+                if purchase_price_str and purchase_date_str:
+                    p_month, p_year = _parse_month_year(purchase_date_str)
+                    if p_month == current_month and p_year == current_year:
+                        val = _parse_price(purchase_price_str)
+                        if val > 0:
+                            total_spent += val
 
-            # Spent this month (purchases)
-            if purchase_price_str and purchase_date_str:
-                p_month, p_year = _parse_month_year(purchase_date_str)
-                if p_month == current_month and p_year == current_year:
-                    val = _parse_price(purchase_price_str)
-                    if val > 0:
-                        total_spent += val
-
-            # Received this month (sales)
-            if sale_price_str and sale_date_str:
-                s_month, s_year = _parse_month_year(sale_date_str)
-                if s_month == current_month and s_year == current_year:
-                    val = _parse_price(sale_price_str)
-                    if val > 0:
-                        total_received += val
+                if sale_price_str and sale_date_str:
+                    s_month, s_year = _parse_month_year(sale_date_str)
+                    if s_month == current_month and s_year == current_year:
+                        val = _parse_price(sale_price_str)
+                        if val > 0:
+                            total_received += val
 
         profit = total_received - total_spent
 
@@ -2679,7 +2690,7 @@ def vinted_analytics():
         })
 
     except Exception as exc:
-        logger.error("Failed to get vinted analytics: %s", exc)
+        logger.error("Failed to get analytics: %s", exc)
         return jsonify({"success": False, "error": "Erreur de lecture du Sheet"}), 500
 
 

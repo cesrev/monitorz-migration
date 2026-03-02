@@ -36,6 +36,7 @@ def init_db() -> None:
             picture TEXT DEFAULT '',
             monitoring_type TEXT NOT NULL CHECK(monitoring_type IN ('tickets', 'vinted')),
             plan TEXT NOT NULL DEFAULT 'starter' CHECK(plan IN ('starter', 'pro')),
+            billing_period TEXT NOT NULL DEFAULT 'monthly' CHECK(billing_period IN ('monthly', 'yearly')),
             created_at TEXT NOT NULL DEFAULT (datetime('now'))
         );
 
@@ -227,6 +228,12 @@ def init_db() -> None:
             conn.commit()
             logger.info("Migration: added %s column to users", col_name)
 
+    # --- Migration: add billing_period ---
+    if "billing_period" not in existing_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN billing_period TEXT NOT NULL DEFAULT 'monthly'")
+        conn.commit()
+        logger.info("Migration: added billing_period column to users")
+
     conn.close()
     logger.info("Database initialized at %s", DB_PATH)
 
@@ -235,19 +242,21 @@ def init_db() -> None:
 # USERS
 # ============================================
 
-def create_user(email: str, name: str, picture: str, monitoring_type: str, plan: str = "starter") -> int:
+def create_user(email: str, name: str, picture: str, monitoring_type: str, plan: str = "starter", billing_period: str = "monthly") -> int:
     """Create a new user. Returns the user id."""
     if plan not in ("starter", "pro"):
         plan = "starter"
+    if billing_period not in ("monthly", "yearly"):
+        billing_period = "monthly"
     conn = get_db()
     try:
         cursor = conn.execute(
-            "INSERT INTO users (email, name, picture, monitoring_type, plan, created_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (email, name, picture, monitoring_type, plan, datetime.utcnow().isoformat())
+            "INSERT INTO users (email, name, picture, monitoring_type, plan, billing_period, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (email, name, picture, monitoring_type, plan, billing_period, datetime.utcnow().isoformat())
         )
         conn.commit()
         user_id = cursor.lastrowid
-        logger.info("Created user id=%d email=%s type=%s plan=%s", user_id, email, monitoring_type, plan)
+        logger.info("Created user id=%d email=%s type=%s plan=%s billing=%s", user_id, email, monitoring_type, plan, billing_period)
         return user_id
     finally:
         conn.close()

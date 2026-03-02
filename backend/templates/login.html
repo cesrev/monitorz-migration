@@ -31,15 +31,28 @@
       Selectionne le type de monitoring puis connecte ton Gmail.
     </p>
 
+    <!-- Billing toggle (Mois / An) -->
+    <div class="animate-in animate-in--delay-2" style="display: flex; justify-content: center; margin-bottom: var(--space-lg);">
+      <div class="segmented-control segmented-control--small" id="loginBillingControl">
+        <div class="segmented-control__indicator" id="loginBillingIndicator"></div>
+        <button class="segmented-control__btn segmented-control__btn--active" id="loginBtnMonth">
+          Mois
+        </button>
+        <button class="segmented-control__btn" id="loginBtnYear">
+          Annuel
+        </button>
+      </div>
+    </div>
+
     <!-- Plan selector -->
     <div class="login-page__plan-selector animate-in animate-in--delay-2" style="margin-bottom: var(--space-2xl);">
       <div class="segmented-control" style="margin: 0 auto;">
         <div class="segmented-control__indicator" id="planIndicator"></div>
         <button class="segmented-control__btn segmented-control__btn--active" data-plan="starter" id="planStarter" onclick="selectPlan('starter')">
-          Starter — 20€
+          Starter — <span id="priceStarter">7.99&#8364;/mois</span>
         </button>
         <button class="segmented-control__btn" data-plan="pro" id="planPro" onclick="selectPlan('pro')">
-          Pro — 30€
+          Pro — <span id="pricePro">9.99&#8364;/mois</span>
         </button>
       </div>
       <div id="planFeatures" style="text-align: center; margin-top: var(--space-md); font-size: 0.82rem; color: var(--text-tertiary);">
@@ -110,15 +123,61 @@
 
   <script src="/static/js/app.js"></script>
   <script>
-    // Pre-select type and plan from URL params
+    // Pre-select type, plan and billing from URL params
     const urlParams = new URLSearchParams(window.location.search);
     const preselectedType = urlParams.get('type');
     let selectedPlan = urlParams.get('plan') || 'starter';
+    let selectedBilling = urlParams.get('billing') || 'monthly';
+
+    // Billing toggle
+    (function() {
+      var btnMonth = document.getElementById('loginBtnMonth');
+      var btnYear = document.getElementById('loginBtnYear');
+      var indicator = document.getElementById('loginBillingIndicator');
+      if (!btnMonth || !btnYear || !indicator) return;
+
+      function updateBillingPrices() {
+        var ps = document.getElementById('priceStarter');
+        var pp = document.getElementById('pricePro');
+        if (selectedBilling === 'yearly') {
+          if (ps) ps.textContent = '60\u20ac/an';
+          if (pp) pp.textContent = '90\u20ac/an';
+        } else {
+          if (ps) ps.textContent = '7.99\u20ac/mois';
+          if (pp) pp.textContent = '9.99\u20ac/mois';
+        }
+      }
+
+      function setBilling(yearly) {
+        selectedBilling = yearly ? 'yearly' : 'monthly';
+        var activeBtn = yearly ? btnYear : btnMonth;
+        var inactiveBtn = yearly ? btnMonth : btnYear;
+        activeBtn.classList.add('segmented-control__btn--active');
+        inactiveBtn.classList.remove('segmented-control__btn--active');
+        indicator.style.width = activeBtn.offsetWidth + 'px';
+        indicator.style.transform = 'translateX(' + activeBtn.offsetLeft + 'px)';
+        updateBillingPrices();
+      }
+
+      // Init
+      setBilling(selectedBilling === 'yearly');
+
+      btnMonth.addEventListener('click', function() { setBilling(false); });
+      btnYear.addEventListener('click', function() { setBilling(true); });
+
+      window.addEventListener('resize', function() {
+        var active = document.querySelector('#loginBillingControl .segmented-control__btn--active');
+        if (active) {
+          indicator.style.width = active.offsetWidth + 'px';
+          indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+        }
+      });
+    })();
 
     // Plan features descriptions
     const planFeatures = {
-      starter: '1 compte Gmail · Scan auto / 1h · Scan manuel illimite',
-      pro: 'Gmail illimite · ROI & benefice auto · Support prioritaire'
+      starter: '1 Gmail · Billets OU Vinted · Scan auto / 1h · Scan manuel illimite',
+      pro: 'Gmail illimite · WTS auto · Analytics · Farm hashtags · Notifications'
     };
 
     function selectPlan(plan) {
@@ -180,7 +239,7 @@
 
       // Redirect to OAuth with type and plan
       setTimeout(() => {
-        window.location.href = `/auth/google?type=${type}&plan=${selectedPlan}`;
+        window.location.href = `/auth/google?type=${type}&plan=${selectedPlan}&billing=${selectedBilling}`;
       }, 800);
     }
   </script>

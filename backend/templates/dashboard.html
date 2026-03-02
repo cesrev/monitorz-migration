@@ -172,8 +172,7 @@
         </div>
       </div>
 
-      <!-- Analytics Cards (Vinted only) -->
-      {% if user.monitoring_type == 'vinted' %}
+      <!-- Analytics Cards (all users) -->
       <div class="dashboard__stats" id="analyticsCards" style="margin-top: 0;">
         <div class="stat-card animate-in animate-in--delay-2">
           <div class="stat-card__icon">💸</div>
@@ -191,7 +190,6 @@
           <div class="stat-card__label">Benefice ce mois</div>
         </div>
       </div>
-      {% endif %}
 
       <!-- Section: Gmail Accounts -->
       <section class="dashboard__section animate-in animate-in--delay-5" id="sectionGmail">
@@ -661,7 +659,7 @@
                 <div>
                   <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-xs);">
                     <span style="font-size: 1.1rem; font-weight: 600; color: var(--text-primary);" id="currentPlanName">{{ user.plan | capitalize if user.plan else 'Starter' }}</span>
-                    <span class="badge badge--{{ 'accent' if user.plan == 'pro' else 'info' }}" id="currentPlanBadge">{{ '30€' if user.plan == 'pro' else '20€' }}</span>
+                    <span class="badge badge--{{ 'accent' if user.plan == 'pro' else 'info' }}" id="currentPlanBadge">{% if user.billing_period == 'yearly' %}{{ '90€/an' if user.plan == 'pro' else '60€/an' }}{% else %}{{ '9.99€/mois' if user.plan == 'pro' else '7.99€/mois' }}{% endif %}</span>
                   </div>
                   <div style="font-size: 0.82rem; color: var(--text-tertiary);" id="currentPlanDesc">
                     {% if user.plan == 'pro' %}
@@ -1119,9 +1117,8 @@
           }
         });
 
-      {% if user.monitoring_type == 'vinted' %}
-      // Load Vinted analytics (monthly stats)
-      fetch('/api/vinted-analytics')
+      // Load analytics (monthly stats)
+      fetch('/api/analytics')
         .then(function(r) { return r.json(); })
         .then(function(data) {
           if (!data.success) return;
@@ -1139,7 +1136,6 @@
         .catch(function(err) {
           console.error('Failed to load analytics:', err);
         });
-      {% endif %}
     });
 
     // Sidebar navigation
@@ -1432,7 +1428,8 @@
 
     // ---- Upgrade plan ----
     async function upgradePlan() {
-      if (!confirm('Passer au plan Pro (30€) ?\n\n+ Gmail illimite\n+ Scan toutes les 5 min\n+ ROI & benefice auto')) return;
+      var priceLabel = '{{ "90€/an" if user.billing_period == "yearly" else "9.99€/mois" }}';
+      if (!confirm('Passer au plan Pro (' + priceLabel + ') ?\n\n+ Gmail illimite\n+ Scan toutes les 5 min\n+ ROI & benefice auto')) return;
 
       try {
         var res = await fetch('/api/update-plan', {
