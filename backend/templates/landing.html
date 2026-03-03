@@ -202,7 +202,7 @@
           <div class="feature">
             <div class="feature__icon">#️⃣</div>
             <h4 class="feature__title">Farm a hashtags</h4>
-            <p class="feature__description">Hashtags generes automatiquement selon l'evenement, l'artiste et la categorie. Maximise ta visibilite.</p>
+            <p class="feature__description">Hashtags generes automatiquement pour tes annonces Vinted. Maximise ta visibilite et vends plus vite.</p>
           </div>
 
           <div class="feature">
@@ -443,20 +443,69 @@
     </div>
   </section>
 
-  <!-- ========== CTA BOX ========== -->
-  <section class="cta-box">
-    <div class="container container--narrow">
-      <div class="cta-box__inner reveal">
-        <h2 class="cta-box__title">Pret a automatiser ton suivi ?</h2>
-        <p class="cta-box__subtitle section-subtitle" style="margin-bottom: var(--space-2xl);">
-          Connecte ton Gmail en 2 minutes. Ton Sheet se remplit tout seul.
-        </p>
-        <a href="/login" class="btn btn--primary btn--large" style="position: relative; z-index: 1;">
-          Commencer maintenant
-        </a>
+  <!-- ========== PROMO VIDEO ========== -->
+  <section class="promo-video" style="padding: var(--space-3xl) 0;">
+    <div class="container" style="max-width: 900px;">
+      <div class="promo-video__frame" style="
+        border: 2px solid var(--orange);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(245, 166, 35, 0.15), 0 0 80px rgba(245, 166, 35, 0.06);
+        position: relative;
+        aspect-ratio: 16 / 9;
+        background: var(--bg);
+      ">
+        <video
+          src="/static/video/MonitorzPromo.mp4"
+          muted
+          loop
+          playsinline
+          disablePictureInPicture
+          controlsList="nodownload nofullscreen noremoteplayback"
+          style="width: 100%; height: 100%; object-fit: cover; display: block;"
+        ></video>
+        <div class="promo-video__overlay" style="
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(0,0,0,0.3);
+          pointer-events: none;
+          transition: opacity 0.4s ease;
+        ">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style="filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));">
+            <path d="M8 5.14v14.72a1 1 0 001.5.86l11-7.36a1 1 0 000-1.72l-11-7.36A1 1 0 008 5.14z" fill="white" opacity="0.9"/>
+          </svg>
+        </div>
       </div>
     </div>
   </section>
+
+  <script>
+  (function() {
+    const frame = document.querySelector('.promo-video__frame');
+    const video = frame.querySelector('video');
+    const overlay = frame.querySelector('.promo-video__overlay');
+    frame.addEventListener('mouseenter', function() {
+      video.muted = false;
+      video.play();
+      overlay.style.opacity = '0';
+    });
+    frame.addEventListener('mouseleave', function() {
+      video.pause();
+      video.currentTime = 0;
+      video.muted = true;
+      overlay.style.opacity = '1';
+    });
+    // Block fullscreen via right-click or double-click
+    video.addEventListener('fullscreenchange', function() {
+      if (document.fullscreenElement === video) document.exitFullscreen();
+    });
+    video.addEventListener('webkitfullscreenchange', function() {
+      if (document.webkitFullscreenElement === video) document.webkitExitFullscreen();
+    });
+    video.addEventListener('dblclick', function(e) { e.preventDefault(); });
+    video.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+  })();
+  </script>
 
   <!-- ========== FOOTER ========== -->
   <footer class="footer">
