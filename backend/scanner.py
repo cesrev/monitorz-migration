@@ -386,6 +386,9 @@ def _scan_gmail_account(
     all_orders: list[dict] = []
     account_email = account.get("email", "")
 
+    # Bulk-load processed email IDs to avoid per-message DB queries
+    processed_ids = db.get_processed_email_ids(user_id, monitoring_type=monitoring_type)
+
     for query_str, source in queries:
         try:
             results = gmail_service.users().messages().list(
@@ -400,8 +403,8 @@ def _scan_gmail_account(
             for msg_info in messages:
                 msg_id = msg_info["id"]
 
-                # Deduplication at DB level (scoped to monitoring_type)
-                if db.is_order_processed(user_id, msg_id, monitoring_type=monitoring_type):
+                # Deduplication via bulk set lookup (avoids per-message DB query)
+                if msg_id in processed_ids:
                     continue
 
                 # Fetch full message

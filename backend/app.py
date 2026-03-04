@@ -11,6 +11,7 @@ from functools import wraps
 # Allow HTTP for local development only (OAuth2 requires HTTPS by default)
 if os.getenv("FLASK_ENV") != "production":
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime
 from typing import Optional
 
@@ -31,6 +32,7 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
 import anthropic
+from flask_compress import Compress
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 import database as db
@@ -47,12 +49,39 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_ENV") == "production"
 
 limiter = Limiter(get_remote_address, app=app, default_limits=["200 per minute"], storage_uri="memory://")
+Compress(app)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+
+# ============================================
+# GOOGLE SHEETS CACHE
+# ============================================
+
+import time as _time_mod
+
+_sheets_cache: dict[str, tuple[float, list]] = {}
+_SHEETS_CACHE_TTL = 90  # seconds
+
+
+def _get_sheet_data_cached(sheets_service, spreadsheet_id: str, range_name: str) -> list:
+    """Fetch sheet data with a short-lived in-memory cache to reduce API calls."""
+    key = f"{spreadsheet_id}:{range_name}"
+    now = _time_mod.time()
+    if key in _sheets_cache:
+        ts, data = _sheets_cache[key]
+        if now - ts < _SHEETS_CACHE_TTL:
+            return data
+    result = sheets_service.spreadsheets().values().get(
+        spreadsheetId=spreadsheet_id, range=range_name
+    ).execute()
+    values = result.get("values", [])
+    _sheets_cache[key] = (now, values)
+    return values
 
 
 # ============================================
@@ -81,6 +110,23 @@ def _csrf_check():
         if not referer.startswith(allowed):
             logger.warning("CSRF blocked: referer=%s expected=%s", referer, allowed)
             return jsonify({"error": "Cross-origin request blocked"}), 403
+    else:
+        # Both Origin and Referer are missing — block the request
+        logger.warning("CSRF blocked: no Origin or Referer header from %s", request.remote_addr)
+        return jsonify({"error": "Cross-origin request blocked"}), 403
+
+
+@app.after_request
+def set_security_headers(response):
+    """Inject standard security headers into every response."""
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+    if os.getenv("FLASK_ENV") == "production":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    return response
 
 
 def login_required(f):
@@ -454,6 +500,13 @@ def oauth_callback():
 
     Creates or updates user, creates gmail_account, creates spreadsheet.
     """
+    # Validate OAuth state to prevent CSRF
+    stored_state = session.pop("oauth_state", None)
+    received_state = request.args.get("state")
+    if not stored_state or stored_state != received_state:
+        flash("Session invalide. Veuillez reessayer.", "error")
+        return redirect(url_for("login"))
+
     monitoring_type = session.pop("oauth_monitoring_type", "tickets")
     plan = session.pop("oauth_plan", "starter")
     billing = session.pop("oauth_billing", "monthly")
@@ -519,7 +572,8 @@ def oauth_callback():
     if not sheets_for_type:
         _create_spreadsheet_for_user(user_id, monitoring_type, plan)
 
-    # Set session
+    # Regenerate session to prevent session fixation
+    session.clear()
     session["user_id"] = user_id
     session["user_email"] = email
     session["user_name"] = name
@@ -576,6 +630,13 @@ def add_gmail():
 @login_required
 def add_gmail_callback():
     """Handle OAuth callback for adding an additional Gmail account."""
+    # Validate OAuth state to prevent CSRF
+    stored_state = session.pop("add_gmail_state", None)
+    received_state = request.args.get("state")
+    if not stored_state or stored_state != received_state:
+        flash("Session invalide. Veuillez reessayer.", "error")
+        return redirect(url_for("dashboard"))
+
     user_id = session["user_id"]
 
     redirect_uri = f"{APP_URL}/oauth/add-gmail/callback"
@@ -845,7 +906,7 @@ def fix_formulas():
 
     except Exception as exc:
         logger.error("fix-formulas error: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({"success": False, "error": "Erreur lors de la correction des formules"}), 500
 
 
 # ============================================
@@ -889,7 +950,7 @@ def scan_now():
         })
     except Exception as exc:
         logger.error("Manual scan failed for user id=%d: %s", user_id, exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({"success": False, "error": "Erreur lors du scan. Veuillez reessayer."}), 500
 
 
 # ============================================
@@ -924,11 +985,7 @@ def events_list():
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
         spreadsheet_id = sheets[0]["spreadsheet_id"]
 
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:J",
-        ).execute()
-        rows = result.get("values", [])
+        rows = _get_sheet_data_cached(sheets_service, spreadsheet_id, "Commandes!A:J")
 
         if len(rows) < 2:
             return jsonify({"success": True, "events": []})
@@ -945,7 +1002,7 @@ def events_list():
         return jsonify({"success": True, "events": events})
     except Exception as exc:
         logger.error("Failed to load events list: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({"success": False, "error": "Erreur lors du chargement de la liste des evenements"}), 500
 
 
 @app.route("/api/event-stats")
@@ -982,11 +1039,7 @@ def event_stats():
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
         spreadsheet_id = sheets[0]["spreadsheet_id"]
 
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:J",
-        ).execute()
-        rows = result.get("values", [])
+        rows = _get_sheet_data_cached(sheets_service, spreadsheet_id, "Commandes!A:J")
 
         if len(rows) < 2:
             return jsonify({"success": True, "event": event_name, "billets": [], "total_achat": 0, "total_revente": 0, "benefice": 0, "roi": "N/A", "count": 0})
@@ -1047,7 +1100,7 @@ def event_stats():
         })
     except Exception as exc:
         logger.error("Failed to load event stats: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({"success": False, "error": "Erreur lors du chargement des statistiques"}), 500
 
 
 @app.route("/api/create-event-sheet", methods=["POST"])
@@ -1152,7 +1205,7 @@ def create_event_sheet():
         })
     except Exception as exc:
         logger.error("Failed to create event sheet: %s", exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({"success": False, "error": "Erreur lors de la creation de l'onglet evenement"}), 500
 
 
 # ============================================
@@ -2447,11 +2500,7 @@ def vinted_articles():
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
         spreadsheet_id = sheets[0]["spreadsheet_id"]
 
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:I",
-        ).execute()
-        rows = result.get("values", [])
+        rows = _get_sheet_data_cached(sheets_service, spreadsheet_id, "Commandes!A:I")
 
         if len(rows) < 2:
             return jsonify({"success": True, "articles": []})
@@ -2516,11 +2565,7 @@ def vinted_sell_times():
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
         spreadsheet_id = sheets[0]["spreadsheet_id"]
 
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:I",
-        ).execute()
-        rows = result.get("values", [])
+        rows = _get_sheet_data_cached(sheets_service, spreadsheet_id, "Commandes!A:I")
 
         if len(rows) < 2:
             return jsonify({"success": True, "items": [], "stats": {}})
@@ -2664,11 +2709,7 @@ def analytics():
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
         spreadsheet_id = sheets[0]["spreadsheet_id"]
 
-        result = sheets_service.spreadsheets().values().get(
-            spreadsheetId=spreadsheet_id,
-            range="Commandes!A:J",
-        ).execute()
-        rows = result.get("values", [])
+        rows = _get_sheet_data_cached(sheets_service, spreadsheet_id, "Commandes!A:J")
 
         if len(rows) < 2:
             return jsonify({"success": True, "spent": 0, "received": 0, "profit": 0})
@@ -2812,8 +2853,11 @@ def create_service_route():
     if not name:
         return jsonify({"success": False, "error": "Le nom du service est requis"}), 400
 
-    unit_price_ht = float(data.get("unit_price_ht", 0))
-    tva_rate = float(data.get("tva_rate", 20))
+    try:
+        unit_price_ht = float(data.get("unit_price_ht", 0))
+        tva_rate = float(data.get("tva_rate", 20))
+    except (ValueError, TypeError):
+        return jsonify({"success": False, "error": "Prix ou taux TVA invalide"}), 400
     description = (data.get("description") or "").strip()
 
     service = db.create_service(user_email, name, unit_price_ht, tva_rate, description)
@@ -2831,9 +2875,15 @@ def update_service_route(service_id):
     if "name" in data:
         kwargs["name"] = (data["name"] or "").strip()
     if "unit_price_ht" in data:
-        kwargs["unit_price_ht"] = float(data["unit_price_ht"])
+        try:
+            kwargs["unit_price_ht"] = float(data["unit_price_ht"])
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "error": "Prix invalide"}), 400
     if "tva_rate" in data:
-        kwargs["tva_rate"] = float(data["tva_rate"])
+        try:
+            kwargs["tva_rate"] = float(data["tva_rate"])
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "error": "Taux TVA invalide"}), 400
     if "description" in data:
         kwargs["description"] = (data["description"] or "").strip()
 
@@ -3247,12 +3297,18 @@ def update_alert_settings():
     updates = {}
 
     if "alert_days_before" in data:
-        val = int(data["alert_days_before"])
+        try:
+            val = int(data["alert_days_before"])
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "error": "Valeur invalide pour alert_days_before"}), 400
         if 1 <= val <= 60:
             updates["alert_days_before"] = val
 
     if "dormant_days_threshold" in data:
-        val = int(data["dormant_days_threshold"])
+        try:
+            val = int(data["dormant_days_threshold"])
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "error": "Valeur invalide pour dormant_days_threshold"}), 400
         if 1 <= val <= 365:
             updates["dormant_days_threshold"] = val
 
@@ -3285,7 +3341,7 @@ def organize_tabs():
         return jsonify({"success": True, **result})
     except Exception as exc:
         logger.error("organize_tabs failed for user id=%d: %s", user_id, exc)
-        return jsonify({"success": False, "error": str(exc)}), 500
+        return jsonify({"success": False, "error": "Erreur lors de l'organisation des onglets"}), 500
 
 
 # ============================================
@@ -3568,13 +3624,17 @@ _scheduler_running = False
 
 
 def _background_scanner():
-    """Background thread that scans all users every hour."""
+    """Background thread that scans all users every hour, parallelized."""
+    # ThreadPoolExecutor imported at module level
+
     logger.info("Background scanner started (interval=%d min)", SCAN_INTERVAL_MIN)
     while True:
         try:
             users = db.get_all_users()
             now = datetime.utcnow()
 
+            # Filter to eligible users
+            eligible_users = []
             for user in users:
                 user_id = user["id"]
 
@@ -3600,19 +3660,30 @@ def _background_scanner():
                     except (ValueError, TypeError):
                         pass
 
-                # Time to scan
-                try:
-                    from scanner import scan_user
-                    orders = scan_user(user_id)
-                    logger.info("Auto-scan user id=%d: %d orders found", user_id, orders)
-                except Exception as exc:
-                    logger.error("Auto-scan failed for user id=%d: %s", user_id, exc)
+                eligible_users.append(user)
 
-                # Check alerts after scan
-                try:
-                    _check_alerts_for_user(user)
-                except Exception as exc:
-                    logger.error("Alert check failed for user id=%d: %s", user_id, exc)
+            # Scan eligible users in parallel
+            if eligible_users:
+                from scanner import scan_user
+
+                def _scan_and_alert(u):
+                    uid = u["id"]
+                    orders = scan_user(uid)
+                    logger.info("Auto-scan user id=%d: %d orders found", uid, orders)
+                    try:
+                        _check_alerts_for_user(u)
+                    except Exception as exc:
+                        logger.error("Alert check failed for user id=%d: %s", uid, exc)
+                    return orders
+
+                with ThreadPoolExecutor(max_workers=5) as executor:
+                    futures = {executor.submit(_scan_and_alert, u): u for u in eligible_users}
+                    for future in as_completed(futures):
+                        user = futures[future]
+                        try:
+                            future.result(timeout=300)
+                        except Exception as exc:
+                            logger.error("Auto-scan failed for user id=%d: %s", user["id"], exc)
 
         except Exception as exc:
             logger.error("Background scanner error: %s", exc)
@@ -3663,17 +3734,22 @@ def _ext_auth(f):
         if not incoming:
             return jsonify({"error": "Missing X-Extension-Secret"}), 401
         # Find user by ext_secret (constant-time comparison via DB lookup)
+        # Constant-time comparison to prevent timing attacks
         conn = db.get_db()
         try:
-            row = conn.execute(
-                "SELECT id FROM users WHERE ext_secret = ? AND ext_secret != ''",
-                (incoming,)
-            ).fetchone()
+            rows = conn.execute(
+                "SELECT id, ext_secret FROM users WHERE ext_secret != ''"
+            ).fetchall()
         finally:
             conn.close()
-        if not row:
+        matched_user_id = None
+        for row in rows:
+            if _hmac.compare_digest(row["ext_secret"], incoming):
+                matched_user_id = row["id"]
+                break
+        if matched_user_id is None:
             return jsonify({"error": "Invalid extension secret"}), 403
-        request.ext_user_id = row["id"]
+        request.ext_user_id = matched_user_id
         return f(*args, **kwargs)
     return _inner
 
@@ -3767,7 +3843,10 @@ def ext_post_log():
 def ext_get_logs():
     """Dashboard fetches extension logs for the current user."""
     user_id = session["user_id"]
-    limit = min(int(request.args.get("limit", 50)), 200)
+    try:
+        limit = min(int(request.args.get("limit", 50)), 200)
+    except (ValueError, TypeError):
+        limit = 50
     logs = db.get_extension_logs(user_id, limit=limit)
     return jsonify({"logs": logs})
 

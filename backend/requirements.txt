@@ -9,3 +9,5 @@ beautifulsoup4==4.12.3
 python-dotenv==1.0.1
 anthropic==0.42.0
 reportlab==4.1.0
+flask-limiter==4.1.1
+flask-compress==1.17

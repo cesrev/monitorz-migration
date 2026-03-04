@@ -12,15 +12,41 @@ from typing import Optional
 
 logger = logging.getLogger(__name__)
 
-DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "monitor.db")
+DB_PATH = os.getenv("DATABASE_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "monitor.db"))
+
+
+def _configure_connection(conn: sqlite3.Connection) -> sqlite3.Connection:
+    """Apply standard configuration to a SQLite connection."""
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.execute("PRAGMA journal_mode = WAL")
+    return conn
 
 
 def get_db() -> sqlite3.Connection:
-    """Get a database connection with row_factory enabled."""
+    """Get a database connection for non-request contexts (scanner, init).
+    Caller is responsible for closing."""
     conn = sqlite3.connect(DB_PATH)
-    conn.row_factory = sqlite3.Row
-    conn.execute("PRAGMA foreign_keys = ON")
-    return conn
+    return _configure_connection(conn)
+
+
+def get_request_db() -> sqlite3.Connection:
+    """Get a request-scoped database connection stored in Flask's g object.
+    Reuses the same connection within a single request."""
+    from flask import g
+    if "db" not in g:
+        g.db = sqlite3.connect(DB_PATH)
+        _configure_connection(g.db)
+    return g.db
+
+
+def close_db(e=None) -> None:
+    """Teardown function to close the request-scoped DB connection.
+    Register with app.teardown_appcontext(close_db)."""
+    from flask import g
+    db = g.pop("db", None)
+    if db is not None:
+        db.close()
 
 
 def init_db() -> None:
@@ -100,12 +126,14 @@ def init_db() -> None:
         CREATE TABLE IF NOT EXISTS services (
             id TEXT PRIMARY KEY,
             user_email TEXT NOT NULL,
+            user_id INTEGER,
             name TEXT NOT NULL,
             unit_price_ht REAL DEFAULT 0.0,
             tva_rate REAL DEFAULT 20.0,
             description TEXT DEFAULT '',
             position INTEGER DEFAULT 0,
-            created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            created_at TEXT NOT NULL DEFAULT (datetime('now')),
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
 
         CREATE UNIQUE INDEX IF NOT EXISTS idx_processed_orders_unique
@@ -119,6 +147,9 @@ def init_db() -> None:
 
         CREATE INDEX IF NOT EXISTS idx_scan_logs_user
             ON scan_logs(user_id);
+
+        CREATE INDEX IF NOT EXISTS idx_scan_logs_user_type
+            ON scan_logs(user_id, monitoring_type, scanned_at);
 
         CREATE INDEX IF NOT EXISTS idx_notifications_user
             ON notifications(user_id, read);
@@ -150,6 +181,12 @@ def init_db() -> None:
 
         CREATE INDEX IF NOT EXISTS idx_extension_logs_user
             ON extension_logs(user_id, created_at);
+
+        CREATE INDEX IF NOT EXISTS idx_processed_orders_user_type
+            ON processed_orders(user_id, monitoring_type);
+
+        CREATE INDEX IF NOT EXISTS idx_notifications_user_type_read
+            ON notifications(user_id, monitoring_type, read);
     """)
 
     conn.commit()
@@ -234,6 +271,27 @@ def init_db() -> None:
         conn.commit()
         logger.info("Migration: added billing_period column to users")
 
+    # --- Migration: add user_id to services table ---
+    svc_cols_cursor = conn.execute("PRAGMA table_info(services)")
+    svc_cols = {row[1] for row in svc_cols_cursor.fetchall()}
+    if "user_id" not in svc_cols:
+        conn.execute("ALTER TABLE services ADD COLUMN user_id INTEGER REFERENCES users(id) ON DELETE CASCADE")
+        conn.commit()
+        logger.info("Migration: added user_id column to services")
+    try:
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_services_user_id ON services(user_id)")
+        conn.commit()
+    except Exception:
+        pass
+
+    # --- Migration: add monitoring_paused ---
+    cursor = conn.execute("PRAGMA table_info(users)")
+    existing_cols = {row[1] for row in cursor.fetchall()}
+    if "monitoring_paused" not in existing_cols:
+        conn.execute("ALTER TABLE users ADD COLUMN monitoring_paused INTEGER NOT NULL DEFAULT 0")
+        conn.commit()
+        logger.info("Migration: added monitoring_paused column to users")
+
     conn.close()
     logger.info("Database initialized at %s", DB_PATH)
 
@@ -283,10 +341,33 @@ def get_user_by_email(email: str) -> Optional[dict]:
 
 
 def get_all_users() -> list[dict]:
-    """Get all users."""
+    """Get all users (excludes sensitive fields like ext_secret)."""
     conn = get_db()
     try:
-        rows = conn.execute("SELECT * FROM users ORDER BY created_at DESC").fetchall()
+        rows = conn.execute(
+            "SELECT id, email, name, picture, monitoring_type, plan, billing_period, "
+            "scan_frequency, created_at FROM users ORDER BY created_at DESC"
+        ).fetchall()
+        return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_all_users_with_stats() -> list[dict]:
+    """Get all users with aggregated stats in a single query (avoids N+1)."""
+    conn = get_db()
+    try:
+        rows = conn.execute("""
+            SELECT u.*,
+                (SELECT COUNT(*) FROM gmail_accounts WHERE user_id = u.id) as gmail_count,
+                (SELECT COUNT(*) FROM processed_orders
+                 WHERE user_id = u.id AND monitoring_type = u.monitoring_type) as orders_count,
+                (SELECT scanned_at FROM scan_logs
+                 WHERE user_id = u.id AND monitoring_type = u.monitoring_type
+                 ORDER BY scanned_at DESC LIMIT 1) as last_scan
+            FROM users u
+            ORDER BY u.created_at DESC
+        """).fetchall()
         return [dict(r) for r in rows]
     finally:
         conn.close()
@@ -372,39 +453,54 @@ def get_gmail_accounts(user_id: int) -> list[dict]:
         conn.close()
 
 
-def update_gmail_account_tokens(account_id: int, oauth_token: str, token_expiry: Optional[str] = None) -> bool:
-    """Update the OAuth token (after refresh)."""
+def update_gmail_account_tokens(account_id: int, oauth_token: str, token_expiry: Optional[str] = None, user_id: int = None) -> bool:
+    """Update the OAuth token (after refresh). user_id adds defense-in-depth."""
     conn = get_db()
     try:
-        conn.execute(
-            "UPDATE gmail_accounts SET oauth_token = ?, token_expiry = ? WHERE id = ?",
-            (oauth_token, token_expiry, account_id)
-        )
+        if user_id:
+            conn.execute(
+                "UPDATE gmail_accounts SET oauth_token = ?, token_expiry = ? WHERE id = ? AND user_id = ?",
+                (oauth_token, token_expiry, account_id, user_id)
+            )
+        else:
+            conn.execute(
+                "UPDATE gmail_accounts SET oauth_token = ?, token_expiry = ? WHERE id = ?",
+                (oauth_token, token_expiry, account_id)
+            )
         conn.commit()
         return True
     finally:
         conn.close()
 
 
-def update_gmail_account_refresh_token(account_id: int, oauth_refresh_token: str) -> bool:
-    """Update the refresh token."""
+def update_gmail_account_refresh_token(account_id: int, oauth_refresh_token: str, user_id: int = None) -> bool:
+    """Update the refresh token. user_id adds defense-in-depth."""
     conn = get_db()
     try:
-        conn.execute(
-            "UPDATE gmail_accounts SET oauth_refresh_token = ? WHERE id = ?",
-            (oauth_refresh_token, account_id)
-        )
+        if user_id:
+            conn.execute(
+                "UPDATE gmail_accounts SET oauth_refresh_token = ? WHERE id = ? AND user_id = ?",
+                (oauth_refresh_token, account_id, user_id)
+            )
+        else:
+            conn.execute(
+                "UPDATE gmail_accounts SET oauth_refresh_token = ? WHERE id = ?",
+                (oauth_refresh_token, account_id)
+            )
         conn.commit()
         return True
     finally:
         conn.close()
 
 
-def delete_gmail_account(account_id: int) -> bool:
-    """Delete a gmail account."""
+def delete_gmail_account(account_id: int, user_id: int = None) -> bool:
+    """Delete a gmail account. user_id adds defense-in-depth."""
     conn = get_db()
     try:
-        conn.execute("DELETE FROM gmail_accounts WHERE id = ?", (account_id,))
+        if user_id:
+            conn.execute("DELETE FROM gmail_accounts WHERE id = ? AND user_id = ?", (account_id, user_id))
+        else:
+            conn.execute("DELETE FROM gmail_accounts WHERE id = ?", (account_id,))
         conn.commit()
         return True
     finally:
@@ -478,11 +574,14 @@ def get_primary_spreadsheet(user_id: int, monitoring_type: str = None) -> Option
         conn.close()
 
 
-def delete_spreadsheet(sheet_row_id: int) -> bool:
-    """Delete a spreadsheet entry."""
+def delete_spreadsheet(sheet_row_id: int, user_id: int = None) -> bool:
+    """Delete a spreadsheet entry. user_id adds defense-in-depth."""
     conn = get_db()
     try:
-        conn.execute("DELETE FROM spreadsheets WHERE id = ?", (sheet_row_id,))
+        if user_id:
+            conn.execute("DELETE FROM spreadsheets WHERE id = ? AND user_id = ?", (sheet_row_id, user_id))
+        else:
+            conn.execute("DELETE FROM spreadsheets WHERE id = ?", (sheet_row_id,))
         conn.commit()
         return True
     finally:
@@ -518,14 +617,20 @@ def create_scan_log(
         conn.close()
 
 
-def update_scan_log(log_id: int, orders_found: int, status: str, error_message: Optional[str] = None) -> bool:
-    """Update a scan log after completion."""
+def update_scan_log(log_id: int, orders_found: int, status: str, error_message: Optional[str] = None, user_id: int = None) -> bool:
+    """Update a scan log after completion. user_id adds defense-in-depth."""
     conn = get_db()
     try:
-        conn.execute(
-            "UPDATE scan_logs SET orders_found = ?, status = ?, error_message = ? WHERE id = ?",
-            (orders_found, status, error_message, log_id)
-        )
+        if user_id:
+            conn.execute(
+                "UPDATE scan_logs SET orders_found = ?, status = ?, error_message = ? WHERE id = ? AND user_id = ?",
+                (orders_found, status, error_message, log_id, user_id)
+            )
+        else:
+            conn.execute(
+                "UPDATE scan_logs SET orders_found = ?, status = ?, error_message = ? WHERE id = ?",
+                (orders_found, status, error_message, log_id)
+            )
         conn.commit()
         return True
     finally:
@@ -651,6 +756,20 @@ def get_processed_orders(user_id: int, limit: int = 50, monitoring_type: str = N
                 (user_id, limit)
             ).fetchall()
         return [dict(r) for r in rows]
+    finally:
+        conn.close()
+
+
+def get_processed_email_ids(user_id: int, monitoring_type: str) -> set:
+    """Return the set of all email_ids already processed for a user+type.
+    Used by scanner for bulk dedup instead of per-message is_order_processed calls."""
+    conn = get_db()
+    try:
+        rows = conn.execute(
+            "SELECT email_id FROM processed_orders WHERE user_id = ? AND monitoring_type = ?",
+            (user_id, monitoring_type)
+        ).fetchall()
+        return {r["email_id"] for r in rows}
     finally:
         conn.close()
 
@@ -849,18 +968,19 @@ def delete_service(service_id: str, user_email: str) -> bool:
 
 
 def increment_invoice_counter(user_id: int) -> int:
-    """Increment and return the new invoice counter for a user."""
+    """Atomically increment and return the new invoice counter for a user."""
     conn = get_db()
     try:
+        # Single atomic UPDATE + SELECT before commit to prevent race conditions
         conn.execute(
             "UPDATE users SET invoice_counter = invoice_counter + 1 WHERE id = ?",
             (user_id,)
         )
-        conn.commit()
         row = conn.execute(
             "SELECT invoice_counter FROM users WHERE id = ?",
             (user_id,)
         ).fetchone()
+        conn.commit()
         return row["invoice_counter"] if row else 1
     finally:
         conn.close()

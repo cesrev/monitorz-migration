@@ -1099,10 +1099,10 @@
               var statusOk = (scan.status === 'completed' || scan.status === 'success');
 
               row.innerHTML =
-                '<td>' + dateStr + '</td>' +
-                '<td>' + gmailCount + ' comptes</td>' +
+                '<td>' + escapeHtml(dateStr) + '</td>' +
+                '<td>' + escapeHtml(gmailCount) + ' comptes</td>' +
                 '<td>' + found + ' nouvelle' + (found !== 1 ? 's' : '') + '</td>' +
-                '<td><span class="badge badge--' + (statusOk ? 'success' : 'warning') + '">' + (statusOk ? 'Termine' : (scan.status || 'Inconnu')) + '</span></td>';
+                '<td><span class="badge badge--' + (statusOk ? 'success' : 'warning') + '">' + (statusOk ? 'Termine' : escapeHtml(scan.status || 'Inconnu')) + '</span></td>';
               tbody.appendChild(row);
             });
           } else {
@@ -1280,22 +1280,33 @@
       });
     })();
 
-    // Monitoring toggle
+    // Monitoring toggle — wired to real API
     var monitoringToggle = document.getElementById('monitoringToggle');
     if (monitoringToggle) {
       var checkbox = monitoringToggle.querySelector('input');
-      checkbox.addEventListener('change', function() {
+      checkbox.addEventListener('change', async function() {
         var statusDot = document.getElementById('statusDot');
         var statusText = document.getElementById('statusText');
-
-        if (this.checked) {
-          statusDot.className = 'status-dot status-dot--active';
-          statusText.textContent = 'Monitoring actif';
-          showToast('Monitoring active', 'success');
-        } else {
-          statusDot.className = 'status-dot status-dot--inactive';
-          statusText.textContent = 'Monitoring en pause';
-          showToast('Monitoring mis en pause', 'info');
+        try {
+          var res = await fetch('/api/toggle-monitoring', {method: 'POST'});
+          var data = await res.json();
+          if (data.success) {
+            if (!data.paused) {
+              statusDot.className = 'status-dot status-dot--active';
+              statusText.textContent = 'Monitoring actif';
+              showToast('Monitoring active', 'success');
+            } else {
+              statusDot.className = 'status-dot status-dot--inactive';
+              statusText.textContent = 'Monitoring en pause';
+              showToast('Monitoring mis en pause', 'info');
+            }
+          } else {
+            checkbox.checked = !checkbox.checked;
+            showToast('Erreur: ' + (data.error || 'Inconnu'), 'error');
+          }
+        } catch (e) {
+          checkbox.checked = !checkbox.checked;
+          showToast('Erreur reseau', 'error');
         }
       });
     }
@@ -1492,7 +1503,7 @@
           _eventsLoaded = true;
           renderEventsList(_allEvents);
         } else {
-          container.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-xl);font-size:0.84rem;">' + (data.error || 'Erreur') + '</p>';
+          container.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-xl);font-size:0.84rem;">' + escapeHtml(data.error || 'Erreur') + '</p>';
         }
       } catch (err) {
         container.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-xl);font-size:0.84rem;">Erreur de connexion</p>';
@@ -1507,8 +1518,8 @@
       }
       var html = '<div class="event-list">';
       events.forEach(function(ev) {
-        html += '<div class="event-list__item" onclick="showEventDetail(\'' + ev.name.replace(/'/g, "\\'") + '\')">' +
-          '<span>' + ev.name + '</span>' +
+        html += '<div class="event-list__item" onclick="showEventDetail(\'' + escapeHtml(ev.name).replace(/'/g, "&#39;") + '\')">' +
+          '<span>' + escapeHtml(ev.name) + '</span>' +
           '<span class="badge badge--neutral" style="font-size:0.72rem;padding:2px 8px;">' + ev.count + ' billet' + (ev.count > 1 ? 's' : '') + '</span>' +
           '</div>';
       });
@@ -1575,13 +1586,13 @@
             data.billets.forEach(function(b) {
               var bColor = b.benefice >= 0 ? 'var(--success)' : 'var(--error)';
               rows += '<tr>' +
-                '<td>' + (b.categorie || '-') + '</td>' +
-                '<td>' + (b.lieu || '-') + '</td>' +
-                '<td>' + (b.date || '-') + '</td>' +
+                '<td>' + escapeHtml(b.categorie || '-') + '</td>' +
+                '<td>' + escapeHtml(b.lieu || '-') + '</td>' +
+                '<td>' + escapeHtml(b.date || '-') + '</td>' +
                 '<td>' + b.prix_achat.toFixed(2) + ' &euro;</td>' +
                 '<td>' + (b.prix_vente > 0 ? b.prix_vente.toFixed(2) + ' &euro;' : '-') + '</td>' +
                 '<td style="color:' + bColor + ';">' + (b.benefice !== 0 ? b.benefice.toFixed(2) + ' &euro;' : '-') + '</td>' +
-                '<td>' + (b.compte || '-') + '</td>' +
+                '<td>' + escapeHtml(b.compte || '-') + '</td>' +
                 '</tr>';
             });
             tbody.innerHTML = rows;
@@ -1589,7 +1600,7 @@
             tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--text-tertiary);">Aucun billet</td></tr>';
           }
         } else {
-          statsCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-tertiary);font-size:0.84rem;padding:var(--space-md);">' + (data.error || 'Erreur') + '</div>';
+          statsCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-tertiary);font-size:0.84rem;padding:var(--space-md);">' + escapeHtml(data.error || 'Erreur') + '</div>';
         }
       } catch (err) {
         statsCards.innerHTML = '<div style="grid-column:1/-1;text-align:center;color:var(--text-tertiary);font-size:0.84rem;padding:var(--space-md);">Erreur de connexion</div>';
@@ -1998,10 +2009,10 @@
             sellTimeDisplay = item.sell_time.display;
           }
           row.innerHTML =
-            '<td style="font-weight:500;">' + item.title + '</td>' +
-            '<td>' + (item.benefice || '--') + '</td>' +
-            '<td>' + (item.roi || '--') + '</td>' +
-            '<td>' + sellTimeDisplay + '</td>' +
+            '<td style="font-weight:500;">' + escapeHtml(item.title) + '</td>' +
+            '<td>' + escapeHtml(item.benefice || '--') + '</td>' +
+            '<td>' + escapeHtml(item.roi || '--') + '</td>' +
+            '<td>' + escapeHtml(sellTimeDisplay) + '</td>' +
             '<td><span class="badge badge--' + (item.sold ? 'success' : 'warning') + '">' + (item.sold ? 'Vendu' : 'En vente') + '</span></td>';
           tbody.appendChild(row);
         });
@@ -2108,7 +2119,7 @@
           '<div class="hashtag-row__header" onclick="toggleHashtagRow(this)">' +
             '<div style="display: flex; align-items: center; gap: 10px; min-width: 0;">' +
               '<svg class="hashtag-row__chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"></polyline></svg>' +
-              '<span class="hashtag-row__title">' + item.title + '</span>' +
+              '<span class="hashtag-row__title">' + escapeHtml(item.title) + '</span>' +
               '<span class="hashtag-row__count">' + item.hashtags.length + '/15</span>' +
             '</div>' +
             '<div style="display: flex; align-items: center; gap: 8px;">' +
@@ -2119,7 +2130,7 @@
             '</div>' +
           '</div>' +
           '<div class="hashtag-row__body" style="display: none;">' +
-            '<div id="batchHash_' + idx + '" class="hashtag-row__tags">' + item.text + '</div>' +
+            '<div id="batchHash_' + idx + '" class="hashtag-row__tags">' + escapeHtml(item.text) + '</div>' +
           '</div>';
         container.appendChild(row);
       });
@@ -2292,15 +2303,11 @@
         });
         if (partialMatch) _selectedArticle = partialMatch;
       }
-      console.log('[ROI Debug] _selectedArticle:', _selectedArticle);
-      console.log('[ROI Debug] _descArticles count:', _descArticles.length);
       if (_selectedArticle && _selectedArticle.purchase_price) {
         var pp = String(_selectedArticle.purchase_price).replace(',', '.').replace(/[^\d.]/g, '');
         purchasePrice = parseFloat(pp) || 0;
-        console.log('[ROI Debug] purchase_price raw:', _selectedArticle.purchase_price, '-> parsed:', purchasePrice);
       }
       var salePrice = parseFloat(price);
-      console.log('[ROI Debug] purchasePrice:', purchasePrice, 'salePrice:', salePrice);
 
       if (purchasePrice > 0 && salePrice > 0) {
         var roi = ((salePrice - purchasePrice) / purchasePrice * 100).toFixed(1);
@@ -2315,7 +2322,6 @@
 
       // Auto-generate hashtags for this article
       try {
-        console.log('[Hashtags] Generating for:', article);
         var res = await fetch('/api/generate-hashtags', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -2324,9 +2330,7 @@
             custom_tags: customTags.map(function(t) { return t.replace('#', ''); })
           })
         });
-        console.log('[Hashtags] Response status:', res.status);
         var data = await res.json();
-        console.log('[Hashtags] Response data:', data);
         if (data.success && data.items && data.items.length > 0) {
           var hashtagText = data.items[0].text;
           descText.textContent = lines.join('\n') + '\n\n' + hashtagText;
@@ -2400,8 +2404,8 @@
       return '<div onclick="markNotifRead('+n.id+',this)" style="display:flex;align-items:flex-start;gap:10px;padding:10px 16px;cursor:pointer;border-bottom:1px solid var(--border-subtle);'+(u?'':'opacity:0.6;')+'" onmouseover="this.style.background=\'var(--bg-elevated)\'" onmouseout="this.style.background=\'none\'">'+
         '<span style="font-size:1.2rem;margin-top:2px;">'+_nIcon(n.type)+'</span>'+
         '<div style="flex:1;min-width:0;">'+
-          '<div style="font-size:0.84rem;font-weight:'+(u?'600':'400')+';line-height:1.3;">'+n.title+'</div>'+
-          (n.message?'<div style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;">'+n.message+'</div>':'')+
+          '<div style="font-size:0.84rem;font-weight:'+(u?'600':'400')+';line-height:1.3;">'+escapeHtml(n.title)+'</div>'+
+          (n.message?'<div style="font-size:0.78rem;color:var(--text-secondary);margin-top:2px;">'+escapeHtml(n.message)+'</div>':'')+
           '<div style="font-size:0.72rem;color:var(--text-tertiary);margin-top:3px;">'+_nAgo(n.created_at)+'</div>'+
         '</div>'+
         (u?'<span style="width:8px;height:8px;border-radius:50%;background:var(--accent-start);flex-shrink:0;margin-top:6px;"></span>':'')+
@@ -2440,8 +2444,8 @@
           el.onclick = function(){markNotifRead(n.id,el);};
           el.innerHTML = '<span style="font-size:1.4rem;margin-top:2px;">'+_nIcon(n.type)+'</span>'+
             '<div style="flex:1;">'+
-              '<div style="font-weight:'+(u?'600':'400')+';font-size:0.9rem;">'+n.title+'</div>'+
-              (n.message?'<div style="font-size:0.84rem;color:var(--text-secondary);margin-top:4px;">'+n.message+'</div>':'')+
+              '<div style="font-weight:'+(u?'600':'400')+';font-size:0.9rem;">'+escapeHtml(n.title)+'</div>'+
+              (n.message?'<div style="font-size:0.84rem;color:var(--text-secondary);margin-top:4px;">'+escapeHtml(n.message)+'</div>':'')+
               '<div style="font-size:0.76rem;color:var(--text-tertiary);margin-top:6px;">'+_nAgo(n.created_at)+'</div>'+
             '</div>'+(u?'<span style="width:10px;height:10px;border-radius:50%;background:var(--accent-start);flex-shrink:0;margin-top:6px;"></span>':'');
           c.appendChild(el);
@@ -2612,8 +2616,9 @@
     }
 
     function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
       var div = document.createElement('div');
-      div.appendChild(document.createTextNode(str));
+      div.appendChild(document.createTextNode(String(str)));
       return div.innerHTML;
     }
 
@@ -2731,7 +2736,7 @@
       var tbody = document.getElementById('invoiceLinesBody');
       var row = document.createElement('tr');
       row.innerHTML =
-        '<td><input type="text" class="input" placeholder="Description" value="' + (desc || '') + '" oninput="recalcInvoiceTotals()"></td>' +
+        '<td><input type="text" class="input" placeholder="Description" value="' + escapeHtml(desc || '') + '" oninput="recalcInvoiceTotals()"></td>' +
         '<td><input type="number" class="input" value="' + (qty || 1) + '" min="1" step="1" style="width:60px;" oninput="recalcInvoiceTotals()"></td>' +
         '<td><input type="number" class="input" value="' + (price || 0) + '" min="0" step="0.01" style="width:100px;" oninput="recalcInvoiceTotals()"></td>' +
         '<td><input type="number" class="input" value="' + (tva !== undefined ? tva : 20) + '" min="0" max="100" step="0.1" style="width:60px;" oninput="recalcInvoiceTotals()"></td>' +
@@ -2972,9 +2977,9 @@
             return '<div style="display:flex;gap:8px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border-subtle);">'
               + '<span style="flex-shrink:0;">' + icon + '</span>'
               + '<div style="flex:1;min-width:0;">'
-              + '<span style="font-size:0.78rem;font-weight:600;color:' + color + ';">' + (l.action_type || '') + '</span>'
-              + (l.error ? '<br><span style="font-size:0.72rem;color:#ef4444;">' + l.error + '</span>' : '')
-              + (l.item_id ? '<br><span style="font-size:0.7rem;color:var(--text-tertiary);">item:' + l.item_id + '</span>' : '')
+              + '<span style="font-size:0.78rem;font-weight:600;color:' + color + ';">' + escapeHtml(l.action_type || '') + '</span>'
+              + (l.error ? '<br><span style="font-size:0.72rem;color:#ef4444;">' + escapeHtml(l.error) + '</span>' : '')
+              + (l.item_id ? '<br><span style="font-size:0.7rem;color:var(--text-tertiary);">item:' + escapeHtml(String(l.item_id)) + '</span>' : '')
               + '</div>'
               + '<span style="font-size:0.7rem;color:var(--text-tertiary);flex-shrink:0;">' + timeStr + '</span>'
               + '</div>';
