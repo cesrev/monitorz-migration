@@ -9,14 +9,20 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SECRET_KEY = os.getenv("SECRET_KEY", secrets.token_hex(32))
+_secret = os.getenv("SECRET_KEY", "")
+if not _secret:
+    raise RuntimeError("SECRET_KEY env var is required (use: python -c 'import secrets; print(secrets.token_hex(32))')")
+SECRET_KEY = _secret
 GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET", "")
-APP_URL = os.getenv("APP_URL", "http://localhost:5000")
+APP_URL = os.getenv("APP_URL", "http://localhost:5050")
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
-ADMIN_EMAILS = os.getenv("ADMIN_EMAILS", "7carambaa7@gmail.com").split(",")
+_admin_raw = os.getenv("ADMIN_EMAILS", "")
+if not _admin_raw:
+    raise RuntimeError("ADMIN_EMAILS env var is required (comma-separated list)")
+ADMIN_EMAILS = [e.strip() for e in _admin_raw.split(",") if e.strip()]
 
 SCOPES = [
     "openid",

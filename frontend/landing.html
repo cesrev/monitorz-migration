@@ -218,10 +218,20 @@
     <div class="container">
       <div class="text-center reveal">
         <span class="section-label">Tarifs transparents</span>
-        <h2 class="section-title">Un paiement. Acces a vie.</h2>
+        <h2 class="section-title">Choisis ta formule.</h2>
         <p class="section-subtitle">
-          Pas d'abonnement, pas de frais caches. Tu payes une fois, c'est a toi.
+          Mensuel ou annuel, sans engagement cache. Annule quand tu veux.
         </p>
+      </div>
+
+      <!-- Toggle Mois / An -->
+      <div class="pricing__toggle reveal">
+        <span class="pricing__toggle-label pricing__toggle-label--active" id="labelMonth">Mois</span>
+        <button class="pricing__toggle-switch" id="billingToggle" aria-label="Basculer entre mensuel et annuel">
+          <span class="pricing__toggle-knob"></span>
+        </button>
+        <span class="pricing__toggle-label" id="labelYear">An</span>
+        <span class="pricing__toggle-save badge badge--accent">-48%</span>
       </div>
 
       <div class="pricing__grid">
@@ -230,8 +240,11 @@
           <div class="pricing-card__name">Starter</div>
           <p class="pricing-card__description">Pour demarrer ton suivi automatise</p>
           <div class="pricing-card__price">
-            <span class="pricing-card__amount">20€</span>
-            <span class="pricing-card__period">one-shot</span>
+            <span class="pricing-card__amount" data-monthly="7.99" data-yearly="50">7.99€</span>
+            <span class="pricing-card__period" data-monthly="/mois" data-yearly="/an">/mois</span>
+          </div>
+          <div class="pricing-card__yearly-detail" style="display:none;">
+            <span class="pricing-card__equiv">soit 4.17€/mois</span>
           </div>
           <div class="pricing-card__features">
             <div class="pricing-card__feature">1 compte Gmail</div>
@@ -241,7 +254,7 @@
             <div class="pricing-card__feature">Deduplication auto</div>
             <div class="pricing-card__feature">Suivi des ventes</div>
           </div>
-          <a href="login.html?plan=starter" class="btn btn--outline btn--block">Choisir Starter</a>
+          <a href="login.html?plan=starter&billing=monthly" class="btn btn--outline btn--block" id="ctaStarter">Choisir Starter</a>
         </div>
 
         <!-- Pro -->
@@ -250,8 +263,11 @@
           <div class="pricing-card__name">Pro</div>
           <p class="pricing-card__description">Pour les resellers serieux</p>
           <div class="pricing-card__price">
-            <span class="pricing-card__amount text-gradient">30€</span>
-            <span class="pricing-card__period">one-shot</span>
+            <span class="pricing-card__amount text-gradient" data-monthly="9.99" data-yearly="90">9.99€</span>
+            <span class="pricing-card__period" data-monthly="/mois" data-yearly="/an">/mois</span>
+          </div>
+          <div class="pricing-card__yearly-detail" style="display:none;">
+            <span class="pricing-card__equiv">soit 7.50€/mois</span>
           </div>
           <div class="pricing-card__features">
             <div class="pricing-card__feature">Comptes Gmail illimites</div>
@@ -263,7 +279,7 @@
             <div class="pricing-card__feature">Deduplication avancee</div>
             <div class="pricing-card__feature">Support prioritaire</div>
           </div>
-          <a href="login.html?plan=pro" class="btn btn--primary btn--block">Choisir Pro</a>
+          <a href="login.html?plan=pro&billing=monthly" class="btn btn--primary btn--block" id="ctaPro">Choisir Pro</a>
         </div>
       </div>
     </div>
@@ -325,7 +341,7 @@
 
         <div class="faq__item reveal" style="transition-delay: 0.3s;">
           <button class="faq__question" aria-expanded="false">
-            <span>C'est vraiment un paiement unique ?</span>
+            <span>Comment fonctionne l'abonnement ?</span>
             <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
               <line x1="12" y1="5" x2="12" y2="19"></line>
               <line x1="5" y1="12" x2="19" y2="12"></line>
@@ -333,7 +349,7 @@
           </button>
           <div class="faq__answer">
             <div class="faq__answer-inner">
-              Oui. Tu payes une seule fois et tu as acces au service a vie. Pas d'abonnement mensuel, pas de frais caches. Les mises a jour et nouvelles sources de billetterie sont incluses.
+              Tu choisis entre un abonnement mensuel ou annuel. L'annuel te fait economiser jusqu'a 48% par rapport au mensuel. Tu peux annuler a tout moment, sans engagement. Les mises a jour et nouvelles sources de billetterie sont toujours incluses.
             </div>
           </div>
         </div>

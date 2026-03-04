@@ -150,6 +150,52 @@
   }
 
   // ==========================================
+  // Pricing Toggle (Mois / An)
+  // ==========================================
+
+  var billingToggle = document.getElementById('billingToggle');
+  if (billingToggle) {
+    var isYearly = false;
+    var labelMonth = document.getElementById('labelMonth');
+    var labelYear = document.getElementById('labelYear');
+    var amounts = document.querySelectorAll('.pricing-card__amount');
+    var periods = document.querySelectorAll('.pricing-card__period');
+    var yearlyDetails = document.querySelectorAll('.pricing-card__yearly-detail');
+    var ctaStarter = document.getElementById('ctaStarter');
+    var ctaPro = document.getElementById('ctaPro');
+
+    billingToggle.addEventListener('click', function () {
+      isYearly = !isYearly;
+      billingToggle.classList.toggle('active', isYearly);
+
+      if (labelMonth) labelMonth.classList.toggle('pricing__toggle-label--active', !isYearly);
+      if (labelYear) labelYear.classList.toggle('pricing__toggle-label--active', isYearly);
+
+      amounts.forEach(function (el) {
+        var price = isYearly ? el.getAttribute('data-yearly') : el.getAttribute('data-monthly');
+        el.style.opacity = '0';
+        setTimeout(function () {
+          el.textContent = price + '\u20AC';
+          el.style.opacity = '1';
+        }, 150);
+      });
+
+      periods.forEach(function (el) {
+        var period = isYearly ? el.getAttribute('data-yearly') : el.getAttribute('data-monthly');
+        el.textContent = period;
+      });
+
+      yearlyDetails.forEach(function (el) {
+        el.style.display = isYearly ? 'block' : 'none';
+      });
+
+      var billingParam = isYearly ? 'yearly' : 'monthly';
+      if (ctaStarter) ctaStarter.href = 'login.html?plan=starter&billing=' + billingParam;
+      if (ctaPro) ctaPro.href = 'login.html?plan=pro&billing=' + billingParam;
+    });
+  }
+
+  // ==========================================
   // FAQ Accordion
   // ==========================================
 
