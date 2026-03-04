@@ -8,8 +8,9 @@ import re
 import logging
 from functools import wraps
 
-# Allow HTTP for local development (OAuth2 requires HTTPS by default)
-os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
+# Allow HTTP for local development only (OAuth2 requires HTTPS by default)
+if os.getenv("FLASK_ENV") != "production":
+    os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 from datetime import datetime
 from typing import Optional
 
@@ -30,6 +31,8 @@ from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
 
 import anthropic
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import database as db
 from config import SECRET_KEY, GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, APP_URL, SCOPES, ADMIN_EMAILS, ANTHROPIC_API_KEY
 
@@ -41,6 +44,9 @@ app = Flask(__name__)
 app.secret_key = SECRET_KEY
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
+app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_ENV") == "production"
+
+limiter = Limiter(get_remote_address, app=app, default_limits=["200 per minute"], storage_uri="memory://")
 
 logging.basicConfig(
     level=logging.INFO,
@@ -52,6 +58,30 @@ logger = logging.getLogger(__name__)
 # ============================================
 # HELPERS
 # ============================================
+
+@app.before_request
+def _csrf_check():
+    """Reject cross-origin POST/PUT/DELETE requests (Origin/Referer validation)."""
+    if request.method in ("GET", "HEAD", "OPTIONS"):
+        return
+    # Skip CSRF for extension API (authenticated via X-Extension-Secret header)
+    if request.path.startswith("/api/extension/") or request.path.startswith("/api/vinted-token"):
+        return
+    # Skip for OAuth callback
+    if request.path == "/oauth/callback":
+        return
+    origin = request.headers.get("Origin") or ""
+    referer = request.headers.get("Referer") or ""
+    allowed = APP_URL.rstrip("/")
+    if origin:
+        if not origin.startswith(allowed):
+            logger.warning("CSRF blocked: origin=%s expected=%s", origin, allowed)
+            return jsonify({"error": "Cross-origin request blocked"}), 403
+    elif referer:
+        if not referer.startswith(allowed):
+            logger.warning("CSRF blocked: referer=%s expected=%s", referer, allowed)
+            return jsonify({"error": "Cross-origin request blocked"}), 403
+
 
 def login_required(f):
     """Decorator that redirects to /login if user is not authenticated."""
@@ -457,7 +487,9 @@ def oauth_callback():
     user = db.get_user_by_email(email)
     if user:
         user_id = user["id"]
-        db.update_user(user_id, name=name, picture=picture, plan=plan, monitoring_type=monitoring_type, billing_period=billing)
+        # Update profile info + monitoring_type/plan/billing when user switches
+        db.update_user(user_id, name=name, picture=picture,
+                       monitoring_type=monitoring_type, plan=plan)
     else:
         user_id = db.create_user(email, name, picture, monitoring_type, plan, billing_period=billing)
 
@@ -625,6 +657,9 @@ def link_sheet():
     Expects JSON: { "sheet_url": "https://docs.google.com/spreadsheets/d/..." }
     """
     user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    if not user:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 403
     data = request.get_json(silent=True)
 
     if not data or not data.get("sheet_url"):
@@ -818,6 +853,7 @@ def fix_formulas():
 # ============================================
 
 @app.route("/api/scan-now", methods=["POST"])
+@limiter.limit("5 per hour")
 @login_required
 def scan_now():
     """Trigger a manual scan for the current user."""
@@ -922,6 +958,8 @@ def event_stats():
 
     if not event_name:
         return jsonify({"success": False, "error": "Parametre event requis"}), 400
+    if len(event_name) > 500:
+        return jsonify({"success": False, "error": "Nom d'evenement trop long (max 500 car.)"}), 400
 
     if not user or user.get("monitoring_type") != "tickets":
         return jsonify({"success": False, "error": "Feature reservee aux utilisateurs tickets"}), 403
@@ -1023,6 +1061,8 @@ def create_event_sheet():
 
     if not event_name:
         return jsonify({"success": False, "error": "Parametre event requis"}), 400
+    if len(event_name) > 500:
+        return jsonify({"success": False, "error": "Nom d'evenement trop long (max 500 car.)"}), 400
 
     if not user or user.get("monitoring_type") != "tickets":
         return jsonify({"success": False, "error": "Feature reservee aux utilisateurs tickets"}), 403
@@ -1938,6 +1978,7 @@ def _generate_hashtags_for_item(title: str, custom_tags: list = None) -> list[st
 
 
 @app.route("/api/generate-hashtags", methods=["POST"])
+@limiter.limit("30 per hour")
 @login_required
 def generate_hashtags():
     """Generate hashtags v2 for Vinted items.
@@ -2239,6 +2280,7 @@ def generate_wts():
 
 
 @app.route("/api/generate-wts-ai", methods=["GET", "POST"])
+@limiter.limit("20 per hour")
 @login_required
 def generate_wts_ai():
     """Generate an AI-enhanced WTS post using Claude API.
@@ -3269,6 +3311,21 @@ def update_plan():
     return jsonify({"success": True, "plan": new_plan})
 
 
+@app.route("/api/toggle-monitoring", methods=["POST"])
+@login_required
+def toggle_monitoring():
+    """Pause or resume monitoring for the current user."""
+    user_id = session["user_id"]
+    user = db.get_user_by_id(user_id)
+    if not user:
+        return jsonify({"success": False, "error": "Utilisateur introuvable"}), 403
+    new_state = 0 if user.get("monitoring_paused", 0) else 1
+    db.update_user(user_id, monitoring_paused=new_state)
+    label = "pause" if new_state else "actif"
+    logger.info("User id=%d monitoring now %s", user_id, label)
+    return jsonify({"success": True, "paused": bool(new_state)})
+
+
 # ============================================
 # ROUTES - ADMIN
 # ============================================
@@ -3521,6 +3578,10 @@ def _background_scanner():
             for user in users:
                 user_id = user["id"]
 
+                # Skip paused users
+                if user.get("monitoring_paused"):
+                    continue
+
                 # Check if user has gmail accounts and a sheet
                 accounts = db.get_gmail_accounts(user_id)
                 mtype = user["monitoring_type"]
@@ -3577,15 +3638,31 @@ def start_background_scanner():
 
 import secrets as _secrets
 import hmac as _hmac
+import time as _time
+
+# Rate limiter for extension auth: {ip: [timestamp, ...]}
+_ext_auth_attempts: dict[str, list[float]] = {}
+_EXT_AUTH_MAX_ATTEMPTS = 10
+_EXT_AUTH_WINDOW_SEC = 60
 
 def _ext_auth(f):
     """Decorator: authenticate extension requests via X-Extension-Secret header."""
     @wraps(f)
     def _inner(*args, **kwargs):
+        # --- Rate limiting per IP ---
+        ip = request.remote_addr or "unknown"
+        now = _time.time()
+        window = _ext_auth_attempts.setdefault(ip, [])
+        # Prune old entries
+        _ext_auth_attempts[ip] = [t for t in window if now - t < _EXT_AUTH_WINDOW_SEC]
+        if len(_ext_auth_attempts[ip]) >= _EXT_AUTH_MAX_ATTEMPTS:
+            return jsonify({"error": "Too many requests, try again later"}), 429
+        _ext_auth_attempts[ip].append(now)
+
         incoming = request.headers.get("X-Extension-Secret", "")
         if not incoming:
             return jsonify({"error": "Missing X-Extension-Secret"}), 401
-        # Find user by ext_secret
+        # Find user by ext_secret (constant-time comparison via DB lookup)
         conn = db.get_db()
         try:
             row = conn.execute(
@@ -3729,7 +3806,11 @@ def ext_config_dashboard():
 # ============================================
 
 db.init_db()
-start_background_scanner()
+
+# Only start background scanner in dev (single-process) mode.
+# In production, use cron.py as a separate process.
+if os.getenv("FLASK_ENV") != "production":
+    start_background_scanner()
 
 if __name__ == "__main__":
-    app.run(debug=True, port=5050)
+    app.run(debug=os.getenv("FLASK_ENV") != "production", port=5050)
