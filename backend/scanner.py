@@ -34,6 +34,12 @@ from parsers.vinted import (
     VINTED_SALE_QUERIES,
     VINTED_PURCHASE_QUERIES,
 )
+from parsers.leboncoin import (
+    parse_leboncoin_sale_email,
+    parse_leboncoin_purchase_email,
+    LEBONCOIN_SALE_QUERIES,
+    LEBONCOIN_PURCHASE_QUERIES,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -99,27 +105,36 @@ def _get_user_credentials(user_id: int) -> Optional[Credentials]:
 # ============================================
 
 def _extract_html_from_payload(payload: dict) -> str:
-    """Recursively extract HTML content from a Gmail message payload."""
-    html_content = ""
-
+    """Recursively extract first HTML content from a Gmail message payload."""
     if "parts" in payload:
         for part in payload["parts"]:
             result = _extract_html_from_payload(part)
             if result:
-                html_content = result
+                return result  # Return immediately on first HTML match
     else:
         mime_type = payload.get("mimeType", "")
         if "html" in mime_type:
             body = payload.get("body", {})
             data = body.get("data", "")
             if data:
-                html_content = base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+                return base64.urlsafe_b64decode(data).decode("utf-8", errors="ignore")
+    return ""
 
-    return html_content
+
+def _headers_to_dict(headers: list[dict]) -> dict[str, str]:
+    """Convert Gmail headers list to a lowercase-key dict (first occurrence wins)."""
+    result = {}
+    for h in headers:
+        key = h.get("name", "").lower()
+        if key and key not in result:
+            result[key] = h.get("value", "")
+    return result
 
 
-def _get_header(headers: list[dict], name: str) -> str:
-    """Extract a header value from Gmail message headers."""
+def _get_header(headers, name: str) -> str:
+    """Extract a header value. Accepts list[dict] or pre-built dict."""
+    if isinstance(headers, dict):
+        return headers.get(name.lower(), "")
     name_lower = name.lower()
     for h in headers:
         if h.get("name", "").lower() == name_lower:
@@ -130,6 +145,24 @@ def _get_header(headers: list[dict], name: str) -> str:
 # ============================================
 # SHEET WRITING
 # ============================================
+
+
+def _validate_order_data(order: dict) -> dict:
+    """Ensure numeric fields are properly formatted for Sheets.
+
+    Converts string prices (with currency symbols, commas, etc.) to floats.
+    """
+    for key in ('prix', 'price', 'prix_achat', 'prix_vente', 'amount'):
+        if key in order:
+            val = order[key]
+            if isinstance(val, str):
+                cleaned = val.replace('€', '').replace(',', '.').replace('\xa0', '').strip()
+                try:
+                    order[key] = float(cleaned)
+                except (ValueError, TypeError):
+                    pass
+    return order
+
 
 TICKET_HEADERS = [
     "Événement", "Catégorie", "Lieu", "Date", "Prix Achat",
@@ -223,18 +256,20 @@ def _write_ticket_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
     batch = []
     for i, order in enumerate(new_orders):
         r = start_row + i
+        # Validate order data before writing
+        validated_order = _validate_order_data(order.copy())
         # Write A-I only (J = Bénéfice is a formula, leave untouched)
         batch.append({
             "range": f"Commandes!A{r}:I{r}",
             "values": [[
-                order.get("event", ""),
-                order.get("category", ""),
-                order.get("venue", ""),
-                order.get("event_date", ""),
-                order.get("price", ""),
-                order.get("order_id", ""),
-                order.get("order_link", ""),
-                order.get("account", ""),
+                validated_order.get("event", ""),
+                validated_order.get("category", ""),
+                validated_order.get("venue", ""),
+                validated_order.get("event_date", ""),
+                validated_order.get("price", ""),
+                validated_order.get("order_id", ""),
+                validated_order.get("order_link", ""),
+                validated_order.get("account", ""),
                 "",  # Prix Vente (I) — filled in later by user
             ]],
         })
@@ -278,17 +313,19 @@ def _write_vinted_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
         batch = []
         for i, order in enumerate(purchases):
             r = start_row + i
+            # Validate order data before writing
+            validated_order = _validate_order_data(order.copy())
             batch.append({
                 "range": f"Commandes!A{r}:C{r}",
                 "values": [[
-                    order.get("title", ""),
-                    order.get("price", ""),
-                    order.get("date", ""),
+                    validated_order.get("title", ""),
+                    validated_order.get("price", ""),
+                    validated_order.get("date", ""),
                 ]],
             })
             batch.append({
                 "range": f"Commandes!I{r}",
-                "values": [[order.get("account", "")]],
+                "values": [[validated_order.get("account", "")]],
             })
 
         sheets_service.spreadsheets().values().batchUpdate(
@@ -318,9 +355,11 @@ def _write_vinted_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
 
         sale_updates = []
         for order in sales:
-            vinted_title = order.get("title", "")
-            sale_price   = order.get("price", "")
-            sale_date    = order.get("date", "")
+            # Validate order data before writing
+            validated_order = _validate_order_data(order.copy())
+            vinted_title = validated_order.get("title", "")
+            sale_price   = validated_order.get("price", "")
+            sale_date    = validated_order.get("date", "")
 
             match = find_matching_item(vinted_title, items_without_sale) if items_without_sale else None
 
@@ -346,7 +385,7 @@ def _write_vinted_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
                 })
                 sale_updates.append({
                     "range": f"Commandes!I{r}",
-                    "values": [[order.get("account", "")]],
+                    "values": [[validated_order.get("account", "")]],
                 })
                 written += 1
 
@@ -378,10 +417,11 @@ def _scan_gmail_account(
     if monitoring_type == "tickets":
         queries = TICKET_QUERIES
     elif plan == "pro":
-        # Pro scans both sales AND purchases
-        queries = VINTED_SALE_QUERIES + VINTED_PURCHASE_QUERIES
+        # Pro scans both sales AND purchases (Vinted + Leboncoin)
+        queries = VINTED_SALE_QUERIES + VINTED_PURCHASE_QUERIES + LEBONCOIN_SALE_QUERIES + LEBONCOIN_PURCHASE_QUERIES
     else:
-        queries = VINTED_SALE_QUERIES
+        # Starter scans sales only (Vinted + Leboncoin)
+        queries = VINTED_SALE_QUERIES + LEBONCOIN_SALE_QUERIES
 
     all_orders: list[dict] = []
     account_email = account.get("email", "")
@@ -415,7 +455,7 @@ def _scan_gmail_account(
                 ).execute()
 
                 payload = msg.get("payload", {})
-                headers = payload.get("headers", [])
+                headers = _headers_to_dict(payload.get("headers", []))
                 subject = _get_header(headers, "subject")
                 delivered_to = _get_header(headers, "delivered-to") or _get_header(headers, "to")
 
@@ -443,6 +483,10 @@ def _scan_gmail_account(
                         order = parse_vinted_sale_email(html_content)
                     elif source == "vinted-purchase":
                         order = parse_vinted_purchase_email(html_content)
+                    elif source == "leboncoin-sale":
+                        order = parse_leboncoin_sale_email(html_content)
+                    elif source == "leboncoin-purchase":
+                        order = parse_leboncoin_purchase_email(html_content)
 
                 if order:
                     order["account"] = delivered_to or account_email
@@ -538,7 +582,17 @@ def scan_user(user_id: int) -> int:
 
         except Exception as exc:
             logger.error("Scan failed: user=%d account=%s error=%s", user_id, account["email"], exc)
-            db.update_scan_log(log_id, 0, "error", str(exc)[:500])
+            # Sanitize error for storage — no internal paths or token details
+            err_str = str(exc)
+            if "invalid_grant" in err_str:
+                sanitized = "Authentication error: token expired or revoked"
+            elif "HttpError" in err_str:
+                sanitized = f"Google API error: {type(exc).__name__}"
+            elif "database" in err_str.lower() or "locked" in err_str.lower():
+                sanitized = "Database error: temporary lock"
+            else:
+                sanitized = f"{type(exc).__name__}: {err_str[:200]}"
+            db.update_scan_log(log_id, 0, "error", sanitized)
 
     return total_orders
 

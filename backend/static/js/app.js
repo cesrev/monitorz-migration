@@ -23,9 +23,16 @@
 
     var toast = document.createElement('div');
     toast.className = 'toast toast--' + type;
-    toast.innerHTML =
-      '<span style="font-size: 1.1rem;">' + (icons[type] || icons.info) + '</span>' +
-      '<span>' + message + '</span>';
+
+    var iconSpan = document.createElement('span');
+    iconSpan.style.fontSize = '1.1rem';
+    iconSpan.textContent = icons[type] || icons.info;
+
+    var msgSpan = document.createElement('span');
+    msgSpan.textContent = message;
+
+    toast.appendChild(iconSpan);
+    toast.appendChild(msgSpan);
 
     container.appendChild(toast);
 
