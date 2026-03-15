@@ -103,6 +103,12 @@ def set_security_headers(response):
 # ROUTES - PAGES (not in blueprints)
 # ============================================
 
+@app.route("/health")
+def health():
+    """Health check endpoint for Railway."""
+    return {"status": "ok"}, 200
+
+
 @app.route("/")
 def index():
     """Landing page."""
