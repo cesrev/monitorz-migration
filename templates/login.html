@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Connexion — Monitorz</title>
+  <meta name="description" content="Connecte ton compte Gmail pour commencer le monitoring automatique de tes billets ou ventes Vinted.">
+  <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Background mesh -->
+  <div class="bg-mesh"></div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <main class="login-page">
+    <!-- Logo -->
+    <a href="/" class="login-page__logo animate-in">
+      <img src="/static/img/logo.png" alt="Monitorz" class="login-page__logo-img">
+    </a>
+
+    <!-- Title -->
+    <h1 class="login-page__title animate-in animate-in--delay-1">
+      Choisis ton <span class="text-gradient">activite</span>
+    </h1>
+    <p class="login-page__subtitle animate-in animate-in--delay-2">
+      Selectionne le type de monitoring puis connecte ton Gmail.
+    </p>
+
+    <!-- Billing toggle (Mois / An) -->
+    <div class="animate-in animate-in--delay-2" style="display: flex; justify-content: center; margin-bottom: var(--space-lg);">
+      <div class="segmented-control segmented-control--small" id="loginBillingControl">
+        <div class="segmented-control__indicator" id="loginBillingIndicator"></div>
+        <button class="segmented-control__btn segmented-control__btn--active" id="loginBtnMonth">
+          Mois
+        </button>
+        <button class="segmented-control__btn" id="loginBtnYear">
+          Annuel
+        </button>
+      </div>
+    </div>
+
+    <!-- Plan selector -->
+    <div class="login-page__plan-selector animate-in animate-in--delay-2" style="margin-bottom: var(--space-2xl);">
+      <div class="segmented-control" style="margin: 0 auto;">
+        <div class="segmented-control__indicator" id="planIndicator"></div>
+        <button class="segmented-control__btn segmented-control__btn--active" data-plan="starter" id="planStarter" onclick="selectPlan('starter')">
+          Starter — <span id="priceStarter">7.99&#8364;/mois</span>
+        </button>
+        <button class="segmented-control__btn" data-plan="pro" id="planPro" onclick="selectPlan('pro')">
+          Pro — <span id="pricePro">9.99&#8364;/mois</span>
+        </button>
+      </div>
+      <div id="planFeatures" style="text-align: center; margin-top: var(--space-md); font-size: 0.82rem; color: var(--text-tertiary);">
+        1 compte Gmail · Scan auto / 1h · Scan manuel illimite
+      </div>
+    </div>
+
+    <!-- Cards -->
+    <div class="login-page__cards">
+      <!-- Tickets Card -->
+      <div class="login-card animate-in animate-in--delay-3" id="loginCardTickets" data-type="tickets">
+        <div class="login-card__header">
+          <span class="login-card__icon"><img src="/static/img/icon-ticket.png" alt="Tickets" style="width:36px;height:auto;"></span>
+          <h2 class="login-card__title">Billets & Tickets</h2>
+        </div>
+        <p class="login-card__description">
+          Monitoring automatique de tes confirmations d'achat de billets. Concerts, sport, spectacles.
+        </p>
+        <div class="login-card__features">
+          <div class="login-card__feature">Ticketmaster, Fnac, Roland-Garros</div>
+          <div class="login-card__feature">Extraction : evenement, date, place, prix</div>
+          <div class="login-card__feature">Export Google Sheets automatique</div>
+          <div class="login-card__feature">Detection des doublons</div>
+        </div>
+        <button class="btn btn--google btn--block" onclick="connectGoogle('tickets')">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Connecter avec Google
+        </button>
+      </div>
+
+      <!-- Vinted Card -->
+      <div class="login-card animate-in animate-in--delay-4" id="loginCardVinted" data-type="vinted">
+        <div class="login-card__header">
+          <span class="login-card__icon"><img src="/static/img/icon-vinted.png" alt="Vinted" style="height:36px;width:auto;"></span>
+          <h2 class="login-card__title">Vinted Monitor</h2>
+        </div>
+        <p class="login-card__description">
+          Monitoring automatique de tes ventes Vinted. Suivi complet de ton activite vendeur.
+        </p>
+        <div class="login-card__features">
+          <div class="login-card__feature">Confirmations de vente Vinted</div>
+          <div class="login-card__feature">Extraction : article, prix, acheteur, frais</div>
+          <div class="login-card__feature">Export Google Sheets automatique</div>
+          <div class="login-card__feature">Suivi des expeditions</div>
+        </div>
+        <button class="btn btn--google btn--block" onclick="connectGoogle('vinted')">
+          <svg viewBox="0 0 24 24" width="20" height="20">
+            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
+            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+          </svg>
+          Connecter avec Google
+        </button>
+      </div>
+    </div>
+
+    <!-- Back link -->
+    <a href="/" class="login-page__back animate-in animate-in--delay-5">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="19" y1="12" x2="5" y2="12"></line>
+        <polyline points="12 19 5 12 12 5"></polyline>
+      </svg>
+      Retour a l'accueil
+    </a>
+  </main>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    // Pre-select type, plan and billing from URL params
+    const urlParams = new URLSearchParams(window.location.search);
+    const preselectedType = urlParams.get('type');
+    let selectedPlan = urlParams.get('plan') || 'starter';
+    let selectedBilling = urlParams.get('billing') || 'monthly';
+
+    // Billing toggle
+    (function() {
+      var btnMonth = document.getElementById('loginBtnMonth');
+      var btnYear = document.getElementById('loginBtnYear');
+      var indicator = document.getElementById('loginBillingIndicator');
+      if (!btnMonth || !btnYear || !indicator) return;
+
+      function updateBillingPrices() {
+        var ps = document.getElementById('priceStarter');
+        var pp = document.getElementById('pricePro');
+        if (selectedBilling === 'yearly') {
+          if (ps) ps.textContent = '60\u20ac/an';
+          if (pp) pp.textContent = '90\u20ac/an';
+        } else {
+          if (ps) ps.textContent = '7.99\u20ac/mois';
+          if (pp) pp.textContent = '9.99\u20ac/mois';
+        }
+      }
+
+      function setBilling(yearly) {
+        selectedBilling = yearly ? 'yearly' : 'monthly';
+        var activeBtn = yearly ? btnYear : btnMonth;
+        var inactiveBtn = yearly ? btnMonth : btnYear;
+        activeBtn.classList.add('segmented-control__btn--active');
+        inactiveBtn.classList.remove('segmented-control__btn--active');
+        indicator.style.width = activeBtn.offsetWidth + 'px';
+        indicator.style.transform = 'translateX(' + activeBtn.offsetLeft + 'px)';
+        updateBillingPrices();
+      }
+
+      // Init
+      setBilling(selectedBilling === 'yearly');
+
+      btnMonth.addEventListener('click', function() { setBilling(false); });
+      btnYear.addEventListener('click', function() { setBilling(true); });
+
+      window.addEventListener('resize', function() {
+        var active = document.querySelector('#loginBillingControl .segmented-control__btn--active');
+        if (active) {
+          indicator.style.width = active.offsetWidth + 'px';
+          indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+        }
+      });
+    })();
+
+    // Plan features descriptions
+    const planFeatures = {
+      starter: '1 Gmail · Billets OU Vinted · Scan auto / 1h · Scan manuel illimite',
+      pro: 'Gmail illimite · WTS auto · Analytics · Farm hashtags · Notifications'
+    };
+
+    function selectPlan(plan) {
+      selectedPlan = plan;
+      var starter = document.getElementById('planStarter');
+      var pro = document.getElementById('planPro');
+      var indicator = document.getElementById('planIndicator');
+      var features = document.getElementById('planFeatures');
+
+      starter.classList.remove('segmented-control__btn--active');
+      pro.classList.remove('segmented-control__btn--active');
+
+      if (plan === 'pro') {
+        pro.classList.add('segmented-control__btn--active');
+        indicator.style.width = pro.offsetWidth + 'px';
+        indicator.style.transform = 'translateX(' + pro.offsetLeft + 'px)';
+      } else {
+        starter.classList.add('segmented-control__btn--active');
+        indicator.style.width = starter.offsetWidth + 'px';
+        indicator.style.transform = 'translateX(' + starter.offsetLeft + 'px)';
+      }
+      features.textContent = planFeatures[plan];
+    }
+
+    (function() {
+      // Pre-select type
+      if (preselectedType === 'tickets') {
+        document.getElementById('loginCardTickets').classList.add('login-card--selected');
+      } else if (preselectedType === 'vinted') {
+        document.getElementById('loginCardVinted').classList.add('login-card--selected');
+      }
+      // Pre-select plan
+      selectPlan(selectedPlan);
+    })();
+
+    // Card selection toggle
+    document.querySelectorAll('.login-card').forEach(card => {
+      card.addEventListener('click', function(e) {
+        // Don't toggle if clicking the button
+        if (e.target.closest('.btn')) return;
+
+        document.querySelectorAll('.login-card').forEach(c => c.classList.remove('login-card--selected'));
+        this.classList.add('login-card--selected');
+      });
+    });
+
+    // Google OAuth redirect
+    function connectGoogle(type) {
+      // Select the card visually
+      document.querySelectorAll('.login-card').forEach(c => c.classList.remove('login-card--selected'));
+      document.querySelector(`[data-type="${type}"]`).classList.add('login-card--selected');
+
+      // Show loading state on the clicked button
+      const card = document.querySelector(`[data-type="${type}"]`);
+      const btn = card.querySelector('.btn--google');
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div> Redirection vers Google...';
+      btn.disabled = true;
+
+      // Redirect to OAuth with type and plan
+      setTimeout(() => {
+        window.location.href = `/auth/google?type=${type}&plan=${selectedPlan}&billing=${selectedBilling}`;
+      }, 800);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+venv/
+*.db
+*.sqlite3
+.DS_Store
+migrate_to_supabase.py
+database_sqlite.py
+marketing/
+
