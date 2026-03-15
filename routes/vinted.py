@@ -370,17 +370,67 @@ def _build_wts_text(unsold_items):
 @vinted_bp.route("/api/generate-hashtags", methods=["POST"])
 @login_required
 def generate_hashtags_route():
-    """Generate hashtags for Vinted items."""
-    data = request.get_json(silent=True) or {}
+    """Generate hashtags for Vinted items.
 
-    title = (data.get("title") or "").strip()
-    custom_tags = data.get("custom_tags", [])
+    Single mode: {title, custom_tags} → {success, items: [{title, text, hashtags}]}
+    Batch mode:  {from_sheet: true, custom_tags} → reads user sheet, returns one item per article.
+    """
+    user_id = session["user_id"]
+    payload = request.get_json(silent=True) or {}
+    custom_tags = payload.get("custom_tags", [])
+    from_sheet = payload.get("from_sheet", False)
 
+    if from_sheet:
+        # --- Batch mode: generate hashtags for all articles in the user's Vinted sheet ---
+        user = db.get_user_by_id(user_id)
+        if not user or user.get("monitoring_type") != "vinted":
+            return jsonify({"success": False, "error": "Feature reservee aux utilisateurs vinted"}), 403
+
+        sheets = db.get_spreadsheets(user_id, monitoring_type="vinted")
+        if not sheets:
+            return jsonify({"success": False, "error": "Aucun Google Sheet configure"}), 400
+
+        creds, primary, err = get_google_credentials(user_id)
+        if err:
+            return err
+
+        try:
+            sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
+            spreadsheet_id = sheets[0]["spreadsheet_id"]
+            rows = _get_sheet_data_cached(sheets_service, spreadsheet_id, "Commandes!A:D")
+
+            items = []
+            for row in rows[1:]:
+                if not row or not row[0]:
+                    continue
+                title = str(row[0]).strip()
+                purchase_price = str(row[1]).strip() if len(row) > 1 else ""
+                sale_price = str(row[3]).strip() if len(row) > 3 else ""
+                sold = bool(sale_price)
+
+                tags = generate_hashtags(title, custom_tags)
+                text = " ".join(tags)
+                items.append({
+                    "title": title,
+                    "text": text,
+                    "hashtags": tags,
+                    "sold": sold,
+                    "purchase_price": purchase_price,
+                })
+
+            return jsonify({"success": True, "items": items})
+        except Exception as exc:
+            logger.error("Batch hashtag generation failed for user id=%d: %s", user_id, exc)
+            return jsonify({"success": False, "error": "Erreur lors de la generation"}), 500
+
+    # --- Single mode ---
+    title = (payload.get("title") or "").strip()
     if not title:
         return jsonify({"success": False, "error": "Title requis"}), 400
 
     tags = generate_hashtags(title, custom_tags)
-    return jsonify({"success": True, "hashtags": tags})
+    text = " ".join(tags)
+    return jsonify({"success": True, "items": [{"title": title, "text": text, "hashtags": tags}]})
 
 
 @vinted_bp.route("/api/hashtag-categories")
