@@ -13,18 +13,14 @@ from flask import Blueprint, session, request, jsonify
 from googleapiclient.discovery import build
 import database as db
 from helpers import login_required, get_google_credentials
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from extensions import limiter
 
 logger = logging.getLogger(__name__)
-
-# Create limiter for scan routes
-limiter = Limiter(get_remote_address, default_limits=["200 per minute"], storage_uri="memory://")
 
 scan_bp = Blueprint("scan", __name__)
 
 # Background scanner globals
-SCAN_INTERVAL_MIN = 60  # 1 hour
+SCAN_INTERVAL_MIN = 480  # 8 hours
 _scheduler_running = False
 
 

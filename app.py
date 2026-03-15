@@ -12,8 +12,7 @@ if os.getenv("FLASK_ENV") in ("development", "dev"):
 
 from flask import Flask, render_template, redirect, url_for, session
 from flask_compress import Compress
-from flask_limiter import Limiter
-from flask_limiter.util import get_remote_address
+from extensions import limiter
 import database as db
 from config import SECRET_KEY, APP_URL
 
@@ -37,7 +36,7 @@ app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_ENV") == "production"
 
-limiter = Limiter(get_remote_address, app=app, default_limits=["200 per minute"], storage_uri="memory://")
+limiter.init_app(app)
 Compress(app)
 
 # ============================================
