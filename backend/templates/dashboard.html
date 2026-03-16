@@ -198,6 +198,15 @@
           <div class="stat-card__icon">📈</div>
           <div class="stat-card__value" id="analyticsProfit">--</div>
           <div class="stat-card__label">Benefice ce mois</div>
+          <span id="analyticsRoiBadge" style="display:none;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:4px;"></span>
+        </div>
+        <div class="stat-card animate-in animate-in--delay-5" style="cursor:pointer;" onclick="toggleMonthlyCosts()" title="Cliquez pour modifier">
+          <div class="stat-card__icon">🧾</div>
+          <div class="stat-card__value" id="analyticsCosts">
+            <span id="costsDisplay">0€</span>
+            <input id="costsInput" type="text" inputmode="decimal" placeholder="0" style="display:none;width:80px;font-size:1.2rem;font-weight:700;font-family:var(--font-display);background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);text-align:center;outline:none;padding:4px 8px;-moz-appearance:textfield;" onblur="saveMonthlyCosts()" onkeydown="if(event.key==='Enter')this.blur()">
+          </div>
+          <div class="stat-card__label">Couts mensuels</div>
         </div>
       </div>
 
@@ -1139,18 +1148,85 @@
           var spentEl = document.getElementById('analyticsSpent');
           var receivedEl = document.getElementById('analyticsReceived');
           var profitEl = document.getElementById('analyticsProfit');
+          var roiBadge = document.getElementById('analyticsRoiBadge');
+          var costsDisplay = document.getElementById('costsDisplay');
+          var costsInput = document.getElementById('costsInput');
+          var netProfitEl = document.getElementById('analyticsNetProfit');
+
           if (spentEl) spentEl.textContent = data.spent.toFixed(0) + '\u20ac';
           if (receivedEl) receivedEl.textContent = data.received.toFixed(0) + '\u20ac';
           if (profitEl) {
-            var profit = data.profit;
+            var profit = data.profit - (data.monthly_costs || 0);
             profitEl.textContent = (profit >= 0 ? '+' : '') + profit.toFixed(0) + '\u20ac';
             profitEl.style.color = profit >= 0 ? 'var(--success)' : 'var(--error)';
           }
+          // ROI badge (same style as Vinted description ROI)
+          if (roiBadge && data.roi !== undefined && data.spent > 0) {
+            var isPositive = data.roi >= 0;
+            roiBadge.textContent = (isPositive ? '+' : '') + data.roi + '% ROI';
+            roiBadge.style.display = 'inline-block';
+            roiBadge.style.background = isPositive ? 'rgba(34,197,94,0.15)' : 'rgba(239,68,68,0.15)';
+            roiBadge.style.color = isPositive ? '#22c55e' : '#ef4444';
+          }
+          // Monthly costs
+          if (costsDisplay) costsDisplay.textContent = (data.monthly_costs || 0).toFixed(0) + '\u20ac';
+          if (costsInput) costsInput.value = data.monthly_costs || 0;
+          // Net profit
+          if (netProfitEl) {
+            var net = data.net_profit;
+            netProfitEl.textContent = (net >= 0 ? '+' : '') + net.toFixed(0) + '\u20ac';
+            netProfitEl.style.color = net >= 0 ? 'var(--success)' : 'var(--error)';
+          }
+          // Store for recalc
+          window._analyticsData = data;
         })
         .catch(function(err) {
           console.error('Failed to load analytics:', err);
         });
     });
+
+    // Monthly costs toggle/save
+    function toggleMonthlyCosts() {
+      var display = document.getElementById('costsDisplay');
+      var input = document.getElementById('costsInput');
+      if (input.style.display === 'none') {
+        display.style.display = 'none';
+        input.style.display = '';
+        input.value = (window._analyticsData && window._analyticsData.monthly_costs) ? window._analyticsData.monthly_costs : '';
+        input.focus();
+        input.select();
+      }
+    }
+
+    function saveMonthlyCosts() {
+      var display = document.getElementById('costsDisplay');
+      var input = document.getElementById('costsInput');
+      var val = parseFloat(input.value.replace(/[^0-9.,]/g, '').replace(',', '.')) || 0;
+      if (val < 0) val = 0;
+
+      display.textContent = val.toFixed(0) + '\u20ac';
+      display.style.display = '';
+      input.style.display = 'none';
+
+      fetch('/api/monthly-costs', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({monthly_costs: val})
+      }).then(function(r) { return r.json(); })
+        .then(function(data) {
+          if (!data.success) return;
+          // Recalculate benefit with new costs
+          if (window._analyticsData) {
+            window._analyticsData.monthly_costs = val;
+            var net = window._analyticsData.profit - val;
+            var profitEl = document.getElementById('analyticsProfit');
+            if (profitEl) {
+              profitEl.textContent = (net >= 0 ? '+' : '') + net.toFixed(0) + '\u20ac';
+              profitEl.style.color = net >= 0 ? 'var(--success)' : 'var(--error)';
+            }
+          }
+        });
+    }
 
     // Sidebar navigation
     document.querySelectorAll('.sidebar__link[data-section]').forEach(function(link) {
@@ -1513,7 +1589,7 @@
         var res = await fetch('/api/events-list');
         var data = await res.json();
         if (data.success) {
-          _allEvents = data.events;
+          _allEvents = data.data;
           _eventsLoaded = true;
           renderEventsList(_allEvents);
         } else {
@@ -2016,10 +2092,10 @@
 
         // Update stats
         var s = data.stats || {};
-        document.getElementById('stSoldCount').textContent = s.sold_count || 0;
-        document.getElementById('stAvgDays').textContent = s.avg_sell_days || 0;
-        document.getElementById('stFastest').textContent = s.fastest_days || 0;
-        document.getElementById('stSlowest').textContent = s.slowest_days || 0;
+        document.getElementById('stSoldCount').textContent = s.count || 0;
+        document.getElementById('stAvgDays').textContent = s.average_days || 0;
+        document.getElementById('stFastest').textContent = s.min_days || 0;
+        document.getElementById('stSlowest').textContent = s.max_days || 0;
 
         // Update table
         var tbody = document.getElementById('sellTimeBody');
@@ -2209,8 +2285,8 @@
       try {
         var res = await fetch('/api/vinted-articles');
         var data = await res.json();
-        if (data.success && data.articles.length > 0) {
-          _descArticles = data.articles;
+        if (data.success && data.data.length > 0) {
+          _descArticles = data.data;
           _descArticlesLoaded = true;
         }
       } catch (err) {
@@ -2235,7 +2311,7 @@
       var q = (query || '').trim().toLowerCase();
       var filtered = _descArticles.filter(function(a) {
         if (!q) return true;
-        return a.name.toLowerCase().indexOf(q) !== -1;
+        return a.title.toLowerCase().indexOf(q) !== -1;
       });
 
       if (filtered.length === 0) {
@@ -2249,7 +2325,7 @@
         var item = document.createElement('div');
         item.className = 'article-suggestions__item';
         var label = document.createElement('span');
-        label.textContent = a.name;
+        label.textContent = a.title;
         item.appendChild(label);
         if (a.purchase_price) {
           var price = document.createElement('span');
@@ -2269,7 +2345,7 @@
     function selectArticle(article) {
       _selectedArticle = article;
       var input = document.getElementById('descArticleInput');
-      input.value = article.name;
+      input.value = article.title;
       document.getElementById('articleSuggestions').style.display = 'none';
     }
 
@@ -2320,14 +2396,14 @@
       // If no article selected from suggestions, try to match by name
       if (!_selectedArticle && article) {
         var match = _descArticles.find(function(a) {
-          return a.name.toLowerCase().trim() === article.toLowerCase().trim();
+          return a.title.toLowerCase().trim() === article.toLowerCase().trim();
         });
         if (match) _selectedArticle = match;
       }
       // Also try partial match if exact match failed
       if (!_selectedArticle && article && _descArticles.length > 0) {
         var partialMatch = _descArticles.find(function(a) {
-          return a.name.toLowerCase().includes(article.toLowerCase()) || article.toLowerCase().includes(a.name.toLowerCase());
+          return a.title.toLowerCase().includes(article.toLowerCase()) || article.toLowerCase().includes(a.title.toLowerCase());
         });
         if (partialMatch) _selectedArticle = partialMatch;
       }
