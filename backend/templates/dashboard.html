@@ -7,6 +7,12 @@
   <meta name="description" content="Tableau de bord Monitorz. Gerez vos comptes Gmail, consultez vos stats et declenchez des scans.">
   <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
   <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Monitorz">
+  <link rel="apple-touch-icon" href="/static/img/logo.png">
+  <meta name="theme-color" content="#0f1117">
   <script>document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'dark');</script>
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
@@ -941,22 +947,45 @@
             <button class="btn btn--primary" style="margin-top:var(--space-md);width:100%;" onclick="saveExtConfig()">Sauvegarder</button>
           </div>
 
-          <!-- Secret + Logs -->
+          <!-- Connexion extension + Logs -->
           <div style="display:flex;flex-direction:column;gap:var(--space-lg);">
-            <div class="card">
-              <h4 style="margin-bottom:var(--space-md);">🔑 Clé d'authentification</h4>
-              <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:var(--space-sm);">
-                Copiez cette clé dans les paramètres de l'extension Chrome.
-              </p>
-              <div style="display:flex;gap:8px;">
-                <input type="text" id="extSecretDisplay" class="form-input" readonly
-                  style="font-family:monospace;font-size:0.78rem;flex:1;"
-                  placeholder="Cliquez sur Générer pour créer une clé">
-                <button class="btn btn--secondary btn--small" onclick="copyExtSecret()">Copier</button>
+            <!-- One-click connect -->
+            <div class="card" id="extConnectCard">
+              <h4 style="margin-bottom:var(--space-sm);">🔌 Connexion extension</h4>
+
+              <!-- État : extension détectée -->
+              <div id="extBridgeDetected" style="display:none;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:var(--space-md);">
+                  <span id="extConnectDot" style="width:10px;height:10px;border-radius:50%;background:#ef4444;flex-shrink:0;"></span>
+                  <span id="extConnectLabel" style="font-size:0.85rem;font-weight:600;">Non connectee</span>
+                </div>
+                <button class="btn btn--primary" id="btnConnectExt" onclick="connectExtension()" style="width:100%;">
+                  Connecter l'extension
+                </button>
+                <p id="extConnectMsg" style="font-size:0.78rem;margin-top:6px;min-height:16px;color:var(--text-secondary);"></p>
               </div>
-              <button class="btn btn--danger btn--small" style="margin-top:var(--space-sm);" onclick="regenerateExtSecret()">
-                Générer / Regénérer
-              </button>
+
+              <!-- État : extension non détectée -->
+              <div id="extBridgeNotDetected">
+                <p style="font-size:0.82rem;color:var(--text-secondary);margin-bottom:var(--space-sm);">
+                  Extension non détectée. Rechargez l'extension dans <code>chrome://extensions</code> puis rafraîchissez cette page.
+                </p>
+                <button class="btn btn--secondary btn--small" onclick="recheckExtBridge()" style="margin-bottom:var(--space-sm);">
+                  ↻ Vérifier à nouveau
+                </button>
+                <details style="margin-top:var(--space-sm);">
+                  <summary style="font-size:0.78rem;color:var(--text-tertiary);cursor:pointer;">Config manuelle (avancé)</summary>
+                  <div style="margin-top:var(--space-sm);display:flex;gap:8px;">
+                    <input type="text" id="extSecretDisplay" class="form-input" readonly
+                      style="font-family:monospace;font-size:0.78rem;flex:1;"
+                      placeholder="Cliquez sur Générer pour créer une clé">
+                    <button class="btn btn--secondary btn--small" onclick="copyExtSecret()">Copier</button>
+                  </div>
+                  <button class="btn btn--danger btn--small" style="margin-top:6px;" onclick="regenerateExtSecret()">
+                    Générer / Regénérer
+                  </button>
+                </details>
+              </div>
             </div>
 
             <div class="card">
@@ -3005,6 +3034,81 @@
 
     var _extCfg = {};
 
+    function recheckExtBridge() {
+      initExtBridge();
+      if (!document.documentElement.hasAttribute('data-mntrz-ext')) {
+        showToast('Extension non détectée. Rechargez l\'extension (chrome://extensions) puis rafraîchissez.', 'error');
+      }
+    }
+
+    // Détection bridge v2 — utilise JWT (pas ext_secret)
+    function initExtBridge() {
+      var detected = document.documentElement.hasAttribute('data-mntrz-ext');
+      var bridgeEl   = document.getElementById('extBridgeDetected');
+      var noBridgeEl = document.getElementById('extBridgeNotDetected');
+      if (bridgeEl)   bridgeEl.style.display   = detected ? '' : 'none';
+      if (noBridgeEl) noBridgeEl.style.display = detected ? 'none' : '';
+
+      if (detected) {
+        document.addEventListener('mntrz:auth:done', function(e) {
+          var msg = document.getElementById('extConnectMsg');
+          var btn = document.getElementById('btnConnectExt');
+          if (e.detail && e.detail.ok) {
+            if (msg) { msg.textContent = 'Extension connectée !'; msg.style.color = '#22c55e'; }
+            if (btn) { btn.textContent = 'Connecté ✓'; btn.disabled = true; }
+            var dot = document.getElementById('extConnectDot');
+            var lbl = document.getElementById('extConnectLabel');
+            if (dot) dot.style.background = '#22c55e';
+            if (lbl) lbl.textContent = 'Connectee';
+            showToast('Extension connectée avec succès !', 'success');
+            setTimeout(function() { loadExtensionSection(); }, 1500);
+          } else {
+            if (msg) { msg.textContent = 'Erreur, réessayez.'; msg.style.color = '#ef4444'; }
+            if (btn) { btn.textContent = 'Connecter l\'extension'; btn.disabled = false; }
+          }
+        }, { once: true });
+      }
+    }
+
+    // v2: génère un JWT via /api/extension/auth/token puis dispatch mntrz:auth
+    function connectExtension() {
+      var btn = document.getElementById('btnConnectExt');
+      var msg = document.getElementById('extConnectMsg');
+      if (btn) { btn.textContent = 'Connexion...'; btn.disabled = true; }
+      if (msg) { msg.textContent = ''; }
+
+      fetch('/api/extension/auth/token', { method: 'POST', headers: {'Content-Type':'application/json'}, credentials: 'include' })
+        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, data: d }; }); })
+        .then(function(result) {
+          if (!result.ok) {
+            var errTxt = result.data.code === 'NOT_PRO'
+              ? 'Extension réservée au plan Pro.'
+              : (result.data.error || 'Erreur inconnue');
+            if (msg) { msg.textContent = errTxt; msg.style.color = '#ef4444'; }
+            if (btn) { btn.textContent = 'Connecter l\'extension'; btn.disabled = false; }
+            return;
+          }
+          document.dispatchEvent(new CustomEvent('mntrz:auth', {
+            detail: {
+              jwt: result.data.token,
+              email: result.data.email,
+              name: result.data.name,
+              monitorzUrl: window.location.origin,
+            }
+          }));
+          setTimeout(function() {
+            if (btn && btn.disabled) {
+              if (msg) { msg.textContent = 'Timeout — extension non trouvée ?'; msg.style.color = '#f59e0b'; }
+              if (btn) { btn.textContent = 'Réessayer'; btn.disabled = false; }
+            }
+          }, 6000);
+        })
+        .catch(function() {
+          if (msg) { msg.textContent = 'Erreur réseau.'; msg.style.color = '#ef4444'; }
+          if (btn) { btn.textContent = 'Connecter l\'extension'; btn.disabled = false; }
+        });
+    }
+
     function loadExtensionSection() {
       fetch('/api/extension/config/dashboard')
         .then(function(r) { return r.json(); })
@@ -3056,9 +3160,27 @@
           if (poll) poll.value = cfg.poll_interval_min || 5;
           var sec = document.getElementById('extSecretDisplay');
           if (sec) sec.value = cfg.ext_secret || '';
+
+          // Update connect status if bridge is active
+          if (document.documentElement.hasAttribute('data-mntrz-ext') && cfg.ext_secret) {
+            var dot = document.getElementById('extConnectDot');
+            var lbl = document.getElementById('extConnectLabel');
+            var btn = document.getElementById('btnConnectExt');
+            // Consider connected if ext_secret exists and vinted is connected
+            if (cfg.vinted_connected) {
+              if (dot) dot.style.background = '#22c55e';
+              if (lbl) lbl.textContent = 'Connectee';
+              if (btn) { btn.textContent = 'Re-connecter'; btn.disabled = false; }
+            } else {
+              if (dot) dot.style.background = '#f59e0b';
+              if (lbl) lbl.textContent = 'Cle configuree - ouvrez Vinted';
+              if (btn) { btn.textContent = 'Reconnecter l\'extension'; btn.disabled = false; }
+            }
+          }
         })
         .catch(function() { showToast('Erreur chargement config extension', 'error'); });
 
+      initExtBridge();
       loadExtLogs();
     }
 
@@ -3111,10 +3233,11 @@
     }
 
     function regenerateExtSecret() {
-      if (!confirm('Regénérer la clé ? L\'extension devra être reconfig avec la nouvelle clé.')) return;
+      if (!confirm('Regénérer la clé ? L\'extension devra être reconnectée.')) return;
       fetch('/api/extension/secret/generate', { method: 'POST' })
         .then(function(r) { return r.json(); })
         .then(function(d) {
+          _extCfg.ext_secret = d.secret || '';
           var el = document.getElementById('extSecretDisplay');
           if (el) el.value = d.secret || '';
           showToast('Nouvelle clé générée', 'success');
