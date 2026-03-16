@@ -3532,95 +3532,62 @@ p {
 }
 
 /* ===================================================================
-   MOBILE PWA FIXES
-   Correctifs pour que le site fonctionne comme une appli sur mobile.
+   MOBILE PWA — Correctifs responsives pour ecrans < 480px
    =================================================================== */
 
 @media (max-width: 480px) {
-  /* CRITICAL FIX: reinitialiser le transform de la barre lateral
-     (translateX(-100%) du breakpoint 768px) pour que la barre du bas
-     soit toujours visible. Source order gagne sur le 768px block. */
+  /* Barre de navigation du bas (sidebar repositionnee) */
   .sidebar {
-    transform: translateX(0);
-  }
-
-  /* Cacher le bouton hamburger (inutile avec la barre du bas) */
-  .dashboard__mobile-toggle {
-    display: none;
-  }
-
-  /* Cacher l'overlay (inutile avec la barre du bas toujours visible) */
-  .sidebar-overlay {
-    display: none;
-  }
-
-  /* iOS momentum scroll sur la barre de nav horizontale */
-  .sidebar {
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
+    transform: translateX(0);         /* reinitialise le 768px translateX(-100%) */
+    -webkit-overflow-scrolling: touch; /* scroll natif iOS */
+    scrollbar-width: none;             /* cache la scrollbar Firefox */
+    padding-bottom: env(safe-area-inset-bottom, 0px); /* iOS home indicator */
   }
 
   .sidebar::-webkit-scrollbar {
     display: none;
   }
 
-  /* Padding top du main (plus de bouton hamburger qui bloque) */
+  /* Cacher le bouton hamburger et l'overlay (remplaces par la barre du bas) */
+  .dashboard__mobile-toggle,
+  .sidebar-overlay {
+    display: none;
+  }
+
+  /* Zone principale: safe area + espace pour la barre du bas */
   .dashboard__main {
     padding-top: var(--space-xl);
-  }
-
-  /* Safe area iOS (notch / home indicator) */
-  .sidebar {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
-
-  .dashboard__main {
     padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* Amelioration de la lisibilite de la barre du bas */
+  /* Liens de la barre du bas: icone seule */
   .sidebar__link {
     flex-direction: column;
     gap: 2px;
     padding: 6px 10px;
-    font-size: 0;  /* cache le texte par defaut */
+    font-size: 0;
   }
 
   .sidebar__link-icon {
     margin-right: 0;
   }
 
-  /* Les boutons ne doivent pas tous etre pleine largeur —
-     seulement ceux dans .btn-group ou .btn--block */
+  /* Boutons: largeur auto sauf btn--block et btn-group */
   .btn:not(.btn--block):not(.btn-group .btn) {
     width: auto;
   }
 
-  /* Fix: sections du dashboard avec un peu plus d'espace */
+  /* Section header: wrap sur petits ecrans */
   .section-header {
     flex-wrap: wrap;
     gap: var(--space-sm);
   }
 
-  /* Fix: le header du dashboard en mode mobile */
   .dashboard__header {
     padding-top: var(--space-lg);
   }
-}
 
-/* Viewport fix iOS Safari (100vh bug) */
-@supports (-webkit-touch-callout: none) {
-  .dashboard__main {
-    min-height: -webkit-fill-available;
-  }
-}
-
-/* ===================================================================
-   RESPONSIVE COMPONENT FIXES (tables, grids, modals)
-   =================================================================== */
-
-@media (max-width: 480px) {
-  /* Tables: scroll horizontalement dans leur conteneur */
+  /* Tables: scroll horizontal dans le conteneur */
   .table-wrapper,
   .orders-table-wrapper,
   .history-table-wrapper {
@@ -3628,17 +3595,19 @@ p {
     -webkit-overflow-scrolling: touch;
   }
 
-  table {
+  .table-wrapper table,
+  .orders-table-wrapper table,
+  .history-table-wrapper table {
     min-width: 520px;
   }
 
-  /* Stats grid: 2 colonnes sur mobile */
+  /* Stats grid: 2 colonnes */
   .stats-grid,
   .dashboard__stats {
-    grid-template-columns: repeat(2, 1fr) !important;
+    grid-template-columns: repeat(2, 1fr);
   }
 
-  /* Modal pleine largeur sur mobile */
+  /* Modal pleine largeur */
   .modal__content {
     width: 95vw;
     max-width: 95vw;
@@ -3646,7 +3615,7 @@ p {
     overflow-y: auto;
   }
 
-  /* Gmail account cards: empilees verticalement */
+  /* Gmail account cards: empilees */
   .gmail-accounts-list {
     flex-direction: column;
   }
@@ -3655,7 +3624,7 @@ p {
     width: 100%;
   }
 
-  /* Sheet input + bouton: colonne sur mobile */
+  /* Input + bouton: colonne sur mobile */
   .sheet-input-group,
   .input-group {
     flex-direction: column;
@@ -3677,10 +3646,17 @@ p {
     width: 100%;
   }
 
-  /* WTS template preview: ne depasse pas */
+  /* WTS / template preview: ne depasse pas */
   .wts-preview,
   .template-preview {
     max-width: 100%;
     overflow-x: auto;
+  }
+}
+
+/* Viewport fix iOS Safari (100vh bug) */
+@supports (-webkit-touch-callout: none) {
+  .dashboard__main {
+    min-height: -webkit-fill-available;
   }
 }
