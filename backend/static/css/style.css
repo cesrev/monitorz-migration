@@ -3530,3 +3530,157 @@ p {
     padding: 0 var(--space-sm);
   }
 }
+
+/* ===================================================================
+   MOBILE PWA FIXES
+   Correctifs pour que le site fonctionne comme une appli sur mobile.
+   =================================================================== */
+
+@media (max-width: 480px) {
+  /* CRITICAL FIX: reinitialiser le transform de la barre lateral
+     (translateX(-100%) du breakpoint 768px) pour que la barre du bas
+     soit toujours visible. Source order gagne sur le 768px block. */
+  .sidebar {
+    transform: translateX(0);
+  }
+
+  /* Cacher le bouton hamburger (inutile avec la barre du bas) */
+  .dashboard__mobile-toggle {
+    display: none;
+  }
+
+  /* Cacher l'overlay (inutile avec la barre du bas toujours visible) */
+  .sidebar-overlay {
+    display: none;
+  }
+
+  /* iOS momentum scroll sur la barre de nav horizontale */
+  .sidebar {
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Padding top du main (plus de bouton hamburger qui bloque) */
+  .dashboard__main {
+    padding-top: var(--space-xl);
+  }
+
+  /* Safe area iOS (notch / home indicator) */
+  .sidebar {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .dashboard__main {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Amelioration de la lisibilite de la barre du bas */
+  .sidebar__link {
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    font-size: 0;  /* cache le texte par defaut */
+  }
+
+  .sidebar__link-icon {
+    margin-right: 0;
+  }
+
+  /* Les boutons ne doivent pas tous etre pleine largeur —
+     seulement ceux dans .btn-group ou .btn--block */
+  .btn:not(.btn--block):not(.btn-group .btn) {
+    width: auto;
+  }
+
+  /* Fix: sections du dashboard avec un peu plus d'espace */
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  /* Fix: le header du dashboard en mode mobile */
+  .dashboard__header {
+    padding-top: var(--space-lg);
+  }
+}
+
+/* Viewport fix iOS Safari (100vh bug) */
+@supports (-webkit-touch-callout: none) {
+  .dashboard__main {
+    min-height: -webkit-fill-available;
+  }
+}
+
+/* ===================================================================
+   RESPONSIVE COMPONENT FIXES (tables, grids, modals)
+   =================================================================== */
+
+@media (max-width: 480px) {
+  /* Tables: scroll horizontalement dans leur conteneur */
+  .table-wrapper,
+  .orders-table-wrapper,
+  .history-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 520px;
+  }
+
+  /* Stats grid: 2 colonnes sur mobile */
+  .stats-grid,
+  .dashboard__stats {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  /* Modal pleine largeur sur mobile */
+  .modal__content {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Gmail account cards: empilees verticalement */
+  .gmail-accounts-list {
+    flex-direction: column;
+  }
+
+  .gmail-account-card {
+    width: 100%;
+  }
+
+  /* Sheet input + bouton: colonne sur mobile */
+  .sheet-input-group,
+  .input-group {
+    flex-direction: column;
+  }
+
+  .sheet-input-group .btn,
+  .input-group .btn {
+    width: 100%;
+    margin-top: var(--space-sm);
+  }
+
+  /* Hashtag grid: 2 colonnes */
+  .hashtags-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Notification cards: pleine largeur */
+  .notification-card {
+    width: 100%;
+  }
+
+  /* WTS template preview: ne depasse pas */
+  .wts-preview,
+  .template-preview {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
