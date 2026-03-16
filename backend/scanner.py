@@ -16,6 +16,7 @@ from googleapiclient.discovery import build
 
 import database as db
 from config import GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, SCOPES
+from helpers import build_credentials_from_account
 from parsers.tickets import (
     parse_ticketmaster_email,
     parse_roland_garros_email,
@@ -49,40 +50,8 @@ logger = logging.getLogger(__name__)
 # ============================================
 
 def _build_credentials(account: dict, user: dict) -> Optional[Credentials]:
-    """Build google.oauth2 Credentials from a gmail_account row.
-
-    If the token is expired, it is refreshed and the DB is updated.
-    """
-    token = account.get("oauth_token")
-    refresh_token = account.get("oauth_refresh_token")
-
-    if not token and not refresh_token:
-        logger.warning("No tokens for gmail_account id=%d", account["id"])
-        return None
-
-    creds = Credentials(
-        token=token,
-        refresh_token=refresh_token,
-        token_uri="https://oauth2.googleapis.com/token",
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        scopes=SCOPES,
-    )
-
-    # Refresh if expired
-    if creds.expired and creds.refresh_token:
-        try:
-            creds.refresh(Request())
-            expiry_str = creds.expiry.isoformat() if creds.expiry else None
-            db.update_gmail_account_tokens(account["id"], creds.token, expiry_str)
-            if creds.refresh_token != refresh_token:
-                db.update_gmail_account_refresh_token(account["id"], creds.refresh_token)
-            logger.info("Refreshed token for gmail_account id=%d", account["id"])
-        except Exception as exc:
-            logger.error("Token refresh failed for account id=%d: %s", account["id"], exc)
-            return None
-
-    return creds
+    """Build google.oauth2 Credentials from a gmail_account row."""
+    return build_credentials_from_account(account)
 
 
 def _get_user_credentials(user_id: int) -> Optional[Credentials]:
@@ -720,8 +689,21 @@ def scan_all_users() -> dict[int, int]:
     for user in users:
         user_id = user["id"]
         try:
-            count = scan_user(user_id)
-            results[user_id] = count
+            import signal
+
+            def _timeout_handler(signum, frame):
+                raise TimeoutError(f"Scan timeout for user id={user_id}")
+
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(300)  # 5 min max par user
+            try:
+                count = scan_user(user_id)
+                results[user_id] = count
+            finally:
+                signal.alarm(0)  # reset
+        except TimeoutError as exc:
+            logger.error("Scan timeout for user id=%d (>5min), skipping", user_id)
+            results[user_id] = 0
         except Exception as exc:
             logger.error("Scan failed for user id=%d: %s", user_id, exc)
             results[user_id] = 0
