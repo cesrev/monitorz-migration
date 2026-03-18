@@ -575,24 +575,11 @@ p {
 }
 
 .card--accent::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--accent-gradient);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  opacity: 0;
-  transition: opacity var(--transition-base);
+  content: none;
 }
 
 .card--accent:hover {
   border-color: var(--border-accent);
-}
-
-.card--accent:hover::before {
-  opacity: 1;
 }
 
 .card__header {
