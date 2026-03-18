@@ -575,24 +575,11 @@ p {
 }
 
 .card--accent::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 2px;
-  background: var(--accent-gradient);
-  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  opacity: 0;
-  transition: opacity var(--transition-base);
+  content: none;
 }
 
 .card--accent:hover {
   border-color: var(--border-accent);
-}
-
-.card--accent:hover::before {
-  opacity: 1;
 }
 
 .card__header {
@@ -3528,5 +3515,135 @@ p {
 
   .container {
     padding: 0 var(--space-sm);
+  }
+}
+
+/* ===================================================================
+   MOBILE PWA — Correctifs responsives pour ecrans < 480px
+   =================================================================== */
+
+@media (max-width: 480px) {
+  /* Barre de navigation du bas (sidebar repositionnee) */
+  .sidebar {
+    transform: translateX(0);         /* reinitialise le 768px translateX(-100%) */
+    -webkit-overflow-scrolling: touch; /* scroll natif iOS */
+    scrollbar-width: none;             /* cache la scrollbar Firefox */
+    padding-bottom: env(safe-area-inset-bottom, 0px); /* iOS home indicator */
+  }
+
+  .sidebar::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Cacher le bouton hamburger et l'overlay (remplaces par la barre du bas) */
+  .dashboard__mobile-toggle,
+  .sidebar-overlay {
+    display: none;
+  }
+
+  /* Zone principale: safe area + espace pour la barre du bas */
+  .dashboard__main {
+    padding-top: var(--space-xl);
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* Liens de la barre du bas: icone seule */
+  .sidebar__link {
+    flex-direction: column;
+    gap: 2px;
+    padding: 6px 10px;
+    font-size: 0;
+  }
+
+  .sidebar__link-icon {
+    margin-right: 0;
+  }
+
+  /* Boutons: largeur auto sauf btn--block et btn-group */
+  .btn:not(.btn--block):not(.btn-group .btn) {
+    width: auto;
+  }
+
+  /* Section header: wrap sur petits ecrans */
+  .section-header {
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+  }
+
+  .dashboard__header {
+    padding-top: var(--space-lg);
+  }
+
+  /* Tables: scroll horizontal dans le conteneur */
+  .table-wrapper,
+  .orders-table-wrapper,
+  .history-table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .table-wrapper table,
+  .orders-table-wrapper table,
+  .history-table-wrapper table {
+    min-width: 520px;
+  }
+
+  /* Stats grid: 2 colonnes */
+  .stats-grid,
+  .dashboard__stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Modal pleine largeur */
+  .modal__content {
+    width: 95vw;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  /* Gmail account cards: empilees */
+  .gmail-accounts-list {
+    flex-direction: column;
+  }
+
+  .gmail-account-card {
+    width: 100%;
+  }
+
+  /* Input + bouton: colonne sur mobile */
+  .sheet-input-group,
+  .input-group {
+    flex-direction: column;
+  }
+
+  .sheet-input-group .btn,
+  .input-group .btn {
+    width: 100%;
+    margin-top: var(--space-sm);
+  }
+
+  /* Hashtag grid: 2 colonnes */
+  .hashtags-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  /* Notification cards: pleine largeur */
+  .notification-card {
+    width: 100%;
+  }
+
+  /* WTS / template preview: ne depasse pas */
+  .wts-preview,
+  .template-preview {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}
+
+/* Viewport fix iOS Safari (100vh bug) */
+@supports (-webkit-touch-callout: none) {
+  .dashboard__main {
+    min-height: -webkit-fill-available;
   }
 }

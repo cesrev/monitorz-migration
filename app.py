@@ -10,7 +10,7 @@ import logging
 if os.getenv("FLASK_ENV") in ("development", "dev"):
     os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
-from flask import Flask, render_template, redirect, url_for, session
+from flask import Flask, render_template, redirect, url_for, session, make_response, send_from_directory
 from flask_compress import Compress
 from extensions import limiter
 import database as db
@@ -49,7 +49,11 @@ def _csrf_check():
     from flask import request, jsonify
     if request.method in ("GET", "HEAD", "OPTIONS"):
         return
-    # Skip CSRF for extension API (authenticated via X-Extension-Secret header)
+    # Skip CSRF for extension and mobile APIs (authenticated via Bearer JWT)
+    if request.headers.get("Authorization", "").startswith("Bearer "):
+        if request.path.startswith("/api/extension/") or request.path.startswith("/api/mobile/"):
+            return
+    # Backward compat: old ext_secret header
     if request.headers.get("X-Extension-Secret"):
         return
     # Skip for OAuth callback
@@ -109,6 +113,28 @@ def health():
     return {"status": "ok"}, 200
 
 
+@app.route("/sw.js")
+def service_worker():
+    """Serve service worker from root scope for full PWA coverage.
+    Must be at / so the SW can intercept all app routes.
+    Cache-Control: no-cache ensures browsers always revalidate for updates.
+    """
+    response = make_response(
+        send_from_directory(app.static_folder, "sw.js",
+                            mimetype="application/javascript")
+    )
+    response.headers["Cache-Control"] = "no-cache"
+    response.headers["Service-Worker-Allowed"] = "/"
+    return response
+
+
+@app.route("/manifest.json")
+def manifest():
+    """Serve Web App Manifest with correct MIME type for PWA installability."""
+    return send_from_directory(app.static_folder, "manifest.json",
+                               mimetype="application/manifest+json")
+
+
 @app.route("/")
 def index():
     """Landing page."""
@@ -166,6 +192,8 @@ from routes.api import api_bp
 from routes.extension import extension_bp
 from routes.trial import trial_bp
 from routes.export import export_bp
+from routes.billing import billing_bp
+from routes.mobile import mobile_bp
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(sheets_bp)
@@ -178,6 +206,8 @@ app.register_blueprint(api_bp)
 app.register_blueprint(extension_bp)
 app.register_blueprint(trial_bp)
 app.register_blueprint(export_bp)
+app.register_blueprint(billing_bp)
+app.register_blueprint(mobile_bp)
 
 # ============================================
 # INITIALIZATION
@@ -192,4 +222,4 @@ if os.getenv("FLASK_ENV") != "production":
     start_background_scanner()
 
 if __name__ == "__main__":
-    app.run(debug=os.getenv("FLASK_ENV") != "production", port=5050)
+    app.run(debug=os.getenv("FLASK_ENV") != "production", port=5050, host="0.0.0.0")
