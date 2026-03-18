@@ -1,0 +1,67 @@
+# =============================================================================
+# Billets Monitor MVP - Fichier de service Systemd
+# /etc/systemd/system/billets-monitor.service
+# =============================================================================
+
+[Unit]
+Description=Billets Monitor MVP - Flask Application
+Documentation=https://github.com/user/billets-monitor-mvp
+After=network.target network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+User=www-data
+Group=www-data
+
+# Répertoire de travail
+WorkingDirectory=/var/www/billets-monitor/backend
+
+# Variables d'environnement
+Environment="PATH=/var/www/billets-monitor/venv/bin:/usr/local/bin:/usr/bin:/bin"
+Environment="PYTHONUNBUFFERED=1"
+EnvironmentFile=/var/www/billets-monitor/backend/.env
+
+# Commande de démarrage avec Gunicorn
+ExecStart=/var/www/billets-monitor/venv/bin/gunicorn \
+    --config /var/www/billets-monitor/deploy/gunicorn.conf.py \
+    app:app
+
+# Rechargement gracieux
+ExecReload=/bin/kill -s HUP $MAINPID
+
+# Arrêt gracieux
+ExecStop=/bin/kill -s TERM $MAINPID
+KillMode=mixed
+KillSignal=SIGTERM
+TimeoutStopSec=30
+
+# Redémarrage automatique en cas d'échec
+Restart=on-failure
+RestartSec=10
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+# Répertoires d'exécution
+RuntimeDirectory=billets-monitor
+RuntimeDirectoryMode=0755
+
+# Sécurité - Sandboxing
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+NoNewPrivileges=true
+ReadWritePaths=/var/www/billets-monitor/backend
+ReadWritePaths=/var/log/billets-monitor
+ReadWritePaths=/var/run/billets-monitor
+
+# Limites système
+LimitNOFILE=4096
+
+# Logging systemd
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=billets-monitor
+
+[Install]
+WantedBy=multi-user.target

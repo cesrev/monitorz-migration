@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Onboarding — Monitorz</title>
+  <meta name="description" content="Bienvenue dans Monitorz. Commencez votre onboarding en quelques etapes simples.">
+  <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    /* Onboarding Wizard Styles */
+    .onboarding-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: var(--bg-primary);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    }
+
+    .onboarding-container {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: var(--space-2xl);
+      animation: slideIn 0.6s var(--ease-out);
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .onboarding-progress {
+      margin-bottom: var(--space-2xl);
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 4px;
+      background: var(--bg-secondary);
+      border-radius: var(--radius-full);
+      overflow: hidden;
+      margin-bottom: var(--space-md);
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent-gradient);
+      border-radius: var(--radius-full);
+      transition: width 0.5s var(--ease-out);
+    }
+
+    .progress-text {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+    }
+
+    .progress-steps {
+      display: flex;
+      gap: var(--space-sm);
+    }
+
+    .progress-step {
+      width: 28px;
+      height: 28px;
+      border-radius: var(--radius-full);
+      background: var(--bg-secondary);
+      border: 2px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      transition: all 0.3s var(--ease-out);
+    }
+
+    .progress-step.active {
+      background: var(--accent-start);
+      border-color: var(--accent-start);
+      color: var(--bg-primary);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .progress-step.completed {
+      background: var(--success);
+      border-color: var(--success);
+      color: var(--bg-primary);
+    }
+
+    .onboarding-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(20px);
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius-lg);
+      padding: var(--space-2xl);
+      margin-bottom: var(--space-xl);
+      box-shadow: var(--shadow-card);
+      animation: fadeIn 0.4s var(--ease-out);
+      display: none;
+    }
+
+    .onboarding-card.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+      }
+      to {
+        opacity: 1;
+      }
+    }
+
+    .onboarding-card h2 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: var(--space-md);
+      color: var(--text-primary);
+    }
+
+    .onboarding-card p {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-lg);
+      line-height: 1.6;
+    }
+
+    .option-group {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-md);
+      margin-bottom: var(--space-xl);
+    }
+
+    .option-button {
+      padding: var(--space-lg);
+      background: var(--glass-bg);
+      border: 2px solid var(--border-light);
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      transition: all 0.3s var(--ease-out);
+      text-align: left;
+      color: var(--text-primary);
+      font-weight: 500;
+    }
+
+    .option-button:hover {
+      background: var(--glass-bg-hover);
+      border-color: var(--border-accent);
+    }
+
+    .option-button.selected {
+      background: var(--accent-gradient);
+      border-color: var(--accent-start);
+      color: var(--bg-primary);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .option-button .option-icon {
+      display: inline-block;
+      margin-right: var(--space-md);
+      font-size: 1.5rem;
+    }
+
+    .confirmation-card {
+      background: var(--success-bg);
+      border: 2px solid var(--success);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      margin-bottom: var(--space-lg);
+      display: flex;
+      align-items: flex-start;
+      gap: var(--space-md);
+    }
+
+    .confirmation-card-icon {
+      font-size: 1.5rem;
+      margin-top: 0.25rem;
+    }
+
+    .confirmation-card-content h3 {
+      font-weight: 600;
+      color: var(--text-primary);
+      margin-bottom: var(--space-xs);
+    }
+
+    .confirmation-card-content p {
+      margin: 0;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+    }
+
+    .form-group {
+      margin-bottom: var(--space-lg);
+    }
+
+    .form-label {
+      display: block;
+      margin-bottom: var(--space-sm);
+      font-weight: 500;
+      color: var(--text-primary);
+      font-size: 0.95rem;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: var(--space-md);
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-light);
+      border-radius: var(--radius-md);
+      color: var(--text-primary);
+      font-size: 1rem;
+      transition: all 0.3s var(--ease-out);
+    }
+
+    .form-input:focus {
+      border-color: var(--accent-start);
+      background: var(--bg-tertiary);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+
+    .form-input::placeholder {
+      color: var(--text-muted);
+    }
+
+    .referral-code-display {
+      background: var(--bg-secondary);
+      border: 2px dashed var(--border-accent);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      text-align: center;
+      margin-bottom: var(--space-lg);
+    }
+
+    .referral-code-display .label {
+      display: block;
+      font-size: 0.875rem;
+      color: var(--text-secondary);
+      margin-bottom: var(--space-sm);
+    }
+
+    .referral-code-display .code {
+      font-family: 'Courier New', monospace;
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: var(--accent-start);
+      letter-spacing: 2px;
+      margin-bottom: var(--space-md);
+    }
+
+    .copy-btn {
+      padding: var(--space-sm) var(--space-md);
+      background: var(--accent-gradient);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--bg-primary);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s var(--ease-out);
+    }
+
+    .copy-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .copy-btn.copied {
+      background: var(--success);
+    }
+
+    .button-group {
+      display: flex;
+      gap: var(--space-md);
+      margin-top: var(--space-2xl);
+      justify-content: space-between;
+    }
+
+    .btn {
+      padding: var(--space-md) var(--space-lg);
+      border: none;
+      border-radius: var(--radius-md);
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s var(--ease-out);
+      font-size: 1rem;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: var(--space-sm);
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: var(--bg-primary);
+      flex: 1;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-glow);
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-secondary {
+      background: var(--glass-bg);
+      color: var(--text-primary);
+      border: 1px solid var(--border-light);
+    }
+
+    .btn-secondary:hover {
+      background: var(--glass-bg-hover);
+      border-color: var(--border-light);
+    }
+
+    .btn-skip {
+      color: var(--text-secondary);
+      background: none;
+      border: none;
+      cursor: pointer;
+      text-decoration: underline;
+      padding: 0;
+      font-size: 0.95rem;
+    }
+
+    .btn-skip:hover {
+      color: var(--text-primary);
+    }
+
+    .trial-banner {
+      background: var(--success-bg);
+      border: 2px solid var(--success);
+      border-radius: var(--radius-md);
+      padding: var(--space-lg);
+      text-align: center;
+      margin-bottom: var(--space-xl);
+      animation: slideDown 0.6s var(--ease-out);
+    }
+
+    @keyframes slideDown {
+      from {
+        opacity: 0;
+        transform: translateY(-20px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .trial-banner h3 {
+      color: var(--success);
+      margin-bottom: var(--space-sm);
+      font-size: 1.25rem;
+    }
+
+    .trial-banner p {
+      color: var(--text-secondary);
+      margin: 0;
+      font-size: 0.95rem;
+    }
+
+    .icon-large {
+      font-size: 3rem;
+      margin-bottom: var(--space-md);
+    }
+
+    @media (max-width: 600px) {
+      .onboarding-container {
+        padding: var(--space-lg);
+      }
+
+      .onboarding-card {
+        padding: var(--space-lg);
+      }
+
+      .onboarding-card h2 {
+        font-size: 1.5rem;
+      }
+
+      .button-group {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Background mesh -->
+  <div class="bg-mesh"></div>
+
+  <!-- Onboarding Overlay -->
+  <div class="onboarding-overlay">
+    <div class="onboarding-container">
+
+      <!-- Progress Bar -->
+      <div class="onboarding-progress">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <div class="progress-text">
+          <span id="progressLabel">Etape 1 sur 5</span>
+          <div class="progress-steps" id="progressSteps"></div>
+        </div>
+      </div>
+
+      <!-- Step 1: Welcome & Monitoring Type -->
+      <div class="onboarding-card active" data-step="1">
+        <h2>Bienvenue dans Monitorz! 🎉</h2>
+        <p>Selectionnez le type de monitoring que vous souhaitez utiliser.</p>
+
+        <div class="option-group">
+          <button class="option-button" data-option="tickets">
+            <span class="option-icon">🎫</span>
+            <div>
+              <strong>Monitoring Billets</strong>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin: var(--space-xs) 0 0 0;">
+                Suivez les disponibilites de billets et les opportunites de revente.
+              </p>
+            </div>
+          </button>
+          <button class="option-button" data-option="vinted">
+            <span class="option-icon">👕</span>
+            <div>
+              <strong>Monitoring Vinted</strong>
+              <p style="font-size: 0.85rem; color: var(--text-secondary); margin: var(--space-xs) 0 0 0;">
+                Trouvez les meilleures affaires sur Vinted et gerez vos ventes.
+              </p>
+            </div>
+          </button>
+        </div>
+
+        <div class="button-group">
+          <button class="btn btn-primary" id="step1-next" disabled>
+            Continuer
+          </button>
+        </div>
+      </div>
+
+      <!-- Step 2: Gmail Connected -->
+      <div class="onboarding-card" data-step="2">
+        <h2>Gmail Connecte ✅</h2>
+        <p>Vous etes maintenant connecte avec votre compte Gmail.</p>
+
+        <div class="confirmation-card">
+          <div class="confirmation-card-icon">✅</div>
+          <div class="confirmation-card-content">
+            <h3>{{ user.email }}</h3>
+            <p>Votre compte Gmail est pret pour le monitoring automatique.</p>
+          </div>
+        </div>
+
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+          Nous lisons vos emails de facon securisee et ne sauvegardons aucune donnee sensible.
+        </p>
+
+        <div class="button-group">
+          <button class="btn btn-secondary" id="step2-back">Retour</button>
+          <button class="btn btn-primary" id="step2-next">Continuer</button>
+        </div>
+      </div>
+
+      <!-- Step 3: Google Sheet Created -->
+      <div class="onboarding-card" data-step="3">
+        <h2>Google Sheet Cree 📊</h2>
+        <p>Votre feuille de calcul a ete creee automatiquement.</p>
+
+        <div class="confirmation-card">
+          <div class="confirmation-card-icon">📊</div>
+          <div class="confirmation-card-content">
+            <h3>Feuille de calcul prete</h3>
+            <p>Les donnees synchronisees seront ajoutees automatiquement dans votre Sheet.</p>
+          </div>
+        </div>
+
+        <p style="color: var(--text-secondary); font-size: 0.95rem;">
+          Vous pouvez acceder a votre Google Sheet depuis le tableau de bord.
+        </p>
+
+        <div class="button-group">
+          <button class="btn btn-secondary" id="step3-back">Retour</button>
+          <button class="btn btn-primary" id="step3-next">Continuer</button>
+        </div>
+      </div>
+
+      <!-- Step 4: Referral Code -->
+      <div class="onboarding-card" data-step="4">
+        <h2>Code de Parrainage 🎁</h2>
+        <p>Partagez votre code pour inviter vos amis et gagnez 14 jours gratuits chacun!</p>
+
+        <div class="referral-code-display">
+          <span class="label">Votre code personnel</span>
+          <div class="code" id="referralCodeDisplay">{{ referral_info.referral_code }}</div>
+          <button class="copy-btn" id="copyReferralBtn" title="Copier le code">
+            Copier le code
+          </button>
+        </div>
+
+        <!-- Optional: Apply someone else's code -->
+        <div class="form-group">
+          <label class="form-label">Vous avez un code de parrainage?</label>
+          <input
+            type="text"
+            class="form-input"
+            id="referralCodeInput"
+            placeholder="Entrez un code de parrainage (optionnel)"
+            maxlength="8"
+          >
+          <button class="btn btn-secondary" id="applyReferralBtn" style="width: 100%; margin-top: var(--space-md);">
+            Appliquer le code
+          </button>
+        </div>
+
+        <div class="button-group">
+          <button class="btn btn-secondary" id="step4-back">Retour</button>
+          <button class="btn btn-primary" id="step4-next">Continuer</button>
+        </div>
+      </div>
+
+      <!-- Step 5: Trial Activated & Ready -->
+      <div class="onboarding-card" data-step="5">
+        <div class="trial-banner">
+          <h3>✨ Votre essai Pro a commence!</h3>
+          <p>14 jours gratuits pour explorer toutes les fonctionnalites premium.</p>
+        </div>
+
+        <h2>Vous etes pret! 🚀</h2>
+        <p>Voici les prochaines etapes:</p>
+
+        <ol style="color: var(--text-secondary); padding-left: var(--space-lg); margin-bottom: var(--space-lg);">
+          <li style="margin-bottom: var(--space-sm);">Configurez vos parametres d'alerte personnalises</li>
+          <li style="margin-bottom: var(--space-sm);">Lancez votre premier scan</li>
+          <li style="margin-bottom: var(--space-sm);">Consultez votre Google Sheet avec les resultats</li>
+          <li>Partagez votre code de parrainage pour gagner des jours gratuits!</li>
+        </ol>
+
+        <div class="confirmation-card">
+          <div class="confirmation-card-icon">🎯</div>
+          <div class="confirmation-card-content">
+            <h3>Essai Pro Actif</h3>
+            <p id="trialDaysText">14 jours pour explorer tous les outils premium.</p>
+          </div>
+        </div>
+
+        <div class="button-group">
+          <button class="btn btn-primary" id="step5-finish">
+            Aller au Dashboard
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    // ============================
+    // Onboarding Wizard Logic
+    // ============================
+
+    const totalSteps = 5;
+    let currentStep = 1;
+    let selectedMonitoringType = null;
+    let referralCodeApplied = false;
+
+    // Initialize progress steps
+    function initializeProgress() {
+      const stepsContainer = document.getElementById('progressSteps');
+      for (let i = 1; i <= totalSteps; i++) {
+        const step = document.createElement('div');
+        step.className = 'progress-step' + (i === 1 ? ' active' : '');
+        step.textContent = i;
+        step.id = `progress-step-${i}`;
+        stepsContainer.appendChild(step);
+      }
+    }
+
+    // Update progress bar and label
+    function updateProgress() {
+      const percentage = (currentStep / totalSteps) * 100;
+      document.getElementById('progressFill').style.width = percentage + '%';
+      document.getElementById('progressLabel').textContent = `Etape ${currentStep} sur ${totalSteps}`;
+
+      // Update step indicators
+      for (let i = 1; i <= totalSteps; i++) {
+        const stepEl = document.getElementById(`progress-step-${i}`);
+        stepEl.className = 'progress-step';
+        if (i < currentStep) {
+          stepEl.classList.add('completed');
+        } else if (i === currentStep) {
+          stepEl.classList.add('active');
+        }
+      }
+    }
+
+    // Show specific step
+    function showStep(step) {
+      document.querySelectorAll('.onboarding-card').forEach(card => {
+        card.classList.remove('active');
+      });
+      document.querySelector(`[data-step="${step}"]`).classList.add('active');
+      updateProgress();
+    }
+
+    // Step 1: Monitoring Type Selection
+    document.querySelectorAll('[data-step="1"] .option-button').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('[data-step="1"] .option-button').forEach(b => {
+          b.classList.remove('selected');
+        });
+        this.classList.add('selected');
+        selectedMonitoringType = this.dataset.option;
+        document.getElementById('step1-next').disabled = false;
+      });
+    });
+
+    document.getElementById('step1-next').addEventListener('click', () => {
+      currentStep = 2;
+      showStep(2);
+    });
+
+    // Step 2: Gmail
+    document.getElementById('step2-back').addEventListener('click', () => {
+      currentStep = 1;
+      showStep(1);
+    });
+
+    document.getElementById('step2-next').addEventListener('click', () => {
+      currentStep = 3;
+      showStep(3);
+    });
+
+    // Step 3: Google Sheet
+    document.getElementById('step3-back').addEventListener('click', () => {
+      currentStep = 2;
+      showStep(2);
+    });
+
+    document.getElementById('step3-next').addEventListener('click', () => {
+      currentStep = 4;
+      showStep(4);
+    });
+
+    // Step 4: Referral Code
+    document.getElementById('step4-back').addEventListener('click', () => {
+      currentStep = 3;
+      showStep(3);
+    });
+
+    document.getElementById('step4-next').addEventListener('click', () => {
+      currentStep = 5;
+      showStep(5);
+    });
+
+    // Copy referral code
+    document.getElementById('copyReferralBtn').addEventListener('click', function() {
+      const code = document.getElementById('referralCodeDisplay').textContent;
+      navigator.clipboard.writeText(code).then(() => {
+        this.textContent = 'Code copie!';
+        this.classList.add('copied');
+        setTimeout(() => {
+          this.textContent = 'Copier le code';
+          this.classList.remove('copied');
+        }, 2000);
+      });
+    });
+
+    // Apply referral code
+    document.getElementById('applyReferralBtn').addEventListener('click', async function() {
+      const code = document.getElementById('referralCodeInput').value.trim();
+      if (!code) {
+        alert('Veuillez entrer un code de parrainage');
+        return;
+      }
+
+      try {
+        const response = await fetch('/api/referral/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ referral_code: code })
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          referralCodeApplied = true;
+          alert('Code applique avec succes! 🎉');
+          document.getElementById('referralCodeInput').disabled = true;
+          this.disabled = true;
+        } else {
+          alert('Erreur: ' + (data.error || 'Code invalide'));
+        }
+      } catch (error) {
+        console.error('Error applying referral:', error);
+        alert('Erreur lors de l\'application du code');
+      }
+    });
+
+    // Step 5: Finish
+    document.getElementById('step5-finish').addEventListener('click', async function() {
+      try {
+        const response = await fetch('/api/complete-onboarding', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+
+        const data = await response.json();
+        if (data.success) {
+          // Redirect to dashboard
+          window.location.href = '/dashboard';
+        } else {
+          alert('Erreur lors de la finalisation de l\'onboarding');
+        }
+      } catch (error) {
+        console.error('Error completing onboarding:', error);
+        alert('Erreur lors de la finalisation de l\'onboarding');
+      }
+    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      initializeProgress();
+      updateProgress();
+    });
+  </script>
+
+</body>
+</html>

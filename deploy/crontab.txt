@@ -1,0 +1,16 @@
+# =============================================================================
+# Billets Monitor MVP - Entrées Crontab
+# Installer avec : crontab -l | cat - crontab.txt | crontab -
+# Ou manuellement : crontab -e puis coller le contenu ci-dessous
+# =============================================================================
+
+# --- Scan automatique toutes les 10 minutes ---
+# Exécute cron.py pour scanner les annonces de tous les utilisateurs
+*/10 * * * * cd /var/www/billets-monitor/backend && /var/www/billets-monitor/venv/bin/python cron.py >> /var/log/billets-monitor/cron.log 2>&1
+
+# --- Rotation des logs cron (chaque dimanche à 3h du matin) ---
+# Empêche le fichier cron.log de grossir indéfiniment
+0 3 * * 0 /usr/bin/find /var/log/billets-monitor/ -name "cron.log" -size +50M -exec truncate -s 0 {} \;
+
+# --- Nettoyage des anciennes entrées de log Gunicorn (1er du mois à 4h) ---
+0 4 1 * * /usr/bin/find /var/log/billets-monitor/ -name "*.log" -mtime +90 -delete

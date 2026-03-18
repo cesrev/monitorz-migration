@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard — Billets Monitor</title>
+  <meta name="description" content="Tableau de bord Billets Monitor. Gerez vos comptes Gmail, consultez vos stats et declenchez des scans.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Background mesh -->
+  <div class="bg-mesh"></div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <div class="dashboard">
+    <!-- ========== SIDEBAR ========== -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar__logo">
+        <div class="sidebar__logo-icon">🎫</div>
+        <span class="sidebar__logo-text">Billets Monitor</span>
+      </div>
+
+      <nav class="sidebar__nav">
+        <a href="#" class="sidebar__link sidebar__link--active" data-section="overview">
+          <span class="sidebar__link-icon">📊</span>
+          <span>Dashboard</span>
+        </a>
+        <a href="#" class="sidebar__link" data-section="gmail">
+          <span class="sidebar__link-icon">📧</span>
+          <span>Comptes Gmail</span>
+        </a>
+        <a href="#" class="sidebar__link" data-section="sheet">
+          <span class="sidebar__link-icon">📋</span>
+          <span>Google Sheet</span>
+        </a>
+        <a href="#" class="sidebar__link" data-section="history">
+          <span class="sidebar__link-icon">📜</span>
+          <span>Historique</span>
+        </a>
+        <a href="#" class="sidebar__link" data-section="settings">
+          <span class="sidebar__link-icon">⚙️</span>
+          <span>Parametres</span>
+        </a>
+      </nav>
+
+      <div class="sidebar__footer">
+        <a href="landing.html" class="sidebar__link">
+          <span class="sidebar__link-icon">🚪</span>
+          <span>Deconnexion</span>
+        </a>
+      </div>
+    </aside>
+
+    <!-- Sidebar overlay for mobile -->
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <!-- Mobile toggle -->
+    <button class="dashboard__mobile-toggle" id="dashboardMobileToggle" aria-label="Menu">
+      ☰
+    </button>
+
+    <!-- ========== MAIN ========== -->
+    <main class="dashboard__main">
+      <!-- Header -->
+      <div class="dashboard__header animate-in">
+        <div class="dashboard__greeting">
+          <div class="dashboard__avatar" id="userAvatar">CR</div>
+          <div class="dashboard__welcome">
+            <h2>Bonjour, <span id="userName">Cesar</span></h2>
+            <p>Voici l'etat de ton monitoring</p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: var(--space-lg);">
+          <span class="badge badge--accent" id="userType">🎫 Tickets</span>
+          <div style="display: flex; align-items: center; gap: var(--space-sm);">
+            <span class="status-dot status-dot--active" id="statusDot"></span>
+            <span style="font-size: 0.82rem; color: var(--text-secondary);" id="statusText">Monitoring actif</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Stats -->
+      <div class="dashboard__stats">
+        <div class="stat-card animate-in animate-in--delay-1">
+          <div class="stat-card__icon">📧</div>
+          <div class="stat-card__value" id="statGmail">3</div>
+          <div class="stat-card__label">Comptes Gmail</div>
+        </div>
+
+        <div class="stat-card animate-in animate-in--delay-2">
+          <div class="stat-card__icon">🎫</div>
+          <div class="stat-card__value" id="statOrders">147</div>
+          <div class="stat-card__label">Commandes trouvees</div>
+        </div>
+
+        <div class="stat-card animate-in animate-in--delay-3">
+          <div class="stat-card__icon">⏱️</div>
+          <div class="stat-card__value" id="statLastScan">3 min</div>
+          <div class="stat-card__label">Dernier scan</div>
+        </div>
+
+        <div class="stat-card animate-in animate-in--delay-4">
+          <div class="stat-card__icon">🔄</div>
+          <div class="stat-card__value" style="display: flex; align-items: center; gap: var(--space-md);">
+            <label class="toggle" id="monitoringToggle">
+              <input type="checkbox" checked>
+              <span class="toggle__slider"></span>
+            </label>
+          </div>
+          <div class="stat-card__label">Monitoring</div>
+        </div>
+      </div>
+
+      <!-- Section: Gmail Accounts -->
+      <section class="dashboard__section animate-in animate-in--delay-5" id="sectionGmail">
+        <div class="dashboard__section-header">
+          <h3>📧 Mes comptes Gmail</h3>
+          <button class="btn btn--primary btn--small" id="addGmailBtn" onclick="addGmailAccount()">
+            + Ajouter un compte
+          </button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: var(--space-md);" id="gmailList">
+          <!-- Gmail account 1 -->
+          <div class="gmail-card">
+            <div class="gmail-card__info">
+              <div class="gmail-card__icon">📧</div>
+              <div>
+                <div class="gmail-card__email">cesar.tickets@gmail.com</div>
+                <div class="gmail-card__date">Connecte le 15 jan. 2026</div>
+              </div>
+            </div>
+            <div class="gmail-card__actions">
+              <span class="badge badge--success">Principal</span>
+              <span class="badge badge--info">98 commandes</span>
+            </div>
+          </div>
+
+          <!-- Gmail account 2 -->
+          <div class="gmail-card">
+            <div class="gmail-card__info">
+              <div class="gmail-card__icon">📧</div>
+              <div>
+                <div class="gmail-card__email">resell.pro@gmail.com</div>
+                <div class="gmail-card__date">Connecte le 22 jan. 2026</div>
+              </div>
+            </div>
+            <div class="gmail-card__actions">
+              <span class="badge badge--info">35 commandes</span>
+              <button class="btn btn--danger btn--small" onclick="removeGmailAccount(this)">Retirer</button>
+            </div>
+          </div>
+
+          <!-- Gmail account 3 -->
+          <div class="gmail-card">
+            <div class="gmail-card__info">
+              <div class="gmail-card__icon">📧</div>
+              <div>
+                <div class="gmail-card__email">events.paris@gmail.com</div>
+                <div class="gmail-card__date">Connecte le 3 fev. 2026</div>
+              </div>
+            </div>
+            <div class="gmail-card__actions">
+              <span class="badge badge--info">14 commandes</span>
+              <button class="btn btn--danger btn--small" onclick="removeGmailAccount(this)">Retirer</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Google Sheet -->
+      <section class="dashboard__section animate-in animate-in--delay-6" id="sectionSheet">
+        <div class="dashboard__section-header">
+          <h3>📋 Mon Google Sheet</h3>
+        </div>
+
+        <div class="sheet-card">
+          <!-- Linked sheet -->
+          <div id="sheetLinked">
+            <a href="https://docs.google.com/spreadsheets/d/example" target="_blank" class="sheet-card__link">
+              <span class="sheet-card__link-icon">📊</span>
+              <div>
+                <div style="font-weight: 600; color: var(--text-primary); font-size: 0.92rem; margin-bottom: 2px;">Billets-Monitor-Export</div>
+                <span class="sheet-card__link-url">docs.google.com/spreadsheets/d/1abc...xyz</span>
+              </div>
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-left: auto; flex-shrink: 0; color: var(--text-tertiary);">
+                <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"></path>
+                <polyline points="15 3 21 3 21 9"></polyline>
+                <line x1="10" y1="14" x2="21" y2="3"></line>
+              </svg>
+            </a>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <span style="font-size: 0.82rem; color: var(--text-tertiary);">Derniere mise a jour : il y a 3 minutes</span>
+              <a href="https://docs.google.com/spreadsheets/d/example" target="_blank" class="btn btn--success btn--small">
+                Ouvrir mon Sheet
+              </a>
+            </div>
+          </div>
+
+          <!-- Form to link a new sheet (hidden by default) -->
+          <div id="sheetForm" style="display: none;">
+            <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: var(--space-lg);">
+              Colle l'URL de ton Google Sheet pour le lier a ton compte.
+            </p>
+            <div class="sheet-card__form">
+              <input type="url" class="input" id="sheetUrlInput" placeholder="https://docs.google.com/spreadsheets/d/...">
+              <button class="btn btn--primary" onclick="linkSheet()">Lier</button>
+            </div>
+          </div>
+
+          <!-- Toggle between linked/form -->
+          <div style="margin-top: var(--space-lg); text-align: center;">
+            <button class="btn btn--ghost" id="toggleSheetForm" onclick="toggleSheetView()">
+              Changer de Sheet
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Section: Scan History -->
+      <section class="dashboard__section animate-in animate-in--delay-7" id="sectionHistory">
+        <div class="dashboard__section-header">
+          <h3>📜 Historique des scans</h3>
+          <button class="btn btn--primary btn--small" id="scanNowBtn" onclick="triggerScan()">
+            🔄 Scanner maintenant
+          </button>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Comptes scannes</th>
+                <th>Commandes trouvees</th>
+                <th>Statut</th>
+              </tr>
+            </thead>
+            <tbody id="scanHistoryBody">
+              <tr>
+                <td>25 fev. 2026 — 14:32</td>
+                <td>3 comptes</td>
+                <td>2 nouvelles</td>
+                <td><span class="badge badge--success">Termine</span></td>
+              </tr>
+              <tr>
+                <td>25 fev. 2026 — 14:22</td>
+                <td>3 comptes</td>
+                <td>0 nouvelle</td>
+                <td><span class="badge badge--success">Termine</span></td>
+              </tr>
+              <tr>
+                <td>25 fev. 2026 — 14:12</td>
+                <td>3 comptes</td>
+                <td>1 nouvelle</td>
+                <td><span class="badge badge--success">Termine</span></td>
+              </tr>
+              <tr>
+                <td>25 fev. 2026 — 14:02</td>
+                <td>3 comptes</td>
+                <td>0 nouvelle</td>
+                <td><span class="badge badge--success">Termine</span></td>
+              </tr>
+              <tr>
+                <td>25 fev. 2026 — 13:52</td>
+                <td>3 comptes</td>
+                <td>5 nouvelles</td>
+                <td><span class="badge badge--success">Termine</span></td>
+              </tr>
+              <tr>
+                <td>25 fev. 2026 — 13:42</td>
+                <td>2 comptes</td>
+                <td>0 nouvelle</td>
+                <td><span class="badge badge--success">Termine</span></td>
+              </tr>
+              <tr>
+                <td>25 fev. 2026 — 13:32</td>
+                <td>2 comptes</td>
+                <td>3 nouvelles</td>
+                <td><span class="badge badge--success">Termine</span></td>
+              </tr>
+              <tr>
+                <td>25 fev. 2026 — 13:22</td>
+                <td>2 comptes</td>
+                <td>1 nouvelle</td>
+                <td><span class="badge badge--warning">Partiel</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Section: Settings (hidden by default, toggled by sidebar) -->
+      <section class="dashboard__section" id="sectionSettings" style="display: none;">
+        <div class="dashboard__section-header">
+          <h3>⚙️ Parametres</h3>
+        </div>
+
+        <div class="card" style="max-width: 600px;">
+          <!-- Account info -->
+          <div style="margin-bottom: var(--space-2xl);">
+            <h4 style="margin-bottom: var(--space-lg);">Compte</h4>
+            <div style="display: flex; flex-direction: column; gap: var(--space-md);">
+              <div>
+                <label style="font-size: 0.78rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: var(--space-xs);">Nom</label>
+                <input type="text" class="input" value="Cesar Revert" id="settingsName">
+              </div>
+              <div>
+                <label style="font-size: 0.78rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: var(--space-xs);">Email principal</label>
+                <input type="email" class="input" value="cesar.tickets@gmail.com" disabled style="opacity: 0.6;">
+              </div>
+              <div>
+                <label style="font-size: 0.78rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: var(--space-xs);">Type de monitoring</label>
+                <div style="display: flex; gap: var(--space-md); margin-top: var(--space-sm);">
+                  <span class="badge badge--accent">🎫 Tickets</span>
+                  <span class="badge badge--neutral">👗 Vinted</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Scan frequency -->
+          <div style="margin-bottom: var(--space-2xl); padding-top: var(--space-xl); border-top: 1px solid var(--border-subtle);">
+            <h4 style="margin-bottom: var(--space-lg);">Frequence de scan</h4>
+            <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+              <label style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);" class="radio-option">
+                <input type="radio" name="frequency" value="5" style="accent-color: var(--accent-mid);">
+                <span style="font-size: 0.88rem;">Toutes les 5 minutes <span class="badge badge--accent" style="margin-left: var(--space-sm);">Pro</span></span>
+              </label>
+              <label style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);" class="radio-option">
+                <input type="radio" name="frequency" value="10" checked style="accent-color: var(--accent-mid);">
+                <span style="font-size: 0.88rem;">Toutes les 10 minutes</span>
+              </label>
+              <label style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); border-radius: var(--radius-md); cursor: pointer; transition: background var(--transition-fast);" class="radio-option">
+                <input type="radio" name="frequency" value="30" style="accent-color: var(--accent-mid);">
+                <span style="font-size: 0.88rem;">Toutes les 30 minutes</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Notifications -->
+          <div style="margin-bottom: var(--space-2xl); padding-top: var(--space-xl); border-top: 1px solid var(--border-subtle);">
+            <h4 style="margin-bottom: var(--space-lg);">Notifications</h4>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-md) 0;">
+              <div>
+                <div style="font-size: 0.92rem; font-weight: 500; color: var(--text-primary);">Email a chaque nouvelle commande</div>
+                <div style="font-size: 0.78rem; color: var(--text-tertiary); margin-top: 2px;">Recevoir un email quand une nouvelle commande est detectee</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox">
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+            <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-md) 0;">
+              <div>
+                <div style="font-size: 0.92rem; font-weight: 500; color: var(--text-primary);">Rapport quotidien</div>
+                <div style="font-size: 0.78rem; color: var(--text-tertiary); margin-top: 2px;">Resume quotidien des commandes detectees</div>
+              </div>
+              <label class="toggle">
+                <input type="checkbox" checked>
+                <span class="toggle__slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Danger zone -->
+          <div style="padding-top: var(--space-xl); border-top: 1px solid var(--border-subtle);">
+            <h4 style="margin-bottom: var(--space-lg); color: var(--error);">Zone dangereuse</h4>
+            <div style="display: flex; align-items: center; justify-content: space-between;">
+              <div>
+                <div style="font-size: 0.92rem; font-weight: 500; color: var(--text-primary);">Supprimer mon compte</div>
+                <div style="font-size: 0.78rem; color: var(--text-tertiary); margin-top: 2px;">Toutes tes donnees seront supprimees definitivement</div>
+              </div>
+              <button class="btn btn--danger btn--small">Supprimer</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="js/app.js"></script>
+  <script>
+    // ===== Dashboard-specific logic =====
+
+    // Sidebar navigation
+    document.querySelectorAll('.sidebar__link[data-section]').forEach(link => {
+      link.addEventListener('click', function(e) {
+        e.preventDefault();
+
+        // Update active link
+        document.querySelectorAll('.sidebar__link').forEach(l => l.classList.remove('sidebar__link--active'));
+        this.classList.add('sidebar__link--active');
+
+        const section = this.dataset.section;
+
+        // Show/hide sections based on selection
+        const allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionSettings'];
+
+        if (section === 'overview') {
+          // Show all except settings
+          allSections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = id === 'sectionSettings' ? 'none' : '';
+          });
+        } else if (section === 'gmail') {
+          allSections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = id === 'sectionGmail' ? '' : 'none';
+          });
+        } else if (section === 'sheet') {
+          allSections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = id === 'sectionSheet' ? '' : 'none';
+          });
+        } else if (section === 'history') {
+          allSections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = id === 'sectionHistory' ? '' : 'none';
+          });
+        } else if (section === 'settings') {
+          allSections.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = id === 'sectionSettings' ? '' : 'none';
+          });
+        }
+
+        // Close mobile sidebar
+        closeSidebar();
+      });
+    });
+
+    // Mobile sidebar toggle
+    const dashboardMobileToggle = document.getElementById('dashboardMobileToggle');
+    const sidebar = document.getElementById('sidebar');
+    const sidebarOverlay = document.getElementById('sidebarOverlay');
+
+    if (dashboardMobileToggle) {
+      dashboardMobileToggle.addEventListener('click', function() {
+        sidebar.classList.toggle('sidebar--open');
+        sidebarOverlay.classList.toggle('sidebar-overlay--visible');
+      });
+    }
+
+    if (sidebarOverlay) {
+      sidebarOverlay.addEventListener('click', closeSidebar);
+    }
+
+    function closeSidebar() {
+      sidebar.classList.remove('sidebar--open');
+      sidebarOverlay.classList.remove('sidebar-overlay--visible');
+    }
+
+    // Monitoring toggle
+    const monitoringToggle = document.getElementById('monitoringToggle');
+    if (monitoringToggle) {
+      const checkbox = monitoringToggle.querySelector('input');
+      checkbox.addEventListener('change', function() {
+        const statusDot = document.getElementById('statusDot');
+        const statusText = document.getElementById('statusText');
+
+        if (this.checked) {
+          statusDot.className = 'status-dot status-dot--active';
+          statusText.textContent = 'Monitoring actif';
+          showToast('Monitoring active', 'success');
+        } else {
+          statusDot.className = 'status-dot status-dot--inactive';
+          statusText.textContent = 'Monitoring en pause';
+          showToast('Monitoring mis en pause', 'info');
+        }
+      });
+    }
+
+    // Add Gmail account
+    function addGmailAccount() {
+      const btn = document.getElementById('addGmailBtn');
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div>';
+      btn.disabled = true;
+
+      // In production: redirect to /auth/google/add
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        showToast('Redirection vers Google OAuth...', 'info');
+
+        // Simulate adding a new account after OAuth
+        setTimeout(() => {
+          const gmailList = document.getElementById('gmailList');
+          const newCard = document.createElement('div');
+          newCard.className = 'gmail-card';
+          newCard.style.animation = 'fadeInUp 0.5s var(--ease-out)';
+          newCard.innerHTML = `
+            <div class="gmail-card__info">
+              <div class="gmail-card__icon">📧</div>
+              <div>
+                <div class="gmail-card__email">nouveau.compte@gmail.com</div>
+                <div class="gmail-card__date">Connecte le 25 fev. 2026</div>
+              </div>
+            </div>
+            <div class="gmail-card__actions">
+              <span class="badge badge--info">0 commande</span>
+              <button class="btn btn--danger btn--small" onclick="removeGmailAccount(this)">Retirer</button>
+            </div>
+          `;
+          gmailList.appendChild(newCard);
+
+          // Update stat
+          const statGmail = document.getElementById('statGmail');
+          statGmail.textContent = parseInt(statGmail.textContent) + 1;
+
+          showToast('Compte Gmail ajoute avec succes', 'success');
+        }, 1500);
+      }, 800);
+    }
+
+    // Remove Gmail account
+    function removeGmailAccount(btn) {
+      const card = btn.closest('.gmail-card');
+      if (confirm('Retirer ce compte Gmail du monitoring ?')) {
+        card.style.opacity = '0';
+        card.style.transform = 'translateX(-20px)';
+        card.style.transition = 'all 0.3s var(--ease-out)';
+
+        setTimeout(() => {
+          card.remove();
+          const statGmail = document.getElementById('statGmail');
+          statGmail.textContent = Math.max(0, parseInt(statGmail.textContent) - 1);
+          showToast('Compte Gmail retire', 'info');
+        }, 300);
+      }
+    }
+
+    // Toggle sheet view
+    function toggleSheetView() {
+      const linked = document.getElementById('sheetLinked');
+      const form = document.getElementById('sheetForm');
+      const toggleBtn = document.getElementById('toggleSheetForm');
+
+      if (linked.style.display === 'none') {
+        linked.style.display = '';
+        form.style.display = 'none';
+        toggleBtn.textContent = 'Changer de Sheet';
+      } else {
+        linked.style.display = 'none';
+        form.style.display = '';
+        toggleBtn.textContent = 'Annuler';
+        document.getElementById('sheetUrlInput').focus();
+      }
+    }
+
+    // Link a new sheet
+    function linkSheet() {
+      const input = document.getElementById('sheetUrlInput');
+      const url = input.value.trim();
+
+      if (!url) {
+        showToast('Entre l\'URL de ton Google Sheet', 'error');
+        return;
+      }
+
+      if (!url.includes('docs.google.com/spreadsheets')) {
+        showToast('URL invalide. Utilise un lien Google Sheets.', 'error');
+        return;
+      }
+
+      showToast('Sheet lie avec succes', 'success');
+      toggleSheetView();
+    }
+
+    // Trigger manual scan
+    function triggerScan() {
+      const btn = document.getElementById('scanNowBtn');
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<div class="spinner"></div> Scan en cours...';
+      btn.disabled = true;
+
+      setTimeout(() => {
+        // Add new row to history
+        const tbody = document.getElementById('scanHistoryBody');
+        const now = new Date();
+        const timeStr = now.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })
+          + ' — ' + now.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        const newRow = document.createElement('tr');
+        newRow.style.animation = 'fadeInUp 0.4s var(--ease-out)';
+        const found = Math.floor(Math.random() * 4);
+        newRow.innerHTML = `
+          <td>${timeStr}</td>
+          <td>${document.getElementById('statGmail').textContent} comptes</td>
+          <td>${found} nouvelle${found !== 1 ? 's' : ''}</td>
+          <td><span class="badge badge--success">Termine</span></td>
+        `;
+        tbody.insertBefore(newRow, tbody.firstChild);
+
+        // Update stats
+        if (found > 0) {
+          const statOrders = document.getElementById('statOrders');
+          statOrders.textContent = parseInt(statOrders.textContent) + found;
+        }
+        document.getElementById('statLastScan').textContent = '0 min';
+
+        btn.innerHTML = originalHTML;
+        btn.disabled = false;
+        showToast(`Scan termine. ${found} nouvelle${found !== 1 ? 's' : ''} commande${found !== 1 ? 's' : ''} trouvee${found !== 1 ? 's' : ''}.`, found > 0 ? 'success' : 'info');
+      }, 3000);
+    }
+
+    // Simulate "last scan" counter
+    let lastScanMinutes = 3;
+    setInterval(() => {
+      lastScanMinutes++;
+      const el = document.getElementById('statLastScan');
+      if (el && lastScanMinutes < 60) {
+        el.textContent = lastScanMinutes + ' min';
+      }
+    }, 60000);
+  </script>
+</body>
+</html>

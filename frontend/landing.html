@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Billets Monitor — Automatise ton resell de billets et Vinted</title>
+  <meta name="description" content="Scanne automatiquement tes emails de confirmation et remplis ton Google Sheet. Billets de concerts, sport, evenements + Vinted.">
+  <meta property="og:title" content="Billets Monitor — Automatise ton resell">
+  <meta property="og:description" content="Scanne tes emails, remplis ton Sheet. Automatiquement.">
+  <meta property="og:type" content="website">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎫</text></svg>">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <!-- Background mesh -->
+  <div class="bg-mesh"></div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ========== NAV ========== -->
+  <nav class="nav" id="mainNav">
+    <div class="container">
+      <div class="nav__inner">
+        <a href="#" class="nav__logo">
+          <div class="nav__logo-icon">🎫</div>
+          <span class="nav__logo-text">Billets Monitor</span>
+        </a>
+
+        <ul class="nav__links" id="navLinks">
+          <li><a href="#services" class="nav__link">Services</a></li>
+          <li><a href="#how-it-works" class="nav__link">Comment ca marche</a></li>
+          <li><a href="#features" class="nav__link">Features</a></li>
+          <li><a href="#pricing" class="nav__link">Tarifs</a></li>
+        </ul>
+
+        <div class="nav__actions">
+          <a href="login.html" class="btn btn--primary btn--small">Commencer</a>
+          <button class="nav__mobile-toggle" id="mobileToggle" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero">
+    <div class="hero__glow"></div>
+    <div class="container">
+      <h1 class="hero__title animate-in">
+        <span>Ton resell,</span>
+        <span class="text-gradient">automatise.</span>
+      </h1>
+      <p class="hero__subtitle animate-in animate-in--delay-2">
+        Connecte ton Gmail, on scanne tes confirmations de commande et on remplit ton Google Sheet. Zero effort.
+      </p>
+      <div class="hero__actions animate-in animate-in--delay-3">
+        <a href="#services" class="btn btn--primary btn--large">
+          🎫 Billets & Tickets
+        </a>
+        <a href="#services" class="btn btn--secondary btn--large">
+          👗 Vinted
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SERVICES ========== -->
+  <section class="services" id="services">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Deux mondes, un seul outil</span>
+        <h2 class="section-title">Choisis ton activite</h2>
+        <p class="section-subtitle">
+          Que tu revendes des billets ou que tu vendes sur Vinted, on s'occupe du suivi pour toi.
+        </p>
+      </div>
+
+      <div class="services__grid">
+        <!-- Tickets Card -->
+        <div class="card card--interactive card--accent reveal">
+          <span class="card__icon">🎫</span>
+          <h3 class="card__title">Billets & Tickets</h3>
+          <p class="card__description">
+            On scanne tes emails de confirmation de billetteries et on extrait automatiquement : evenement, date, place, prix, vendeur. Tout dans ton Sheet.
+          </p>
+          <div class="card__sources">
+            <span class="badge badge--accent">Ticketmaster</span>
+            <span class="badge badge--accent">Roland-Garros</span>
+            <span class="badge badge--accent">Stade de France</span>
+            <span class="badge badge--accent">Fnac Spectacles</span>
+            <span class="badge badge--accent">+ autres</span>
+          </div>
+          <a href="login.html?type=tickets" class="btn btn--primary btn--block">
+            Commencer avec Tickets
+          </a>
+        </div>
+
+        <!-- Vinted Card -->
+        <div class="card card--interactive reveal" style="animation-delay: 0.15s;">
+          <span class="card__icon">👗</span>
+          <h3 class="card__title">Vinted Monitor</h3>
+          <p class="card__description">
+            On scanne tes confirmations de vente Vinted : article, prix, acheteur, date, frais. Suivi complet de tes ventes dans un Sheet propre.
+          </p>
+          <div class="card__sources">
+            <span class="badge badge--neutral">Confirmations de vente</span>
+            <span class="badge badge--neutral">Suivi expeditions</span>
+            <span class="badge badge--neutral">Paiements recus</span>
+          </div>
+          <a href="login.html?type=vinted" class="btn btn--secondary btn--block">
+            Commencer avec Vinted
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== HOW IT WORKS ========== -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Simple comme bonjour</span>
+        <h2 class="section-title">Comment ca marche</h2>
+        <p class="section-subtitle">
+          Trois etapes. Cinq minutes. Apres, c'est 100% automatique.
+        </p>
+      </div>
+
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step__number">1</div>
+          <div class="step__icon">🔗</div>
+          <h4 class="step__title">Connecte ton Gmail</h4>
+          <p class="step__description">
+            Autorise l'acces en lecture seule a ta boite mail via Google OAuth. Securise, on ne lit que les confirmations de commande.
+          </p>
+        </div>
+
+        <div class="step reveal" style="transition-delay: 0.15s;">
+          <div class="step__number">2</div>
+          <div class="step__icon">🤖</div>
+          <h4 class="step__title">Scan automatique</h4>
+          <p class="step__description">
+            Notre moteur scanne tes emails toutes les 10 minutes. Il identifie les confirmations et extrait les donnees cles.
+          </p>
+        </div>
+
+        <div class="step reveal" style="transition-delay: 0.3s;">
+          <div class="step__number">3</div>
+          <div class="step__icon">📊</div>
+          <h4 class="step__title">Sheet rempli</h4>
+          <p class="step__description">
+            Les donnees arrivent automatiquement dans ton Google Sheet. Colonnes propres, zero doublon, pret a exploiter.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FEATURES ========== -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Tout ce qu'il faut</span>
+        <h2 class="section-title">Features</h2>
+        <p class="section-subtitle">
+          Concu pour le resell. Chaque detail compte.
+        </p>
+      </div>
+
+      <div class="features__grid">
+        <div class="feature reveal">
+          <div class="feature__icon">📧</div>
+          <h4 class="feature__title">Multi-Gmail</h4>
+          <p class="feature__description">Connecte plusieurs comptes Gmail pour centraliser tous tes achats et ventes dans un seul Sheet.</p>
+        </div>
+
+        <div class="feature reveal" style="transition-delay: 0.1s;">
+          <div class="feature__icon">⚡</div>
+          <h4 class="feature__title">Temps reel</h4>
+          <p class="feature__description">Scan automatique toutes les 10 minutes. Tes donnees sont toujours a jour sans lever le petit doigt.</p>
+        </div>
+
+        <div class="feature reveal" style="transition-delay: 0.2s;">
+          <div class="feature__icon">📊</div>
+          <h4 class="feature__title">Google Sheets</h4>
+          <p class="feature__description">Export direct dans ton Google Sheet. Colonnes personnalisees selon ton type d'activite (billets ou Vinted).</p>
+        </div>
+
+        <div class="feature reveal" style="transition-delay: 0.1s;">
+          <div class="feature__icon">🔒</div>
+          <h4 class="feature__title">Securise</h4>
+          <p class="feature__description">OAuth Google, acces lecture seule. On ne stocke aucun email. Tes donnees restent les tiennes.</p>
+        </div>
+
+        <div class="feature reveal" style="transition-delay: 0.2s;">
+          <div class="feature__icon">🚫</div>
+          <h4 class="feature__title">Deduplication</h4>
+          <p class="feature__description">Detection intelligente des doublons. Chaque commande n'apparait qu'une seule fois dans ton Sheet.</p>
+        </div>
+
+        <div class="feature reveal" style="transition-delay: 0.3s;">
+          <div class="feature__icon">🎯</div>
+          <h4 class="feature__title">Multi-sources</h4>
+          <p class="feature__description">Ticketmaster, Fnac, Roland-Garros, Vinted... On supporte les principales plateformes de billetterie et vente.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== PRICING ========== -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Tarifs transparents</span>
+        <h2 class="section-title">Choisis ta formule.</h2>
+        <p class="section-subtitle">
+          Mensuel ou annuel, sans engagement cache. Annule quand tu veux.
+        </p>
+      </div>
+
+      <!-- Toggle Mois / An -->
+      <div class="pricing__toggle reveal">
+        <span class="pricing__toggle-label pricing__toggle-label--active" id="labelMonth">Mois</span>
+        <button class="pricing__toggle-switch" id="billingToggle" aria-label="Basculer entre mensuel et annuel">
+          <span class="pricing__toggle-knob"></span>
+        </button>
+        <span class="pricing__toggle-label" id="labelYear">An</span>
+        <span class="pricing__toggle-save badge badge--accent">-48%</span>
+      </div>
+
+      <div class="pricing__grid">
+        <!-- Starter -->
+        <div class="pricing-card reveal">
+          <div class="pricing-card__name">Starter</div>
+          <p class="pricing-card__description">Pour demarrer ton suivi automatise</p>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount" data-monthly="7.99" data-yearly="50">7.99€</span>
+            <span class="pricing-card__period" data-monthly="/mois" data-yearly="/an">/mois</span>
+          </div>
+          <div class="pricing-card__yearly-detail" style="display:none;">
+            <span class="pricing-card__equiv">soit 4.17€/mois</span>
+          </div>
+          <div class="pricing-card__features">
+            <div class="pricing-card__feature">1 compte Gmail</div>
+            <div class="pricing-card__feature">1 type (Tickets OU Vinted)</div>
+            <div class="pricing-card__feature">Scan toutes les 10 min</div>
+            <div class="pricing-card__feature">Google Sheets export</div>
+            <div class="pricing-card__feature">Deduplication auto</div>
+            <div class="pricing-card__feature">Suivi des ventes</div>
+          </div>
+          <a href="login.html?plan=starter&billing=monthly" class="btn btn--outline btn--block" id="ctaStarter">Choisir Starter</a>
+        </div>
+
+        <!-- Pro -->
+        <div class="pricing-card pricing-card--featured reveal" style="transition-delay: 0.15s;">
+          <span class="pricing-card__badge badge badge--accent">Populaire</span>
+          <div class="pricing-card__name">Pro</div>
+          <p class="pricing-card__description">Pour les resellers serieux</p>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount text-gradient" data-monthly="9.99" data-yearly="90">9.99€</span>
+            <span class="pricing-card__period" data-monthly="/mois" data-yearly="/an">/mois</span>
+          </div>
+          <div class="pricing-card__yearly-detail" style="display:none;">
+            <span class="pricing-card__equiv">soit 7.50€/mois</span>
+          </div>
+          <div class="pricing-card__features">
+            <div class="pricing-card__feature">Comptes Gmail illimites</div>
+            <div class="pricing-card__feature">Tickets + Vinted</div>
+            <div class="pricing-card__feature">Scan toutes les 5 min</div>
+            <div class="pricing-card__feature">Scan prix d'achat + vente</div>
+            <div class="pricing-card__feature">Calcul benefice & ROI auto</div>
+            <div class="pricing-card__feature">Temps en stock par article</div>
+            <div class="pricing-card__feature">Deduplication avancee</div>
+            <div class="pricing-card__feature">Support prioritaire</div>
+          </div>
+          <a href="login.html?plan=pro&billing=monthly" class="btn btn--primary btn--block" id="ctaPro">Choisir Pro</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FAQ ========== -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Questions frequentes</span>
+        <h2 class="section-title">FAQ</h2>
+      </div>
+
+      <div class="faq__list">
+        <div class="faq__item reveal">
+          <button class="faq__question" aria-expanded="false">
+            <span>Est-ce que mes emails sont stockes quelque part ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Non. On ne stocke aucun email. Notre moteur lit les confirmations de commande en temps reel via l'API Gmail (acces lecture seule), extrait les donnees utiles, et les envoie directement dans ton Google Sheet. Aucune copie n'est conservee sur nos serveurs.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.1s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Quelles billetteries sont supportees ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              On supporte actuellement Ticketmaster, Fnac Spectacles, Roland-Garros, Stade de France, et plusieurs autres plateformes. De nouvelles sources sont ajoutees regulierement. Si ta billetterie n'est pas encore supportee, contacte-nous et on l'ajoute.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.2s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Je peux connecter plusieurs comptes Gmail ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Avec le plan Starter, tu peux connecter 1 compte Gmail. Avec le plan Pro, c'est illimite. Tous les comptes alimentent le meme Google Sheet pour un suivi centralise.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.3s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Comment fonctionne l'abonnement ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Tu choisis entre un abonnement mensuel ou annuel. L'annuel te fait economiser jusqu'a 48% par rapport au mensuel. Tu peux annuler a tout moment, sans engagement. Les mises a jour et nouvelles sources de billetterie sont toujours incluses.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.4s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Comment fonctionne la deduplication ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Chaque commande est identifiee de maniere unique (numero de commande, combinaison evenement + date + place). Meme si tu recois plusieurs emails pour la meme commande (confirmation, rappel, e-ticket), elle n'apparaitra qu'une seule fois dans ton Sheet.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== CTA BOX ========== -->
+  <section class="cta-box">
+    <div class="container container--narrow">
+      <div class="cta-box__inner reveal">
+        <h2 class="cta-box__title">Pret a automatiser ton suivi ?</h2>
+        <p class="cta-box__subtitle section-subtitle" style="margin-bottom: var(--space-2xl);">
+          Connecte ton Gmail en 2 minutes. Ton Sheet se remplit tout seul.
+        </p>
+        <a href="login.html" class="btn btn--primary btn--large" style="position: relative; z-index: 1;">
+          Commencer maintenant
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__logo">
+          <div class="footer__logo-icon">🎫</div>
+          <span class="footer__logo-text">Billets Monitor</span>
+        </div>
+        <div class="footer__links">
+          <a href="#services" class="footer__link">Services</a>
+          <a href="#features" class="footer__link">Features</a>
+          <a href="#pricing" class="footer__link">Tarifs</a>
+          <a href="#faq" class="footer__link">FAQ</a>
+          <a href="mailto:contact@billets-monitor.com" class="footer__link">Contact</a>
+        </div>
+      </div>
+
+      <div class="social-links">
+        <a href="https://www.facebook.com/carwashdrivedeauville/photos" target="_blank" rel="noopener" aria-label="Facebook">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+        </a>
+        <a href="https://www.instagram.com/carwashdrive/" target="_blank" rel="noopener" aria-label="Instagram">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/></svg>
+        </a>
+      </div>
+
+      <div class="footer__bottom">
+        <p class="footer__copyright">&copy; 2026 Billets Monitor. Tous droits reserves.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/app.js"></script>
+</body>
+</html>

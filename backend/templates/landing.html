@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitorz — Vends plus, gere moins</title>
+  <meta name="description" content="Scanne automatiquement tes emails de confirmation et remplis ton Google Sheet. Billets de concerts, sport, evenements + Vinted.">
+  <meta property="og:title" content="Monitorz — Vends plus, gere moins">
+  <meta property="og:description" content="Scanne tes emails, remplis ton Sheet. Automatiquement.">
+  <meta property="og:type" content="website">
+  <link rel="icon" type="image/x-icon" href="/static/img/favicon.ico">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-32.png">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Monitorz">
+  <link rel="apple-touch-icon" href="/static/img/logo.png">
+  <meta name="theme-color" content="#0f1117">
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+  <!-- Background mesh -->
+  <div class="bg-mesh"></div>
+
+  <!-- Cursor glow -->
+  <div class="cursor-glow" id="cursorGlow"></div>
+
+  <!-- Toast container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- ========== NAV ========== -->
+  <nav class="nav" id="mainNav">
+    <div class="container">
+      <div class="nav__inner">
+        <a href="#" class="nav__logo">
+          <img src="/static/img/logo.png" alt="Monitorz" class="nav__logo-img">
+        </a>
+
+        <ul class="nav__links" id="navLinks">
+          <li><a href="#services" class="nav__link">Services</a></li>
+          <li><a href="#how-it-works" class="nav__link">Comment ça marche</a></li>
+          <li><a href="#features" class="nav__link">Features</a></li>
+          <li><a href="#pricing" class="nav__link">Tarifs</a></li>
+        </ul>
+
+        <div class="nav__actions">
+          <a href="/login" class="btn btn--primary">Commencer</a>
+          <button class="nav__mobile-toggle" id="mobileToggle" aria-label="Menu">
+            <span></span>
+            <span></span>
+            <span></span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ========== HERO ========== -->
+  <section class="hero">
+    <div class="hero__glow"></div>
+    <div class="container">
+      <h1 class="hero__title animate-in">
+        <img src="/static/img/slogan-hero.png" alt="Vends plus, gère moins" class="hero__slogan-img">
+      </h1>
+      <p class="hero__subtitle animate-in animate-in--delay-2">
+        Connecte ton Gmail, on scanne tes commandes, on analyse tes profits, et on crée tes annonces de vente. Tu revends, on gère le reste.
+      </p>
+      <div class="hero__segmented animate-in animate-in--delay-3">
+        <div class="segmented-control">
+          <div class="segmented-control__indicator" id="segIndicator"></div>
+          <button class="segmented-control__btn segmented-control__btn--active" data-type="tickets" id="segTickets">
+            🎟 Billets & Tickets
+          </button>
+          <button class="segmented-control__btn" data-type="vinted" id="segVinted">
+            👗 Vinted
+          </button>
+        </div>
+        <a href="/login?type=tickets" class="btn btn--primary btn--large hero__cta" id="heroCta">
+          Commencer
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== SERVICES ========== -->
+  <section class="services" id="services">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Deux mondes, un seul outil</span>
+        <h2 class="section-title">Choisis ton activité</h2>
+        <p class="section-subtitle">
+          Que tu revendes des billets ou que tu vendes sur Vinted, on s'occupe du suivi pour toi.
+        </p>
+      </div>
+
+      <div class="services__grid">
+        <!-- Tickets Card -->
+        <div class="card card--interactive card--accent reveal">
+          <div class="card__header">
+            <span class="card__icon"><img src="/static/img/icon-ticket.png" alt="Tickets" style="width:36px;height:auto;"></span>
+            <h3 class="card__title">Billets & Tickets</h3>
+          </div>
+          <p class="card__description">
+            On scanne tes emails de confirmation de billetteries et on extrait automatiquement : événement, date, place, prix, vendeur. Tout dans ton Sheet.
+          </p>
+          <div class="card__sources">
+            <span class="badge badge--accent">Ticketmaster</span>
+            <span class="badge badge--accent">Roland-Garros</span>
+            <span class="badge badge--accent">Stade de France</span>
+            <span class="badge badge--accent">Fnac Spectacles</span>
+            <span class="badge badge--accent">+ autres</span>
+          </div>
+          <a href="/login?type=tickets" class="btn btn--primary btn--block">
+            Commencer avec Tickets
+          </a>
+        </div>
+
+        <!-- Vinted Card -->
+        <div class="card card--interactive card--accent reveal" style="animation-delay: 0.15s;">
+          <div class="card__header">
+            <span class="card__icon"><img src="/static/img/icon-vinted.png" alt="Vinted" style="height:36px;width:auto;"></span>
+            <h3 class="card__title">Vinted Monitor</h3>
+          </div>
+          <p class="card__description">
+            On scanne tes confirmations de vente Vinted : article, prix, acheteur, date, frais. Suivi complet + outils pour booster ton activité.
+          </p>
+          <div class="card__sources">
+            <span class="badge badge--accent">Confirmations de vente</span>
+            <span class="badge badge--accent">Suivi expéditions</span>
+            <span class="badge badge--accent">Paiements reçus</span>
+            <span class="badge badge--accent">Génération de description</span>
+            <span class="badge badge--accent">Analyse temps de vente</span>
+            <span class="badge badge--accent">Génération de hashtags</span>
+          </div>
+          <a href="/login?type=vinted" class="btn btn--primary btn--block">
+            Commencer avec Vinted
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== HOW IT WORKS ========== -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Simple comme bonjour</span>
+        <h2 class="section-title">Comment ça marche</h2>
+        <p class="section-subtitle">
+          Trois étapes, 30 secondes. Après... Monitorz t'aide à piloter ton activité.
+        </p>
+      </div>
+
+      <div class="steps">
+        <div class="step reveal">
+          <div class="step__number">1</div>
+          <div class="step__icon">🔗</div>
+          <h4 class="step__title">Connecte ton Gmail</h4>
+          <p class="step__description">
+            Autorise l'accès en lecture seule à ta boîte mail via Google OAuth. Sécurisé, on ne lit que les confirmations de commande.
+          </p>
+        </div>
+
+        <div class="step reveal" style="transition-delay: 0.15s;">
+          <div class="step__number">2</div>
+          <div class="step__icon">🤖</div>
+          <h4 class="step__title">Scan automatique</h4>
+          <p class="step__description">
+            Notre moteur scanne tes emails toutes les heures. Il identifie les confirmations, extrait les données clés et les envoie directement dans ton Google Sheet. Colonnes propres, zéro doublon, prêt à exploiter.
+          </p>
+        </div>
+
+        <div class="step reveal" style="transition-delay: 0.3s;">
+          <div class="step__number">3</div>
+          <div class="step__icon">📊</div>
+          <h4 class="step__title">Analytics intégrés</h4>
+          <p class="step__description">
+            Visualise tes marges, ton ROI et le temps en stock de chaque article. Monitorz calcule tes bénéfices automatiquement pour que tu saches exactement ce que tu gagnes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FEATURES ========== -->
+  <section class="features" id="features">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Ton arsenal complet</span>
+        <h2 class="section-title">Des outils faits pour scaler</h2>
+        <p class="section-subtitle">
+          Chaque feature est pensée pour te faire gagner du temps et vendre plus vite.
+        </p>
+      </div>
+
+      <div class="features__scroll" id="featuresScroll">
+        <div class="features__track">
+          <div class="feature">
+            <div class="feature__icon">📝</div>
+            <h4 class="feature__title">Génération WTS</h4>
+            <p class="feature__description">Génère automatiquement tes annonces WTS prêtes à poster. Format pro, prix, détails — un clic et c'est fait.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">💬</div>
+            <h4 class="feature__title">Générateur de descriptions</h4>
+            <p class="feature__description">Descriptions optimisées pour tes ventes. Ton annonce est prête à copier-coller sur n'importe quelle plateforme.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">#️⃣</div>
+            <h4 class="feature__title">Farm à hashtags</h4>
+            <p class="feature__description">Hashtags générés automatiquement pour tes annonces Vinted. Maximise ta visibilité et vends plus vite.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">📊</div>
+            <h4 class="feature__title">Analytics avancés</h4>
+            <p class="feature__description">Dépenses, revenus, bénéfices, ROI par événement. Suis ta rentabilité en temps réel depuis ton dashboard.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">🔔</div>
+            <h4 class="feature__title">Notifications événements</h4>
+            <p class="feature__description">Reçois une alerte quand un événement approche. Ne rate plus jamais une date de revente ou d'expédition.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">⏱</div>
+            <h4 class="feature__title">Suivi du temps de vente</h4>
+            <p class="feature__description">Mesure combien de temps chaque billet ou article met à se vendre. Identifie tes meilleurs deals.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">📧</div>
+            <h4 class="feature__title">Multi-Gmail</h4>
+            <p class="feature__description">Connecte plusieurs comptes Gmail pour centraliser tous tes achats et ventes dans un seul Sheet.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">⚡</div>
+            <h4 class="feature__title">Scan automatique</h4>
+            <p class="feature__description">Scan auto en continu. Tes données sont toujours à jour sans lever le petit doigt.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">📊</div>
+            <h4 class="feature__title">Google Sheets</h4>
+            <p class="feature__description">Export direct dans ton Google Sheet. Colonnes personnalisées selon ton type d'activité.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">🔒</div>
+            <h4 class="feature__title">Sécurisé</h4>
+            <p class="feature__description">OAuth Google, accès lecture seule. On ne stocke aucun email. Tes données restent les tiennes.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">🚫</div>
+            <h4 class="feature__title">Déduplication</h4>
+            <p class="feature__description">Détection intelligente des doublons. Chaque commande n'apparaît qu'une seule fois dans ton Sheet.</p>
+          </div>
+
+          <div class="feature">
+            <div class="feature__icon">🎯</div>
+            <h4 class="feature__title">Multi-sources</h4>
+            <p class="feature__description">Ticketmaster, Fnac, Roland-Garros, Vinted... On supporte les principales plateformes.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Scroll progress bar -->
+      <div class="features__scrollbar">
+        <div class="features__scrollbar-thumb" id="featuresThumb"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== PRICING ========== -->
+  <section class="pricing" id="pricing">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Tarifs transparents</span>
+        <h2 class="section-title">Choisis ta formule.</h2>
+        <p class="section-subtitle">
+          Mensuel ou annuel, sans engagement caché. Annule quand tu veux.
+        </p>
+      </div>
+
+      <!-- Toggle Mois / An -->
+      <div class="pricing__toggle reveal">
+        <div class="segmented-control" id="billingControl">
+          <div class="segmented-control__indicator" id="billingIndicator"></div>
+          <button class="segmented-control__btn segmented-control__btn--active" id="btnMonth" data-billing="monthly">
+            Mensuel
+          </button>
+          <button class="segmented-control__btn" id="btnYear" data-billing="yearly">
+            Annuel <span class="pricing__toggle-save badge badge--accent">-37%</span>
+          </button>
+        </div>
+      </div>
+
+      <div class="pricing__grid">
+        <!-- Starter -->
+        <div class="pricing-card reveal">
+          <div class="pricing-card__name">Starter</div>
+          <p class="pricing-card__description">L'essentiel pour démarrer ton suivi</p>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount" data-monthly="7.99" data-yearly="60">7.99&#8364;</span>
+            <span class="pricing-card__period" data-monthly="/mois" data-yearly="/an">/mois</span>
+            <span class="pricing-card__save-badge" data-save="-37%"></span>
+          </div>
+          <div class="pricing-card__features">
+            <div class="pricing-card__feature">1 compte Gmail</div>
+            <div class="pricing-card__feature">Billets OU Vinted</div>
+            <div class="pricing-card__feature">Scan auto toutes les heures</div>
+            <div class="pricing-card__feature">Scan manuel illimité</div>
+            <div class="pricing-card__feature">Export Google Sheets</div>
+            <div class="pricing-card__feature">Détection des doublons</div>
+          </div>
+          <a href="/login?plan=starter&billing=monthly" class="btn btn--primary btn--block" id="ctaStarter">Choisir Starter</a>
+        </div>
+
+        <!-- Pro -->
+        <div class="pricing-card pricing-card--featured reveal" style="transition-delay: 0.15s;">
+          <div class="pricing-card__name">Pro</div>
+          <p class="pricing-card__description">Le toolkit complet du reseller</p>
+          <div class="pricing-card__price">
+            <span class="pricing-card__amount text-gradient" data-monthly="9.99" data-yearly="90">9.99&#8364;</span>
+            <span class="pricing-card__period" data-monthly="/mois" data-yearly="/an">/mois</span>
+            <span class="pricing-card__save-badge" data-save="-25%"></span>
+          </div>
+          <div class="pricing-card__features">
+            <div class="pricing-card__feature">Comptes Gmail illimités</div>
+            <div class="pricing-card__feature">Billets + Vinted combinés</div>
+            <div class="pricing-card__feature">Scan auto toutes les 30 min</div>
+            <div class="pricing-card__feature">Génération WTS automatique</div>
+            <div class="pricing-card__feature">Générateur de descriptions</div>
+            <div class="pricing-card__feature">Farm à hashtags</div>
+            <div class="pricing-card__feature">Outils d'analytics avancés</div>
+            <div class="pricing-card__feature">Suivi du temps de vente</div>
+            <div class="pricing-card__feature">Notifications evenements</div>
+            <div class="pricing-card__feature">Support prioritaire</div>
+          </div>
+          <a href="/login?plan=pro&billing=monthly" class="btn btn--primary btn--block" id="ctaPro">Choisir Pro</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== FAQ ========== -->
+  <section class="faq" id="faq">
+    <div class="container">
+      <div class="text-center reveal">
+        <span class="section-label">Questions fréquentes</span>
+        <h2 class="section-title">FAQ</h2>
+      </div>
+
+      <div class="faq__list">
+        <div class="faq__item reveal">
+          <button class="faq__question" aria-expanded="false">
+            <span>Est-ce que mes emails sont stockés quelque part ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Non. On ne stocke aucun email. Notre moteur lit les confirmations de commande en temps réel via l'API Gmail (accès lecture seule), extrait les données utiles, et les envoie directement dans ton Google Sheet. Aucune copie n'est conservée sur nos serveurs.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.1s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Quelles billetteries sont supportées ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              On supporte actuellement Ticketmaster, Fnac Spectacles, Roland-Garros, Stade de France, et plusieurs autres plateformes. De nouvelles sources sont ajoutées régulièrement. Si ta billetterie n'est pas encore supportée, contacte-nous et on l'ajoute.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.2s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Je peux connecter plusieurs comptes Gmail ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Avec le plan Starter, tu peux connecter 1 compte Gmail. Avec le plan Pro, c'est illimité. Tous les comptes alimentent le même Google Sheet pour un suivi centralisé.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.3s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Comment fonctionne l'abonnement ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Tu choisis entre un abonnement mensuel ou annuel. L'annuel te fait économiser jusqu'à 37% par rapport au mensuel. Tu peux annuler à tout moment, sans engagement. Les mises à jour et nouvelles sources de billetterie sont toujours incluses.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.4s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Les features Pro sont-elles toutes disponibles ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Les futures features majeures comme l'extension Chrome, la connexion Discord, les analytics avancés ou encore la génération WTS automatique seront exclusives au forfait Pro. En tant qu'abonné Pro, tu seras le premier à y accéder dès leur sortie, sans coût supplémentaire.
+            </div>
+          </div>
+        </div>
+
+        <div class="faq__item reveal" style="transition-delay: 0.5s;">
+          <button class="faq__question" aria-expanded="false">
+            <span>Comment fonctionne la déduplication ?</span>
+            <svg class="faq__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+              <line x1="12" y1="5" x2="12" y2="19"></line>
+              <line x1="5" y1="12" x2="19" y2="12"></line>
+            </svg>
+          </button>
+          <div class="faq__answer">
+            <div class="faq__answer-inner">
+              Chaque commande est identifiée de manière unique (numéro de commande, combinaison événement + date + place). Même si tu reçois plusieurs emails pour la même commande (confirmation, rappel, e-ticket), elle n'apparaîtra qu'une seule fois dans ton Sheet.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========== PROMO VIDEO ========== -->
+  <section class="promo-video" style="padding: var(--space-3xl) 0;">
+    <div class="container" style="max-width: 900px;">
+      <div class="promo-video__frame" style="
+        border: 2px solid var(--orange);
+        border-radius: 16px;
+        overflow: hidden;
+        box-shadow: 0 0 40px rgba(245, 166, 35, 0.15), 0 0 80px rgba(245, 166, 35, 0.06);
+        position: relative;
+        aspect-ratio: 16 / 9;
+        background: var(--bg);
+      ">
+        <video
+          src="/static/video/MonitorzPromo.mp4"
+          muted
+          loop
+          playsinline
+          disablePictureInPicture
+          controlsList="nodownload nofullscreen noremoteplayback"
+          style="width: 100%; height: 100%; object-fit: cover; display: block;"
+        ></video>
+        <div class="promo-video__overlay" style="
+          position: absolute; inset: 0;
+          display: flex; align-items: center; justify-content: center;
+          background: rgba(0,0,0,0.3);
+          pointer-events: none;
+          transition: opacity 0.4s ease;
+        ">
+          <svg width="64" height="64" viewBox="0 0 24 24" fill="none" style="filter: drop-shadow(0 2px 8px rgba(0,0,0,0.5));">
+            <path d="M8 5.14v14.72a1 1 0 001.5.86l11-7.36a1 1 0 000-1.72l-11-7.36A1 1 0 008 5.14z" fill="white" opacity="0.9"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <script>
+  (function() {
+    const frame = document.querySelector('.promo-video__frame');
+    const video = frame.querySelector('video');
+    const overlay = frame.querySelector('.promo-video__overlay');
+    frame.addEventListener('mouseenter', function() {
+      video.muted = false;
+      video.play();
+      overlay.style.opacity = '0';
+    });
+    frame.addEventListener('mouseleave', function() {
+      video.pause();
+      video.currentTime = 0;
+      video.muted = true;
+      overlay.style.opacity = '1';
+    });
+    // Block fullscreen via right-click or double-click
+    video.addEventListener('fullscreenchange', function() {
+      if (document.fullscreenElement === video) document.exitFullscreen();
+    });
+    video.addEventListener('webkitfullscreenchange', function() {
+      if (document.webkitFullscreenElement === video) document.webkitExitFullscreen();
+    });
+    video.addEventListener('dblclick', function(e) { e.preventDefault(); });
+    video.addEventListener('contextmenu', function(e) { e.preventDefault(); });
+  })();
+  </script>
+
+  <!-- ========== FOOTER ========== -->
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__inner">
+        <div class="footer__logo">
+          <img src="/static/img/logo.png" alt="Monitorz" class="footer__logo-img">
+        </div>
+        <div class="footer__links">
+          <a href="#services" class="footer__link">Services</a>
+          <a href="#features" class="footer__link">Features</a>
+          <a href="#pricing" class="footer__link">Tarifs</a>
+          <a href="#faq" class="footer__link">FAQ</a>
+          <a href="mailto:contact@billets-monitor.com" class="footer__link">Contact</a>
+        </div>
+      </div>
+
+      <div class="social-links">
+        <a href="https://discord.gg/FjNmWpVq" target="_blank" rel="noopener" aria-label="Discord">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="currentColor"><path d="M20.317 4.37a19.791 19.791 0 00-4.885-1.515.074.074 0 00-.079.037c-.21.375-.444.864-.608 1.25a18.27 18.27 0 00-5.487 0 12.64 12.64 0 00-.617-1.25.077.077 0 00-.079-.037A19.736 19.736 0 003.677 4.37a.07.07 0 00-.032.027C.533 9.046-.32 13.58.099 18.057a.082.082 0 00.031.057 19.9 19.9 0 005.993 3.03.078.078 0 00.084-.028c.462-.63.874-1.295 1.226-1.994a.076.076 0 00-.041-.106 13.107 13.107 0 01-1.872-.892.077.077 0 01-.008-.128 10.2 10.2 0 00.372-.292.074.074 0 01.077-.01c3.928 1.793 8.18 1.793 12.062 0a.074.074 0 01.078.01c.12.098.246.198.373.292a.077.077 0 01-.006.127 12.299 12.299 0 01-1.873.892.077.077 0 00-.041.107c.36.698.772 1.362 1.225 1.993a.076.076 0 00.084.028 19.839 19.839 0 006.002-3.03.077.077 0 00.032-.054c.5-5.177-.838-9.674-3.549-13.66a.061.061 0 00-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.096 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/></svg>
+        </a>
+      </div>
+
+      <div class="footer__bottom">
+        <p class="footer__copyright">&copy; 2026 Monitorz. Tous droits reserves.</p>
+      </div>
+    </div>
+  </footer>
+
+  <script src="/static/js/app.js"></script>
+  <script>
+    // Features horizontal scroll + drag + progress bar
+    (function() {
+      var scroll = document.getElementById('featuresScroll');
+      var thumb = document.getElementById('featuresThumb');
+      if (!scroll || !thumb) return;
+
+      // Progress bar
+      function updateThumb() {
+        var maxScroll = scroll.scrollWidth - scroll.clientWidth;
+        if (maxScroll <= 0) { thumb.style.width = '100%'; thumb.style.left = '0'; return; }
+        var ratio = scroll.clientWidth / scroll.scrollWidth;
+        var pos = scroll.scrollLeft / maxScroll;
+        thumb.style.width = (ratio * 100) + '%';
+        thumb.style.left = (pos * (1 - ratio) * 100) + '%';
+      }
+      scroll.addEventListener('scroll', updateThumb);
+      window.addEventListener('resize', updateThumb);
+      updateThumb();
+
+      // Drag to scroll
+      var isDown = false, startX, scrollLeft;
+      scroll.addEventListener('mousedown', function(e) {
+        if (e.target.closest('a, button')) return;
+        isDown = true;
+        scroll.style.cursor = 'grabbing';
+        startX = e.pageX - scroll.offsetLeft;
+        scrollLeft = scroll.scrollLeft;
+        e.preventDefault();
+      });
+      document.addEventListener('mouseup', function() {
+        isDown = false;
+        scroll.style.cursor = 'grab';
+      });
+      document.addEventListener('mousemove', function(e) {
+        if (!isDown) return;
+        var x = e.pageX - scroll.offsetLeft;
+        scroll.scrollLeft = scrollLeft - (x - startX);
+      });
+    })();
+
+    // Cursor orange glow
+    (function() {
+      var glow = document.getElementById('cursorGlow');
+      if (!glow) return;
+      var raf;
+      document.addEventListener('mousemove', function(e) {
+        if (raf) cancelAnimationFrame(raf);
+        raf = requestAnimationFrame(function() {
+          glow.style.transform = 'translate(' + (e.clientX - 90) + 'px, ' + (e.clientY - 90) + 'px)';
+          glow.style.opacity = '1';
+        });
+      });
+      document.addEventListener('mouseleave', function() {
+        glow.style.opacity = '0';
+      });
+    })();
+
+    // Segmented control
+    (function() {
+      var tickets = document.getElementById('segTickets');
+      var vinted = document.getElementById('segVinted');
+      var indicator = document.getElementById('segIndicator');
+      var cta = document.getElementById('heroCta');
+      if (!tickets || !vinted || !indicator || !cta) return;
+
+      function activate(btn, type) {
+        tickets.classList.remove('segmented-control__btn--active');
+        vinted.classList.remove('segmented-control__btn--active');
+        btn.classList.add('segmented-control__btn--active');
+
+        // Move indicator
+        indicator.style.width = btn.offsetWidth + 'px';
+        indicator.style.transform = 'translateX(' + btn.offsetLeft + 'px)';
+
+        // Update CTA link — preserve plan if coming from pricing section
+        var urlPlan = new URLSearchParams(window.location.hash.replace('#','').split('?')[1] || '').get('plan');
+        cta.href = '/login?type=' + type + (urlPlan ? '&plan=' + urlPlan : '');
+      }
+
+      // Init position
+      activate(tickets, 'tickets');
+
+      tickets.addEventListener('click', function() { activate(tickets, 'tickets'); });
+      vinted.addEventListener('click', function() { activate(vinted, 'vinted'); });
+
+      // Recalc on resize
+      window.addEventListener('resize', function() {
+        var active = document.querySelector('.segmented-control__btn--active');
+        if (active) {
+          indicator.style.width = active.offsetWidth + 'px';
+          indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+        }
+      });
+    })();
+
+    // Pricing toggle Mois / An (segmented control)
+    (function() {
+      var btnMonth = document.getElementById('btnMonth');
+      var btnYear = document.getElementById('btnYear');
+      var indicator = document.getElementById('billingIndicator');
+      if (!btnMonth || !btnYear || !indicator) return;
+
+      function setBilling(isYearly) {
+        var activeBtn = isYearly ? btnYear : btnMonth;
+        var inactiveBtn = isYearly ? btnMonth : btnYear;
+
+        // Move indicator
+        activeBtn.classList.add('segmented-control__btn--active');
+        inactiveBtn.classList.remove('segmented-control__btn--active');
+        indicator.style.width = activeBtn.offsetWidth + 'px';
+        indicator.style.transform = 'translateX(' + activeBtn.offsetLeft + 'px)';
+
+        // Animate prices
+        document.querySelectorAll('.pricing-card__amount').forEach(function(el) {
+          var price = isYearly ? el.getAttribute('data-yearly') : el.getAttribute('data-monthly');
+          el.style.opacity = '0';
+          setTimeout(function() {
+            el.textContent = price + '\u20ac';
+            el.style.opacity = '1';
+          }, 150);
+        });
+
+        // Toggle period
+        document.querySelectorAll('.pricing-card__period').forEach(function(el) {
+          el.textContent = isYearly ? el.getAttribute('data-yearly') : el.getAttribute('data-monthly');
+        });
+
+        // Show/hide savings badges
+        document.querySelectorAll('.pricing-card__save-badge').forEach(function(el) {
+          if (isYearly) {
+            el.textContent = el.getAttribute('data-save');
+            el.classList.add('visible');
+          } else {
+            el.classList.remove('visible');
+          }
+        });
+
+        // Update CTA links
+        var b = isYearly ? 'yearly' : 'monthly';
+        var s = document.getElementById('ctaStarter');
+        if (s) s.href = '/login?plan=starter&billing=' + b;
+        var p = document.getElementById('ctaPro');
+        if (p) p.href = '/login?plan=pro&billing=' + b;
+      }
+
+      // Init indicator position
+      indicator.style.width = btnMonth.offsetWidth + 'px';
+      indicator.style.transform = 'translateX(' + btnMonth.offsetLeft + 'px)';
+
+      btnMonth.addEventListener('click', function() { setBilling(false); });
+      btnYear.addEventListener('click', function() { setBilling(true); });
+
+      window.addEventListener('resize', function() {
+        var active = document.querySelector('#billingControl .segmented-control__btn--active');
+        if (active) {
+          indicator.style.width = active.offsetWidth + 'px';
+          indicator.style.transform = 'translateX(' + active.offsetLeft + 'px)';
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

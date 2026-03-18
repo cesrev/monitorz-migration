@@ -1,12 +1,37 @@
-.env
+# Python
 __pycache__/
-*.pyc
+*.py[cod]
 *.pyo
 venv/
+.venv/
+*.egg-info/
+
+# Environment
+.env
+*.env.local
+
+# Database
 *.db
 *.sqlite3
-.DS_Store
-migrate_to_supabase.py
-database_sqlite.py
-marketing/
 
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Logs
+*.log
+
+# Large generated images
+*.png
+!static/img/logo.png
+!backend/static/img/favicon-32.png
+!backend/static/img/icon-*.png
+
+# Node (frontend)
+node_modules/
