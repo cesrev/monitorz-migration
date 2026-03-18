@@ -3647,3 +3647,51 @@ p {
     min-height: -webkit-fill-available;
   }
 }
+
+/* ==========================================================================
+   LANDING PAGE — Mobile fixes iOS
+   ========================================================================== */
+
+/* Cache le bouton CTA dans la nav sur mobile, garde seulement le hamburger */
+@media (max-width: 768px) {
+  .nav__actions .btn--primary {
+    display: none;
+  }
+}
+
+/* Segmented control : réduit le padding sur petit écran */
+@media (max-width: 480px) {
+  .segmented-control__btn {
+    padding: 0.7rem 1.1rem;
+    font-size: 0.875rem;
+  }
+
+  .hero__segmented {
+    width: 100%;
+  }
+
+  .hero__segmented .btn--large {
+    width: 100%;
+  }
+
+  .hero__subtitle {
+    max-width: 100%;
+    font-size: 0.95rem;
+  }
+
+  /* Pricing toggle sur mobile */
+  .pricing__toggle .segmented-control__btn {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  /* Video promo : réduit padding */
+  .promo-video {
+    padding: var(--space-2xl) 0 !important;
+  }
+
+  /* Footer links wrap proprement */
+  .footer__links {
+    gap: var(--space-sm);
+  }
+}

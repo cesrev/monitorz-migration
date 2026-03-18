@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>Monitorz — Vends plus, gere moins</title>
   <meta name="description" content="Scanne automatiquement tes emails de confirmation et remplis ton Google Sheet. Billets de concerts, sport, evenements + Vinted.">
   <meta property="og:title" content="Monitorz — Vends plus, gere moins">
@@ -501,6 +501,22 @@
       video.currentTime = 0;
       video.muted = true;
       overlay.style.opacity = '1';
+    });
+    // Touch support (iOS)
+    var playing = false;
+    frame.addEventListener('click', function() {
+      if (playing) {
+        video.pause();
+        video.currentTime = 0;
+        video.muted = true;
+        overlay.style.opacity = '1';
+        playing = false;
+      } else {
+        video.muted = false;
+        video.play();
+        overlay.style.opacity = '0';
+        playing = true;
+      }
     });
     // Block fullscreen via right-click or double-click
     video.addEventListener('fullscreenchange', function() {
