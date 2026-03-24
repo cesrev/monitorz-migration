@@ -13,3 +13,4 @@ reportlab==4.1.0
 flask-limiter==4.1.1
 flask-compress==1.17
 cryptography==44.0.1
+PyJWT==2.10.1

@@ -2,8 +2,6 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "gunicorn app:app -c gunicorn.conf.py"
-healthcheckPath = "/health"
-healthcheckTimeout = 30
+startCommand = "python cron.py"
 restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 3
+restartPolicyMaxRetries = 10

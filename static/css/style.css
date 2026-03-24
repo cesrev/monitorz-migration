@@ -757,6 +757,36 @@ p {
 .stat-card__icon {
   font-size: 1.1rem;
   margin-bottom: var(--space-xs);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+}
+
+/* ---------- Quick Action Bar ---------- */
+.dashboard__quickaction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.dashboard__quickaction-info {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+}
+
+.dashboard__quickaction-info svg {
+  flex-shrink: 0;
+  color: var(--text-tertiary);
 }
 
 .stat-card__value {
@@ -3693,5 +3723,1450 @@ p {
   /* Footer links wrap proprement */
   .footer__links {
     gap: var(--space-sm);
+  }
+}
+
+/* ==========================================================================
+   VINTED ACCOUNTS SECTION
+   ========================================================================== */
+
+/* ---------- Vinted Account Card ---------- */
+.vinted-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  transition: all var(--transition-base);
+}
+
+.vinted-card:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--glass-border-hover);
+}
+
+.vinted-card--selected {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 1px var(--border-accent), var(--shadow-md);
+}
+
+.vinted-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-lg) var(--space-xl);
+  gap: var(--space-md);
+}
+
+.vinted-card__identity {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  flex: 1;
+  min-width: 0;
+}
+
+.vinted-card__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1rem;
+  color: #111116;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.vinted-card__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vinted-card__meta {
+  min-width: 0;
+}
+
+.vinted-card__username {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vinted-card__label {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.vinted-card__date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+.vinted-card__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+/* ---------- Vinted Tabs ---------- */
+.vinted-tabs {
+  border-top: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+}
+
+.vinted-tabs__nav {
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-xl);
+  gap: var(--space-xs);
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.vinted-tabs__nav::-webkit-scrollbar {
+  display: none;
+}
+
+.vinted-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-md) var(--space-lg);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+  position: relative;
+}
+
+.vinted-tab-btn:hover {
+  color: var(--text-secondary);
+}
+
+.vinted-tab-btn--active {
+  color: var(--accent-mid);
+  border-bottom-color: var(--accent-mid);
+}
+
+.vinted-tab-content {
+  padding: var(--space-xl);
+  display: none;
+  animation: fadeInUp 0.25s var(--ease-out);
+}
+
+.vinted-tab-content--active {
+  display: block;
+}
+
+/* ---------- Vinted Wallet ---------- */
+.vinted-wallet {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+}
+
+.vinted-wallet__block {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg) var(--space-xl);
+}
+
+.vinted-wallet__block--primary {
+  background: linear-gradient(135deg, rgba(245, 166, 35, 0.08), rgba(232, 99, 107, 0.06));
+  border-color: var(--border-accent);
+}
+
+.vinted-wallet__label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
+}
+
+.vinted-wallet__amount {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.vinted-wallet__amount--pending {
+  font-size: 1.4rem;
+  color: var(--warning);
+}
+
+.vinted-wallet__actions {
+  display: flex;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+/* ---------- Vinted Messages ---------- */
+.vinted-messages__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.vinted-message-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-md) var(--space-lg);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  transition: background var(--transition-fast);
+}
+
+.vinted-message-row:hover {
+  background: var(--glass-bg);
+}
+
+.vinted-message-row--unread {
+  background: rgba(96, 165, 250, 0.04);
+}
+
+.vinted-message__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-full);
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.vinted-message__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vinted-message__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.vinted-message__user {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+}
+
+.vinted-message__preview {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin-top: 1px;
+}
+
+.vinted-message__meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-xs);
+  flex-shrink: 0;
+}
+
+.vinted-message__time {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Vinted Item Grid ---------- */
+.vinted-item-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-md);
+}
+
+.vinted-item-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  transition: all var(--transition-fast);
+  cursor: pointer;
+}
+
+.vinted-item-card:hover {
+  border-color: var(--glass-border-hover);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-md);
+}
+
+.vinted-item-card__img {
+  width: 100%;
+  aspect-ratio: 1;
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 2rem;
+  overflow: hidden;
+  position: relative;
+}
+
+.vinted-item-card__img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vinted-item-card__info {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.vinted-item-card__title {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.vinted-item-card__price {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--accent-mid);
+  margin-top: 2px;
+}
+
+/* ---------- Vinted Table Thumbnail ---------- */
+.vinted-table-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-tertiary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.vinted-table-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vinted-table-cell--title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+}
+
+/* ---------- Vinted Empty State ---------- */
+.vinted-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4xl) var(--space-xl);
+  text-align: center;
+}
+
+.vinted-empty__icon {
+  font-size: 3.5rem;
+  margin-bottom: var(--space-lg);
+  opacity: 0.5;
+}
+
+.vinted-empty__title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: var(--space-sm);
+}
+
+.vinted-empty__subtitle {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-xl);
+  max-width: 320px;
+}
+
+/* ---------- Vinted Loading State ---------- */
+.vinted-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  padding: var(--space-2xl);
+  color: var(--text-tertiary);
+  font-size: 0.88rem;
+}
+
+/* ---------- Vinted Pagination ---------- */
+.vinted-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding-top: var(--space-lg);
+  border-top: 1px solid var(--border-subtle);
+  margin-top: var(--space-lg);
+}
+
+.vinted-pagination__btn {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.vinted-pagination__btn:hover {
+  color: var(--text-primary);
+  background: var(--glass-bg-hover);
+}
+
+.vinted-pagination__btn--active {
+  background: var(--accent-gradient);
+  color: #111116;
+  border-color: transparent;
+}
+
+/* ---------- Vinted Modal ---------- */
+.vinted-modal__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+
+.vinted-modal__backdrop--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.vinted-modal {
+  background: var(--bg-secondary);
+  border: 1px solid var(--glass-border-hover);
+  border-radius: var(--radius-xl);
+  width: 100%;
+  max-width: 520px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  transform: translateY(20px) scale(0.97);
+  transition: transform var(--transition-base);
+}
+
+.vinted-modal__backdrop--visible .vinted-modal {
+  transform: translateY(0) scale(1);
+}
+
+.vinted-modal__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xl) var(--space-2xl) var(--space-lg);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.vinted-modal__title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.vinted-modal__close {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-tertiary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 1.2rem;
+  transition: all var(--transition-fast);
+}
+
+.vinted-modal__close:hover {
+  background: var(--glass-bg);
+  color: var(--text-primary);
+}
+
+.vinted-modal__body {
+  padding: var(--space-xl) var(--space-2xl);
+}
+
+.vinted-modal__footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-2xl) var(--space-xl);
+  border-top: 1px solid var(--border-subtle);
+}
+
+/* ---------- Vinted Onboarding Steps ---------- */
+.vinted-onboarding-steps {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-md);
+  padding: var(--space-lg);
+  margin-bottom: var(--space-xl);
+}
+
+.vinted-onboarding-steps__title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-md);
+}
+
+.vinted-onboarding-steps__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.vinted-onboarding-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  font-size: 0.84rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.vinted-onboarding-step__num {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--radius-full);
+  background: var(--accent-gradient);
+  color: #111116;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.vinted-onboarding-steps__security {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--border-subtle);
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ---------- Vinted Form ---------- */
+.vinted-form__field {
+  margin-bottom: var(--space-lg);
+}
+
+.vinted-form__label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
+}
+
+/* ---------- Vinted Accounts Grid ---------- */
+.vinted-accounts-grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* ---------- Vinted Tab Count Badge ---------- */
+.vinted-tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: var(--radius-full);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--text-tertiary);
+}
+
+.vinted-tab-btn--active .vinted-tab-badge {
+  background: rgba(240, 128, 78, 0.15);
+  border-color: var(--border-accent);
+  color: var(--accent-mid);
+}
+
+/* ---------- Responsive: Vinted ---------- */
+@media (max-width: 768px) {
+  .vinted-wallet {
+    grid-template-columns: 1fr;
+  }
+
+  .vinted-card__header {
+    flex-wrap: wrap;
+  }
+
+  .vinted-item-grid {
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+  }
+
+  .vinted-modal {
+    border-radius: var(--radius-lg);
+  }
+
+  .vinted-modal__header,
+  .vinted-modal__body,
+  .vinted-modal__footer {
+    padding-left: var(--space-lg);
+    padding-right: var(--space-lg);
+  }
+}
+
+@media (max-width: 480px) {
+  .vinted-tabs__nav {
+    padding: 0 var(--space-md);
+  }
+
+  .vinted-tab-btn {
+    padding: var(--space-md);
+    font-size: 0.78rem;
+  }
+
+  .vinted-tab-content {
+    padding: var(--space-lg);
+  }
+}
+
+/* ==========================================================================
+   VINTED — TEAL ACCENT SYSTEM (#09B1BA)
+   ========================================================================== */
+
+:root {
+  --vinted: #09B1BA;
+  --vinted-dark: #077a81;
+  --vinted-light: rgba(9, 177, 186, 0.12);
+  --vinted-border: rgba(9, 177, 186, 0.25);
+  --vinted-glow: rgba(9, 177, 186, 0.2);
+}
+
+/* Teal button variant */
+.btn--vinted {
+  background: linear-gradient(135deg, #09B1BA, #07969d);
+  color: #fff;
+  box-shadow: 0 4px 16px var(--vinted-glow);
+}
+
+.btn--vinted:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(9, 177, 186, 0.35);
+}
+
+.btn--vinted:active {
+  transform: translateY(0);
+}
+
+/* Tab active state overridden to teal */
+.vinted-tab-btn--active {
+  color: var(--vinted) !important;
+  border-bottom-color: var(--vinted) !important;
+}
+
+.vinted-tab-btn--active .vinted-tab-badge {
+  background: var(--vinted-light);
+  border-color: var(--vinted-border);
+  color: var(--vinted);
+}
+
+/* Onboarding step numbers in teal */
+.vinted-onboarding-step__num {
+  background: linear-gradient(135deg, #09B1BA, #07969d);
+}
+
+/* Active badge in section strip */
+.badge--vinted-active {
+  background: var(--vinted-light);
+  color: var(--vinted);
+  border: 1px solid var(--vinted-border);
+  font-size: 0.72rem;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  font-weight: 600;
+}
+
+/* Unread message count badge */
+.badge--vinted-unread {
+  background: var(--vinted);
+  color: #fff;
+  border-radius: var(--radius-full);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Transaction status badges */
+.badge--vinted-pending {
+  background: rgba(251, 191, 36, 0.12);
+  color: #f59e0b;
+  border: 1px solid rgba(251, 191, 36, 0.25);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge--vinted-done {
+  background: var(--vinted-light);
+  color: var(--vinted);
+  border: 1px solid var(--vinted-border);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge--vinted-transit {
+  background: rgba(139, 92, 246, 0.12);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.25);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.badge--vinted-cancelled {
+  background: var(--error-bg);
+  color: var(--error);
+  border: 1px solid rgba(248, 113, 113, 0.2);
+  border-radius: var(--radius-full);
+  padding: 2px 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Spinner teal tint */
+.vinted-spinner {
+  border-top-color: var(--vinted) !important;
+}
+
+/* Section title gradient */
+.vinted-section-title {
+  background: linear-gradient(135deg, var(--vinted), #07969d);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* ==========================================================================
+   VINTED — ACCOUNT BAR (multi-account selector)
+   ========================================================================== */
+
+.vinted-account-bar {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md) var(--space-xl);
+  margin-bottom: var(--space-lg);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.vinted-account-bar::-webkit-scrollbar { display: none; }
+
+.vinted-account-bar__list {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.vinted-account-bar__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-full);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  white-space: nowrap;
+}
+
+.vinted-account-bar__btn:hover {
+  background: var(--glass-bg-hover);
+  color: var(--text-primary);
+}
+
+.vinted-account-bar__btn--active {
+  background: var(--vinted-light);
+  border-color: var(--vinted-border);
+  color: var(--vinted);
+}
+
+.vinted-account-bar__avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-full);
+  background: var(--vinted);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   VINTED — ACCOUNT STRIP
+   ========================================================================== */
+
+.vinted-account-strip {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  padding: var(--space-lg) var(--space-xl);
+  background: var(--glass-bg);
+  border: 1px solid var(--vinted-border);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-lg);
+}
+
+.vinted-account-strip__avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-full);
+  background: linear-gradient(135deg, #09B1BA, #07969d);
+  color: #fff;
+  font-weight: 700;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+.vinted-account-strip__avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.vinted-account-strip__meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.vinted-account-strip__username {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.vinted-account-strip__label {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.vinted-account-strip__actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-shrink: 0;
+}
+
+/* ==========================================================================
+   VINTED — WORKSPACE
+   ========================================================================== */
+
+.vinted-workspace {
+  animation: fadeInUp 0.3s var(--ease-out);
+}
+
+/* ==========================================================================
+   VINTED — KPI CARDS (Dashboard tab)
+   ========================================================================== */
+
+.vinted-kpi-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-md);
+  padding: var(--space-xl) 0 var(--space-md);
+}
+
+.vinted-kpi-card {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg) var(--space-xl);
+  transition: all var(--transition-fast);
+}
+
+.vinted-kpi-card:hover {
+  background: var(--glass-bg-hover);
+  border-color: var(--vinted-border);
+  transform: translateY(-2px);
+}
+
+.vinted-kpi-card__period {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--text-muted);
+  margin-bottom: 4px;
+}
+
+.vinted-kpi-card__label {
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-sm);
+}
+
+.vinted-kpi-card__value {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.vinted-kpi-card__value--revenue {
+  color: var(--vinted);
+}
+
+.vinted-kpi-card__value--spent {
+  color: var(--text-secondary);
+}
+
+.vinted-kpi-card__value--profit {
+  color: var(--success);
+}
+
+/* ==========================================================================
+   VINTED — SUB-TABS (Transactions: Achats / Ventes)
+   ========================================================================== */
+
+.vinted-subtabs {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-lg);
+  padding-bottom: var(--space-md);
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.vinted-subtab-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-full);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.vinted-subtab-btn:hover {
+  color: var(--text-secondary);
+  background: var(--glass-bg-hover);
+}
+
+.vinted-subtab-btn--active {
+  background: var(--vinted-light);
+  border-color: var(--vinted-border);
+  color: var(--vinted);
+}
+
+.vinted-subtab-content {
+  display: none;
+  animation: fadeInUp 0.2s var(--ease-out);
+}
+
+.vinted-subtab-content--active {
+  display: block;
+}
+
+/* ==========================================================================
+   VINTED — INBOX (Messages: split layout)
+   ========================================================================== */
+
+.vinted-inbox {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 0;
+  min-height: 480px;
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.vinted-inbox__sidebar {
+  border-right: 1px solid var(--border-subtle);
+  overflow-y: auto;
+  max-height: 560px;
+  background: var(--glass-bg);
+}
+
+.vinted-inbox__thread {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-primary);
+  overflow: hidden;
+}
+
+.vinted-inbox__thread-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-md);
+  color: var(--text-tertiary);
+  font-size: 0.88rem;
+}
+
+.vinted-message-row--selected {
+  background: var(--vinted-light) !important;
+  border-left: 2px solid var(--vinted);
+}
+
+/* Thread header */
+.vinted-thread__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--border-subtle);
+  background: var(--glass-bg);
+  flex-shrink: 0;
+}
+
+/* Thread bubbles container */
+.vinted-thread__bubbles {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-lg) var(--space-xl);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Chat bubbles */
+.vinted-bubble {
+  display: flex;
+  flex-direction: column;
+  max-width: 72%;
+}
+
+.vinted-bubble--mine {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.vinted-bubble--theirs {
+  align-self: flex-start;
+  align-items: flex-start;
+}
+
+.vinted-bubble__text {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-lg);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.vinted-bubble--mine .vinted-bubble__text {
+  background: var(--vinted);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.vinted-bubble--theirs .vinted-bubble__text {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border-bottom-left-radius: 4px;
+}
+
+.vinted-bubble__time {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  margin-top: 4px;
+  padding: 0 4px;
+}
+
+/* ==========================================================================
+   VINTED — NOTIFICATIONS LIST
+   ========================================================================== */
+
+.vinted-notif-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.vinted-notif-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+  padding: var(--space-lg) var(--space-xl);
+  border-bottom: 1px solid var(--border-subtle);
+  transition: background var(--transition-fast);
+}
+
+.vinted-notif-row:last-child {
+  border-bottom: none;
+}
+
+.vinted-notif-row:hover {
+  background: var(--glass-bg);
+}
+
+.vinted-notif-row--unread {
+  background: rgba(9, 177, 186, 0.03);
+}
+
+.vinted-notif-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--border-subtle);
+  margin-top: 6px;
+  flex-shrink: 0;
+}
+
+.vinted-notif-dot--active {
+  background: var(--vinted);
+  box-shadow: 0 0 6px var(--vinted-glow);
+}
+
+.vinted-notif-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.vinted-notif-title {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  margin-bottom: 2px;
+}
+
+.vinted-notif-body {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+  line-height: 1.5;
+}
+
+.vinted-notif-date {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* ==========================================================================
+   VINTED — SHIPMENT DRAWER
+   ========================================================================== */
+
+.vinted-drawer__backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity var(--transition-base), visibility var(--transition-base);
+}
+
+.vinted-drawer__backdrop--visible {
+  opacity: 1;
+  visibility: visible;
+}
+
+.vinted-drawer {
+  width: 420px;
+  max-width: 100%;
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--glass-border-hover);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform var(--transition-base);
+  overflow: hidden;
+}
+
+.vinted-drawer__backdrop--visible .vinted-drawer {
+  transform: translateX(0);
+}
+
+.vinted-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-xl) var(--space-2xl);
+  border-bottom: 1px solid var(--border-subtle);
+  flex-shrink: 0;
+}
+
+.vinted-drawer__title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.vinted-drawer__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-xl) var(--space-2xl);
+}
+
+/* ==========================================================================
+   VINTED — SHIPMENT TIMELINE
+   ========================================================================== */
+
+.vinted-shipment-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  margin-bottom: var(--space-xl);
+  padding: var(--space-md) var(--space-lg);
+  background: var(--vinted-light);
+  border: 1px solid var(--vinted-border);
+  border-radius: var(--radius-md);
+}
+
+.vinted-shipment-carrier {
+  font-weight: 700;
+  font-size: 0.88rem;
+  color: var(--vinted);
+}
+
+.vinted-shipment-tracking {
+  font-family: monospace;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  background: var(--bg-tertiary);
+  padding: 2px 8px;
+  border-radius: var(--radius-sm);
+}
+
+.vinted-timeline {
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-left: var(--space-xl);
+}
+
+.vinted-timeline::before {
+  content: '';
+  position: absolute;
+  left: 8px;
+  top: 12px;
+  bottom: 12px;
+  width: 2px;
+  background: var(--border-subtle);
+}
+
+.vinted-timeline__item {
+  display: flex;
+  gap: var(--space-lg);
+  padding-bottom: var(--space-xl);
+  position: relative;
+}
+
+.vinted-timeline__item:last-child {
+  padding-bottom: 0;
+}
+
+.vinted-timeline__dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-tertiary);
+  border: 2px solid var(--border-subtle);
+  flex-shrink: 0;
+  margin-left: -24px;
+  margin-top: 3px;
+  position: relative;
+  z-index: 1;
+}
+
+.vinted-timeline__item--active .vinted-timeline__dot {
+  background: var(--vinted);
+  border-color: var(--vinted);
+  box-shadow: 0 0 8px var(--vinted-glow);
+}
+
+.vinted-timeline__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.vinted-timeline__label {
+  font-weight: 600;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  margin-bottom: 3px;
+}
+
+.vinted-timeline__item--active .vinted-timeline__label {
+  color: var(--vinted);
+}
+
+.vinted-timeline__date {
+  font-size: 0.78rem;
+  color: var(--text-tertiary);
+}
+
+.vinted-timeline__location {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+/* ==========================================================================
+   VINTED — ITEM CARD seller line
+   ========================================================================== */
+
+.vinted-item-card__seller {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  margin-top: 3px;
+}
+
+/* ==========================================================================
+   VINTED — RESPONSIVE ADDITIONS
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .vinted-kpi-row {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .vinted-kpi-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .vinted-inbox {
+    grid-template-columns: 1fr;
+    grid-template-rows: 240px 1fr;
+  }
+
+  .vinted-inbox__sidebar {
+    border-right: none;
+    border-bottom: 1px solid var(--border-subtle);
+    max-height: 240px;
+  }
+
+  .vinted-account-strip {
+    flex-wrap: wrap;
+  }
+
+  .vinted-drawer {
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .vinted-kpi-row {
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+  }
+
+  .vinted-kpi-card {
+    padding: var(--space-md);
+  }
+
+  .vinted-kpi-card__value {
+    font-size: 1.2rem;
+  }
+
+  .vinted-subtabs {
+    flex-wrap: wrap;
   }
 }
