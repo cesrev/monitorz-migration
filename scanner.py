@@ -689,21 +689,8 @@ def scan_all_users() -> dict[int, int]:
     for user in users:
         user_id = user["id"]
         try:
-            import signal
-
-            def _timeout_handler(signum, frame):
-                raise TimeoutError(f"Scan timeout for user id={user_id}")
-
-            signal.signal(signal.SIGALRM, _timeout_handler)
-            signal.alarm(300)  # 5 min max par user
-            try:
-                count = scan_user(user_id)
-                results[user_id] = count
-            finally:
-                signal.alarm(0)  # reset
-        except TimeoutError as exc:
-            logger.error("Scan timeout for user id=%d (>5min), skipping", user_id)
-            results[user_id] = 0
+            count = scan_user(user_id)
+            results[user_id] = count
         except Exception as exc:
             logger.error("Scan failed for user id=%d: %s", user_id, exc)
             results[user_id] = 0

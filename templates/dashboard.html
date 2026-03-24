@@ -73,12 +73,8 @@
         {% endif %}
         {% if user.monitoring_type == 'vinted' %}
         <a href="#" class="sidebar__link" data-section="extension">
-          <span class="sidebar__link-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8H6a1 1 0 0 0-1 1v3a4 4 0 0 0 4 4h4a4 4 0 0 0 4-4V9a1 1 0 0 0-1-1z"/></svg></span>
+          <span class="sidebar__link-icon">🔌</span>
           <span style="display:flex;align-items:center;gap:6px;">Extension <span id="sidebarExtDot" style="width:8px;height:8px;border-radius:50%;background:#ef4444;display:none;flex-shrink:0;"></span></span>
-        </a>
-        <a href="#" class="sidebar__link" data-section="vinted-accounts" id="sidebarVintedAccounts">
-          <span class="sidebar__link-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></span>
-          <span>Comptes Vinted</span>
         </a>
         {% endif %}
         <a href="#" class="sidebar__link" data-section="settings">
@@ -118,21 +114,15 @@
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: nowrap;">
-          <span class="badge badge--accent" style="font-size: 0.75rem; padding: 4px 10px; display: inline-flex; align-items: center; gap: 5px;">
-            {% if user.monitoring_type == 'tickets' %}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/></svg>
-            Tickets
-            {% else %}
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>
-            Vinted
-            {% endif %}
+          <span class="badge badge--accent" style="font-size: 0.75rem; padding: 4px 10px;">
+            {% if user.monitoring_type == 'tickets' %}🎟 Tickets{% else %}👗 Vinted{% endif %}
           </span>
           <span class="badge badge--neutral" style="font-size: 0.75rem; padding: 4px 10px;">{{ user.plan | capitalize if user.plan else 'Starter' }}</span>
 
           {% if user.monitoring_type == 'tickets' %}
           <div style="position: relative;" id="notifWrapper">
-            <button id="notifBell" onclick="toggleNotifDropdown()" style="background: none; border: none; cursor: pointer; position: relative; padding: 4px; line-height: 1; color: var(--text-secondary); transition: color 0.2s; display: flex; align-items: center;">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+            <button id="notifBell" onclick="toggleNotifDropdown()" style="background: none; border: none; cursor: pointer; position: relative; padding: 4px; font-size: 1.1rem; line-height: 1; color: var(--text-secondary); transition: color 0.2s;">
+              🔔
               <span id="notifBadge" class="notif-count-badge notif-count-badge--header" style="display: none;">0</span>
             </button>
             <div id="notifDropdown" style="display: none; position: absolute; right: 0; top: 110%; width: 340px; max-height: 420px; overflow-y: auto; background: var(--bg-card); border: 1px solid var(--border-subtle); border-radius: var(--radius-lg); box-shadow: 0 12px 40px rgba(0,0,0,0.35); z-index: 1000;">
@@ -147,11 +137,7 @@
           </div>
           {% endif %}
 
-          <div style="display: flex; align-items: center; gap: 8px; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: var(--radius-full); padding: 5px 12px;">
-            <label class="toggle" id="monitoringToggle" style="margin: 0;">
-              <input type="checkbox" checked>
-              <span class="toggle__slider"></span>
-            </label>
+          <div style="display: flex; align-items: center; gap: 6px;">
             <span class="status-dot status-dot--active" id="statusDot"></span>
             <span style="font-size: 0.78rem; color: var(--text-secondary); white-space: nowrap;" id="statusText">Monitoring actif</span>
           </div>
@@ -170,25 +156,19 @@
       <!-- Stats -->
       <div class="dashboard__stats">
         <div class="stat-card animate-in animate-in--delay-1">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
-          </div>
+          <div class="stat-card__icon">📧</div>
           <div class="stat-card__value" id="statGmail">{{ accounts | length }}</div>
           <div class="stat-card__label">Comptes Gmail</div>
         </div>
 
         <div class="stat-card animate-in animate-in--delay-2">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v2z"/></svg>
-          </div>
+          <div class="stat-card__icon">🎟</div>
           <div class="stat-card__value" id="statOrders">{{ orders_count }}</div>
           <div class="stat-card__label">Commandes trouvees</div>
         </div>
 
         <div class="stat-card animate-in animate-in--delay-3">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          </div>
+          <div class="stat-card__icon">⏱️</div>
           <div class="stat-card__value" id="statLastScan"
                data-scanned-at="{{ last_scan.scanned_at if last_scan else '' }}">
             {% if last_scan %}--{% else %}Aucun{% endif %}
@@ -197,42 +177,37 @@
         </div>
 
         <div class="stat-card animate-in animate-in--delay-4">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          <div class="stat-card__icon">🔄</div>
+          <div class="stat-card__value" style="display: flex; align-items: center; gap: var(--space-md);">
+            <label class="toggle" id="monitoringToggle">
+              <input type="checkbox" checked>
+              <span class="toggle__slider"></span>
+            </label>
           </div>
-          <div class="stat-card__value" id="statNextScan">--</div>
-          <div class="stat-card__label">Prochain scan</div>
+          <div class="stat-card__label">Monitoring</div>
         </div>
       </div>
 
       <!-- Analytics Cards (all users) -->
       <div class="dashboard__stats" id="analyticsCards" style="margin-top: 0;">
         <div class="stat-card animate-in animate-in--delay-2">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><polyline points="19 12 12 19 5 12"/></svg>
-          </div>
+          <div class="stat-card__icon">💸</div>
           <div class="stat-card__value" id="analyticsSpent">--</div>
           <div class="stat-card__label">Depense ce mois</div>
         </div>
         <div class="stat-card animate-in animate-in--delay-3">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="19" x2="12" y2="5"/><polyline points="5 12 12 5 19 12"/></svg>
-          </div>
+          <div class="stat-card__icon">💰</div>
           <div class="stat-card__value" id="analyticsReceived">--</div>
           <div class="stat-card__label">Recu ce mois</div>
         </div>
         <div class="stat-card animate-in animate-in--delay-4">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-          </div>
+          <div class="stat-card__icon">📈</div>
           <div class="stat-card__value" id="analyticsProfit">--</div>
           <div class="stat-card__label">Benefice ce mois</div>
           <span id="analyticsRoiBadge" style="display:none;font-size:0.72rem;font-weight:600;padding:2px 8px;border-radius:4px;margin-top:4px;"></span>
         </div>
         <div class="stat-card animate-in animate-in--delay-5" style="cursor:pointer;" onclick="toggleMonthlyCosts()" title="Cliquez pour modifier">
-          <div class="stat-card__icon">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-          </div>
+          <div class="stat-card__icon">🧾</div>
           <div class="stat-card__value" id="analyticsCosts">
             <span id="costsDisplay">0€</span>
             <input id="costsInput" type="text" inputmode="decimal" placeholder="0" style="display:none;width:80px;font-size:1.2rem;font-weight:700;font-family:var(--font-display);background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;color:var(--text-primary);text-align:center;outline:none;padding:4px 8px;-moz-appearance:textfield;" onblur="saveMonthlyCosts()" onkeydown="if(event.key==='Enter')this.blur()">
@@ -241,24 +216,10 @@
         </div>
       </div>
 
-      <!-- Quick Action Bar -->
-      <div class="dashboard__quickaction animate-in animate-in--delay-6" id="quickActionBar">
-        <div class="dashboard__quickaction-info">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-          <span id="quickActionLastScan">
-            {% if last_scan %}Dernier scan : <strong>--</strong>{% else %}Aucun scan effectue{% endif %}
-          </span>
-        </div>
-        <button class="btn btn--primary" onclick="triggerScan()" id="quickScanBtn" style="display:inline-flex;align-items:center;gap:6px;">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Scanner maintenant
-        </button>
-      </div>
-
       <!-- Section: Gmail Accounts -->
       <section class="dashboard__section animate-in animate-in--delay-5" id="sectionGmail">
         <div class="dashboard__section-header">
-          <h3>Mes comptes Gmail</h3>
+          <h3>📧 Mes comptes Gmail</h3>
           <button class="btn btn--primary btn--small" id="addGmailBtn" onclick="addGmailAccount()">
             + Ajouter un compte
           </button>
@@ -268,7 +229,7 @@
           {% for account in accounts %}
           <div class="gmail-card">
             <div class="gmail-card__info">
-              <div class="gmail-card__icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg></div>
+              <div class="gmail-card__icon">📧</div>
               <div>
                 <div class="gmail-card__email">{{ account.email }}</div>
                 <div class="gmail-card__date">Connecte le {{ account.created_at[:10] if account.created_at else 'N/A' }}</div>
@@ -288,36 +249,15 @@
           <p style="color: var(--text-tertiary); text-align: center; padding: var(--space-xl);">Aucun compte Gmail connecte.</p>
           {% endif %}
         </div>
-
-        {% if user.monitoring_type == 'tickets' %}
-        <!-- External Gmail Sources -->
-        <div style="margin-top: var(--space-lg); border-top: 1px solid var(--glass-border); padding-top: var(--space-lg);">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md);">
-            <div>
-              <div style="font-weight: 600; color: var(--text-primary); font-size: 0.9rem;">Sources Gmail externes</div>
-              <div style="font-size: 0.8rem; color: var(--text-tertiary); margin-top: 2px;">Emails transférés depuis ces adresses seront scannés automatiquement</div>
-            </div>
-          </div>
-          <div style="display: flex; gap: var(--space-sm); margin-bottom: var(--space-md);">
-            <input type="email" id="externalEmailInput" placeholder="exemple@gmail.com"
-              style="flex: 1; background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 8px; padding: 8px 12px; color: var(--text-primary); font-size: 0.875rem; outline: none;"
-              onkeydown="if(event.key==='Enter') addExternalEmail()" />
-            <button class="btn btn--primary btn--small" onclick="addExternalEmail()">+ Ajouter</button>
-          </div>
-          <div id="externalEmailList" style="display: flex; flex-direction: column; gap: 6px;">
-            <p style="color: var(--text-tertiary); font-size: 0.85rem; text-align: center; padding: 8px;" id="externalEmailEmpty">Chargement...</p>
-          </div>
-        </div>
-        {% endif %}
       </section>
 
       <!-- Section: Google Sheet -->
       <section class="dashboard__section animate-in animate-in--delay-6" id="sectionSheet">
         <div class="dashboard__section-header" style="display:flex;align-items:center;justify-content:space-between;">
-          <h3>Mon Google Sheet</h3>
+          <h3>📋 Mon Google Sheet</h3>
           <div style="display:flex;gap:8px;">
-            <button class="btn btn--small" id="fixFormulasBtn" onclick="fixFormulas()" style="background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);font-size:0.75rem;display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Reparer formules</button>
-            <button class="btn btn--primary btn--small" id="scanNowBtn2" onclick="triggerScanSheet()" style="display:inline-flex;align-items:center;gap:5px;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg> Scanner</button>
+            <button class="btn btn--small" id="fixFormulasBtn" onclick="fixFormulas()" style="background:var(--glass-bg);border:1px solid var(--glass-border);color:var(--text-secondary);font-size:0.75rem;">⚙️ Reparer formules</button>
+            <button class="btn btn--primary btn--small" id="scanNowBtn2" onclick="triggerScanSheet()">🔄 Scanner</button>
           </div>
         </div>
 
@@ -327,7 +267,7 @@
           <!-- Linked sheet -->
           <div id="sheetLinked">
             <a href="{{ sheet.spreadsheet_url }}" target="_blank" class="sheet-card__link">
-              <span class="sheet-card__link-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="9" y1="3" x2="9" y2="21"/></svg></span>
+              <span class="sheet-card__link-icon">📊</span>
               <div>
                 <div style="font-weight: 600; color: var(--text-primary); font-size: 0.92rem; margin-bottom: 2px;">Monitorz Export</div>
                 <span class="sheet-card__link-url">{{ sheet.spreadsheet_url | truncate(50) }}</span>
@@ -549,22 +489,22 @@
         <!-- Stats cards -->
         <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-xl);" id="sellTimeStats">
           <div class="stat-card">
-            <div class="stat-card__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg></div>
+            <div class="stat-card__icon">📦</div>
             <div class="stat-card__value" id="stSoldCount">--</div>
             <div class="stat-card__label">Articles vendus</div>
           </div>
           <div class="stat-card">
-            <div class="stat-card__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div>
+            <div class="stat-card__icon">⏱️</div>
             <div class="stat-card__value" id="stAvgDays">--</div>
             <div class="stat-card__label">Moyenne (jours)</div>
           </div>
           <div class="stat-card">
-            <div class="stat-card__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg></div>
+            <div class="stat-card__icon">⚡</div>
             <div class="stat-card__value" id="stFastest">--</div>
             <div class="stat-card__label">Plus rapide (jours)</div>
           </div>
           <div class="stat-card">
-            <div class="stat-card__icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg></div>
+            <div class="stat-card__icon">🐢</div>
             <div class="stat-card__value" id="stSlowest">--</div>
             <div class="stat-card__label">Plus lent (jours)</div>
           </div>
@@ -693,7 +633,7 @@
       {% if user.monitoring_type == 'tickets' %}
       <section class="dashboard__section" id="sectionNotifications" style="display: none;">
         <div class="dashboard__section-header">
-          <h3>Notifications</h3>
+          <h3>🔔 Notifications</h3>
           <button class="btn btn--ghost btn--small" onclick="markAllNotifRead(); loadNotifSection();">Tout marquer lu</button>
         </div>
         <div id="notifSectionList" style="display: flex; flex-direction: column; gap: var(--space-sm);">
@@ -705,7 +645,7 @@
       <!-- Section: Settings (hidden by default, toggled by sidebar) -->
       <section class="dashboard__section" id="sectionSettings" style="display: none;">
         <div class="dashboard__section-header">
-          <h3>Parametres</h3>
+          <h3>⚙️ Parametres</h3>
         </div>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xl); align-items: start;">
@@ -727,14 +667,14 @@
                   <label style="font-size: 0.78rem; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: 0.08em; display: block; margin-bottom: var(--space-xs);">Type de monitoring</label>
                   <div style="display: flex; gap: var(--space-md); margin-top: var(--space-sm);">
                     {% if user.monitoring_type == 'tickets' %}
-                    <span class="badge badge--accent">Tickets</span>
-                    <span class="badge badge--neutral">Vinted</span>
+                    <span class="badge badge--accent">🎟 Tickets</span>
+                    <span class="badge badge--neutral">👗 Vinted</span>
                     {% elif user.monitoring_type == 'vinted' %}
-                    <span class="badge badge--neutral">Tickets</span>
-                    <span class="badge badge--accent">Vinted</span>
+                    <span class="badge badge--neutral">🎟 Tickets</span>
+                    <span class="badge badge--accent">👗 Vinted</span>
                     {% else %}
-                    <span class="badge badge--accent">Tickets</span>
-                    <span class="badge badge--neutral">Vinted</span>
+                    <span class="badge badge--accent">🎟 Tickets</span>
+                    <span class="badge badge--neutral">👗 Vinted</span>
                     {% endif %}
                   </div>
                 </div>
@@ -1049,7 +989,7 @@
             </div>
 
             <div class="card">
-              <h4 style="margin-bottom:var(--space-md);">Activité récente</h4>
+              <h4 style="margin-bottom:var(--space-md);">📋 Activité récente</h4>
               <div id="extLogsContainer" style="max-height:260px;overflow-y:auto;">
                 <p style="font-size:0.82rem;color:var(--text-tertiary);">Chargement...</p>
               </div>
@@ -1057,212 +997,6 @@
           </div>
 
         </div>
-      </section>
-      {% endif %}
-
-      {% if user.monitoring_type == 'vinted' %}
-      <!-- ================================================================
-           Section: Vinted Accounts
-           ================================================================ -->
-      <section class="dashboard__section" id="sectionVintedAccounts" style="display: none;">
-
-        <!-- HEADER -->
-        <div class="dashboard__section-header">
-          <h3 class="vinted-section-title">&#128247; Comptes Vinted</h3>
-          <button class="btn btn--vinted btn--small" onclick="openVintedModal()">
-            + Ajouter un compte
-          </button>
-        </div>
-
-        <!-- ACCOUNT SELECTOR BAR (visible when 2+ accounts) -->
-        <div class="vinted-account-bar" id="vintedAccountBar" style="display:none;">
-          <div class="vinted-account-bar__list" id="vintedAccountBarList"></div>
-        </div>
-
-        <!-- EMPTY STATE -->
-        <div class="vinted-empty" id="vintedEmptyState">
-          <div class="vinted-empty__icon">&#128247;</div>
-          <div class="vinted-empty__title">Aucun compte Vinted connecte</div>
-          <div class="vinted-empty__subtitle">
-            Lie ton premier compte Vinted pour suivre ton portefeuille,
-            tes messages, favoris et ventes en un seul endroit.
-          </div>
-          <button class="btn btn--vinted" onclick="openVintedModal()">
-            + Connecter mon premier compte Vinted
-          </button>
-        </div>
-
-        <!-- ACCOUNT WORKSPACE -->
-        <div class="vinted-workspace" id="vintedWorkspace" style="display:none;">
-
-          <!-- Identity strip -->
-          <div class="vinted-account-strip">
-            <div class="vinted-account-strip__avatar" id="wsAvatar"></div>
-            <div class="vinted-account-strip__meta">
-              <span class="vinted-account-strip__username" id="wsUsername"></span>
-              <span class="vinted-account-strip__label" id="wsLabel"></span>
-            </div>
-            <div class="vinted-account-strip__actions">
-              <span class="badge badge--vinted-active">Actif</span>
-              <button class="btn btn--danger btn--small" id="wsRemoveBtn">Retirer</button>
-            </div>
-          </div>
-
-          <!-- 7-tab navigation -->
-          <div class="vinted-tabs">
-            <nav class="vinted-tabs__nav" id="vintedTabsNav">
-              <button class="vinted-tab-btn vinted-tab-btn--active" data-tab="dashboard">Dashboard</button>
-              <button class="vinted-tab-btn" data-tab="transactions">Transactions</button>
-              <button class="vinted-tab-btn" data-tab="messages">
-                Messages <span class="vinted-tab-badge" id="vTabBadgeMessages">0</span>
-              </button>
-              <button class="vinted-tab-btn" data-tab="notifications">
-                Notifications <span class="vinted-tab-badge" id="vTabBadgeNotifications">0</span>
-              </button>
-              <button class="vinted-tab-btn" data-tab="wallet">Portefeuille</button>
-              <button class="vinted-tab-btn" data-tab="favorites">Favoris</button>
-              <button class="vinted-tab-btn" data-tab="items">Articles</button>
-            </nav>
-
-            <!-- TAB: DASHBOARD -->
-            <div class="vinted-tab-content vinted-tab-content--active" id="vTab-dashboard">
-              <div class="vinted-kpi-row" id="vKpiRow">
-                <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-              </div>
-            </div>
-
-            <!-- TAB: TRANSACTIONS -->
-            <div class="vinted-tab-content" id="vTab-transactions">
-              <div class="vinted-subtabs">
-                <button class="vinted-subtab-btn vinted-subtab-btn--active" data-subtab="purchases">
-                  Achats <span class="vinted-tab-badge" id="vSubBadgePurchases">0</span>
-                </button>
-                <button class="vinted-subtab-btn" data-subtab="sales">
-                  Ventes <span class="vinted-tab-badge" id="vSubBadgeSales">0</span>
-                </button>
-              </div>
-              <div class="vinted-subtab-content vinted-subtab-content--active" id="vSubtab-purchases">
-                <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-              </div>
-              <div class="vinted-subtab-content" id="vSubtab-sales">
-                <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-              </div>
-            </div>
-
-            <!-- TAB: MESSAGES -->
-            <div class="vinted-tab-content" id="vTab-messages">
-              <div class="vinted-inbox">
-                <div class="vinted-inbox__sidebar" id="vInboxSidebar">
-                  <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-                </div>
-                <div class="vinted-inbox__thread" id="vInboxThread">
-                  <div class="vinted-inbox__thread-empty">
-                    <span style="font-size:2rem;">&#128172;</span>
-                    <p>Selectionne une conversation</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- TAB: NOTIFICATIONS -->
-            <div class="vinted-tab-content" id="vTab-notifications">
-              <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-            </div>
-
-            <!-- TAB: PORTEFEUILLE -->
-            <div class="vinted-tab-content" id="vTab-wallet">
-              <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-            </div>
-
-            <!-- TAB: FAVORIS -->
-            <div class="vinted-tab-content" id="vTab-favorites">
-              <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-            </div>
-
-            <!-- TAB: ARTICLES -->
-            <div class="vinted-tab-content" id="vTab-items">
-              <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement...</div>
-            </div>
-
-          </div><!-- /.vinted-tabs -->
-        </div><!-- /.vinted-workspace -->
-
-        <!-- SHIPMENT DETAIL DRAWER -->
-        <div class="vinted-drawer__backdrop" id="vintedDrawerBackdrop" onclick="closeVintedDrawer()">
-          <div class="vinted-drawer" id="vintedDrawer" onclick="event.stopPropagation()">
-            <div class="vinted-drawer__header">
-              <span class="vinted-drawer__title" id="vintedDrawerTitle">Suivi colis</span>
-              <button class="vinted-modal__close" onclick="closeVintedDrawer()" aria-label="Fermer">&#10005;</button>
-            </div>
-            <div class="vinted-drawer__body" id="vintedDrawerBody">
-              <div class="vinted-loading"><div class="spinner vinted-spinner"></div> Chargement du suivi...</div>
-            </div>
-          </div>
-        </div>
-
-        <!-- ADD ACCOUNT MODAL -->
-        <div class="vinted-modal__backdrop" id="vintedModalBackdrop" onclick="closeVintedModalOnBackdrop(event)">
-          <div class="vinted-modal" role="dialog" aria-modal="true" aria-labelledby="vintedModalTitle">
-            <div class="vinted-modal__header">
-              <span class="vinted-modal__title" id="vintedModalTitle">&#128247; Connecter un compte Vinted</span>
-              <button class="vinted-modal__close" onclick="closeVintedModal()" aria-label="Fermer">&#10005;</button>
-            </div>
-            <div class="vinted-modal__body">
-              <div class="vinted-onboarding-steps">
-                <div class="vinted-onboarding-steps__title">Comment recuperer ton token</div>
-                <div class="vinted-onboarding-steps__list">
-                  <div class="vinted-onboarding-step">
-                    <span class="vinted-onboarding-step__num">1</span>
-                    <span>Ouvre une fenetre de navigation privee</span>
-                  </div>
-                  <div class="vinted-onboarding-step">
-                    <span class="vinted-onboarding-step__num">2</span>
-                    <span>Connecte-toi sur <strong style="color:var(--text-primary);">vinted.fr</strong></span>
-                  </div>
-                  <div class="vinted-onboarding-step">
-                    <span class="vinted-onboarding-step__num">3</span>
-                    <span>
-                      Ouvre les DevTools
-                      <kbd style="font-size:0.75rem;background:var(--bg-elevated);padding:1px 5px;border-radius:4px;border:1px solid var(--border-light);color:var(--text-secondary);">F12</kbd>
-                      &#8594; Application &#8594; Cookies &#8594; copie
-                      <code style="font-size:0.78rem;background:var(--bg-elevated);padding:1px 6px;border-radius:4px;color:#09B1BA;">refresh_token_web</code>
-                    </span>
-                  </div>
-                  <div class="vinted-onboarding-step">
-                    <span class="vinted-onboarding-step__num">4</span>
-                    <span>Colle-le dans le champ ci-dessous</span>
-                  </div>
-                </div>
-                <div class="vinted-onboarding-steps__security">
-                  <span>&#128274;</span>
-                  <span>Le token est chiffre et stocke cote serveur.</span>
-                </div>
-              </div>
-              <form id="vintedAddForm" onsubmit="addVintedAccount(event)">
-                <div class="vinted-form__field">
-                  <label class="vinted-form__label" for="vintedAccountLabel">Nom du compte (optionnel)</label>
-                  <input type="text" class="input" id="vintedAccountLabel" name="label"
-                    placeholder="Ex: Compte perso, Revente..." autocomplete="off">
-                </div>
-                <div class="vinted-form__field">
-                  <label class="vinted-form__label" for="vintedToken">
-                    Token (refresh_token_web) <span style="color:var(--error);">*</span>
-                  </label>
-                  <input type="password" class="input" id="vintedToken" name="token"
-                    placeholder="Colle ton refresh_token_web ici" required autocomplete="off"
-                    style="font-family:monospace;font-size:0.82rem;letter-spacing:0.02em;">
-                </div>
-              </form>
-            </div>
-            <div class="vinted-modal__footer">
-              <button class="btn btn--ghost" onclick="closeVintedModal()">Annuler</button>
-              <button class="btn btn--vinted" id="vintedAddSubmitBtn" onclick="addVintedAccount(event)">
-                Connecter le compte
-              </button>
-            </div>
-          </div>
-        </div>
-
       </section>
       {% endif %}
 
@@ -1368,22 +1102,6 @@
   <script src="/static/js/app.js"></script>
   <script>
     // ===== Dashboard-specific logic =====
-
-    // ---- Global fetch interceptor: redirect to /login on 401 ----
-    (function() {
-      var _origFetch = window.fetch;
-      window.fetch = function(url, opts) {
-        return _origFetch(url, opts).then(function(res) {
-          if (res.status === 401) {
-            res.clone().json().then(function(d) {
-              if (d && d.redirect) window.location.href = d.redirect;
-              else window.location.href = '/login';
-            }).catch(function() { window.location.href = '/login'; });
-          }
-          return res;
-        });
-      };
-    })();
 
     // ---- Time-ago helper ----
     function timeAgo(dateStr) {
@@ -1494,11 +1212,6 @@
         .catch(function(err) {
           console.error('Failed to load analytics:', err);
         });
-
-      // Load external Gmail sources (tickets only)
-      if (document.getElementById('externalEmailList')) {
-        loadExternalEmails();
-      }
     });
 
     // Monthly costs toggle/save
@@ -1556,7 +1269,7 @@
         var section = this.dataset.section;
 
         // Show/hide sections based on selection
-        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}{% if user.monitoring_type == 'vinted' %}'sectionExtension', 'sectionVintedAccounts', {% endif %}'sectionSettings'];
+        var allSections = ['sectionGmail', 'sectionSheet', 'sectionHistory', 'sectionWts', 'sectionSellTime', 'sectionHashtags', {% if user.monitoring_type == 'tickets' %}'sectionNotifications', {% endif %}{% if user.monitoring_type == 'vinted' %}'sectionExtension', {% endif %}'sectionSettings'];
 
         // Show/hide analytics cards based on section
         var analyticsEl = document.getElementById('analyticsCards');
@@ -1600,7 +1313,6 @@
             var el = document.getElementById(id);
             if (el) el.style.display = id === 'sectionSellTime' ? '' : 'none';
           });
-          loadSellTimes();
         } else if (section === 'hashtags') {
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
@@ -1619,12 +1331,6 @@
             if (el) el.style.display = id === 'sectionExtension' ? '' : 'none';
           });
           loadExtensionSection();
-        } else if (section === 'vinted-accounts') {
-          allSections.forEach(function(id) {
-            var el = document.getElementById(id);
-            if (el) el.style.display = id === 'sectionVintedAccounts' ? '' : 'none';
-          });
-          loadVintedAccounts();
         } else if (section === 'settings') {
           allSections.forEach(function(id) {
             var el = document.getElementById(id);
@@ -1797,86 +1503,6 @@
         }
       } catch (err) {
         showToast('Erreur de connexion', 'error');
-      }
-    }
-
-    // External Gmail Sources
-    var _externalEmails = [];
-
-    async function loadExternalEmails() {
-      try {
-        var res = await fetch('/api/external-sources');
-        var data = await res.json();
-        if (data.success) {
-          _externalEmails = data.emails || [];
-          renderExternalEmails();
-        }
-      } catch (e) {
-        var empty = document.getElementById('externalEmailEmpty');
-        if (empty) empty.textContent = 'Erreur de chargement';
-      }
-    }
-
-    function renderExternalEmails() {
-      var list = document.getElementById('externalEmailList');
-      if (!list) return;
-      while (list.firstChild) list.removeChild(list.firstChild);
-      if (_externalEmails.length === 0) {
-        var empty = document.createElement('p');
-        empty.style.cssText = 'color:var(--text-tertiary);font-size:0.85rem;text-align:center;padding:8px;';
-        empty.textContent = 'Aucune source externe configuree';
-        list.appendChild(empty);
-        return;
-      }
-      _externalEmails.forEach(function(email, idx) {
-        var row = document.createElement('div');
-        row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;background:var(--glass-bg);border:1px solid var(--glass-border);border-radius:8px;padding:8px 12px;';
-        var label = document.createElement('span');
-        label.style.cssText = 'font-size:0.875rem;color:var(--text-primary);';
-        label.textContent = '\u{1F4E8} ' + email;
-        var btn = document.createElement('button');
-        btn.className = 'btn btn--danger btn--small';
-        btn.textContent = 'Retirer';
-        (function(i) { btn.addEventListener('click', function() { removeExternalEmail(i); }); })(idx);
-        row.appendChild(label);
-        row.appendChild(btn);
-        list.appendChild(row);
-      });
-    }
-
-    async function addExternalEmail() {
-      var input = document.getElementById('externalEmailInput');
-      var email = input.value.trim().toLowerCase();
-      if (!email || !email.includes('@')) { showToast('Email invalide', 'error'); return; }
-      if (_externalEmails.includes(email)) { showToast('Email deja ajoute', 'info'); return; }
-      _externalEmails.push(email);
-      input.value = '';
-      await saveExternalEmails();
-    }
-
-    async function removeExternalEmail(idx) {
-      _externalEmails.splice(idx, 1);
-      await saveExternalEmails();
-    }
-
-    async function saveExternalEmails() {
-      try {
-        var res = await fetch('/api/external-sources', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ emails: _externalEmails }),
-        });
-        var data = await res.json();
-        if (data.success) {
-          renderExternalEmails();
-          showToast('Sources mises a jour', 'success');
-        } else {
-          showToast(data.error || 'Erreur', 'error');
-          loadExternalEmails();
-        }
-      } catch (e) {
-        showToast('Erreur de connexion', 'error');
-        loadExternalEmails();
       }
     }
 
@@ -2526,7 +2152,6 @@
 
         showToast('Donnees chargees', 'success');
       } catch (err) {
-        console.error('[SellTimes] Error:', err);
         showToast('Erreur de connexion', 'error');
       } finally {
         if (btn) { btn.innerHTML = 'Actualiser'; btn.disabled = false; }
@@ -2594,7 +2219,6 @@
           showToast(data.error || 'Erreur', 'error');
         }
       } catch (err) {
-        console.error('[Hashtags] Error:', err);
         showToast('Erreur de connexion', 'error');
       } finally {
         btn.innerHTML = originalHTML;
@@ -2897,7 +2521,7 @@
       }
     });
 
-    function _nIcon(t) { return {event_soon:'📅',dormant_stock:'📦',scan_result:'🔍',sale_confirmation:'💰',info:'ℹ️'}[t]||'ℹ️'; }
+    function _nIcon(t) { return {event_soon:'📅',dormant_stock:'📦',scan_result:'🔍',info:'ℹ️'}[t]||'ℹ️'; }
 
     function _nAgo(d) {
       if (!d) return '';
@@ -2934,20 +2558,6 @@
       } catch(e){}
     }
 
-    function _notifCard(n) {
-      var u = !n.read;
-      var el = document.createElement('div');
-      el.style.cssText = 'display:flex;align-items:flex-start;gap:12px;padding:var(--space-md) var(--space-lg);background:var(--bg-elevated);border-radius:var(--radius-md);border-left:3px solid '+(u?'var(--accent-start)':'var(--border-subtle)')+';cursor:pointer;'+(u?'':'opacity:0.6;');
-      el.onclick = function(){markNotifRead(n.id,el);};
-      el.innerHTML = '<span style="font-size:1.4rem;margin-top:2px;">'+_nIcon(n.type)+'</span>'+
-        '<div style="flex:1;">'+
-          '<div style="font-weight:'+(u?'600':'400')+';font-size:0.9rem;">'+escapeHtml(n.title)+'</div>'+
-          (n.message?'<div style="font-size:0.84rem;color:var(--text-secondary);margin-top:4px;">'+escapeHtml(n.message)+'</div>':'')+
-          '<div style="font-size:0.76rem;color:var(--text-tertiary);margin-top:6px;">'+_nAgo(n.created_at)+'</div>'+
-        '</div>'+(u?'<span style="width:10px;height:10px;border-radius:50%;background:var(--accent-start);flex-shrink:0;margin-top:6px;"></span>':'');
-      return el;
-    }
-
     async function loadNotifSection() {
       try {
         var r = await fetch('/api/notifications');
@@ -2955,38 +2565,24 @@
         if (!d.success) return;
         _updBadge(d.unread_count);
         var c = document.getElementById('notifSectionList');
+        if (!d.notifications||!d.notifications.length) {
+          c.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);padding:var(--space-xl);">Aucune notification.</p>';
+          return;
+        }
         c.innerHTML = '';
-
-        var alerts = (d.notifications||[]).filter(function(n){ return n.type !== 'sale_confirmation'; });
-        var sales  = (d.notifications||[]).filter(function(n){ return n.type === 'sale_confirmation'; });
-
-        // — Section Alertes —
-        var alertsWrap = document.createElement('div');
-        alertsWrap.innerHTML = '<div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-tertiary);margin-bottom:var(--space-sm);">Alertes</div>';
-        if (alerts.length === 0) {
-          var empty = document.createElement('p');
-          empty.style.cssText = 'text-align:center;color:var(--text-tertiary);padding:var(--space-lg);font-size:0.85rem;';
-          empty.textContent = 'Aucune alerte.';
-          alertsWrap.appendChild(empty);
-        } else {
-          alerts.forEach(function(n){ alertsWrap.appendChild(_notifCard(n)); });
-        }
-        c.appendChild(alertsWrap);
-
-        // — Section Ventes terminées —
-        var salesWrap = document.createElement('div');
-        salesWrap.style.cssText = 'margin-top:var(--space-xl);';
-        salesWrap.innerHTML = '<div style="font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-tertiary);margin-bottom:var(--space-sm);">Ventes terminées</div>';
-        if (sales.length === 0) {
-          var emptyS = document.createElement('p');
-          emptyS.style.cssText = 'text-align:center;color:var(--text-tertiary);padding:var(--space-lg);font-size:0.85rem;';
-          emptyS.textContent = 'Aucune confirmation de vente.';
-          salesWrap.appendChild(emptyS);
-        } else {
-          sales.forEach(function(n){ salesWrap.appendChild(_notifCard(n)); });
-        }
-        c.appendChild(salesWrap);
-
+        d.notifications.forEach(function(n) {
+          var el = document.createElement('div');
+          var u = !n.read;
+          el.style.cssText = 'display:flex;align-items:flex-start;gap:12px;padding:var(--space-md) var(--space-lg);background:var(--bg-elevated);border-radius:var(--radius-md);border-left:3px solid '+(u?'var(--accent-start)':'var(--border-subtle)')+';cursor:pointer;'+(u?'':'opacity:0.6;');
+          el.onclick = function(){markNotifRead(n.id,el);};
+          el.innerHTML = '<span style="font-size:1.4rem;margin-top:2px;">'+_nIcon(n.type)+'</span>'+
+            '<div style="flex:1;">'+
+              '<div style="font-weight:'+(u?'600':'400')+';font-size:0.9rem;">'+escapeHtml(n.title)+'</div>'+
+              (n.message?'<div style="font-size:0.84rem;color:var(--text-secondary);margin-top:4px;">'+escapeHtml(n.message)+'</div>':'')+
+              '<div style="font-size:0.76rem;color:var(--text-tertiary);margin-top:6px;">'+_nAgo(n.created_at)+'</div>'+
+            '</div>'+(u?'<span style="width:10px;height:10px;border-radius:50%;background:var(--accent-start);flex-shrink:0;margin-top:6px;"></span>':'');
+          c.appendChild(el);
+        });
       } catch(e){}
     }
 
@@ -3731,462 +3327,6 @@
       // Attach click handler
       themeToggle.addEventListener('click', toggleTheme);
     })();
-
-    {% if user.monitoring_type == 'vinted' %}
-    // =========================================================================
-    // VINTED ACCOUNTS — 7-tab workspace
-    // =========================================================================
-
-    function escHtml(str) {
-      if (str == null) return '';
-      return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-    }
-
-    function eur(val) {
-      return parseFloat(val || 0).toFixed(2) + '\u00A0\u20AC';
-    }
-
-    function vintedInitials(username) {
-      if (!username) return '?';
-      return username.replace('@','').slice(0,2).toUpperCase();
-    }
-
-    function vintedFormatDate(raw) {
-      if (!raw) return '';
-      try { return new Date(raw).toLocaleString('fr-FR', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' }); }
-      catch(e) { return raw; }
-    }
-
-    var _vintedCurrentAccountId = null;
-    var _vintedAccounts = [];
-    var _vintedTabLoaded = {};
-
-    function openVintedModal() {
-      var bd = document.getElementById('vintedModalBackdrop');
-      if (bd) { bd.classList.add('vinted-modal__backdrop--visible'); setTimeout(function() { var f = document.getElementById('vintedAccountLabel'); if (f) f.focus(); }, 150); }
-    }
-
-    function closeVintedModal() {
-      var bd = document.getElementById('vintedModalBackdrop');
-      if (bd) bd.classList.remove('vinted-modal__backdrop--visible');
-      var form = document.getElementById('vintedAddForm'); if (form) form.reset();
-    }
-
-    function closeVintedModalOnBackdrop(e) { if (e.target === document.getElementById('vintedModalBackdrop')) closeVintedModal(); }
-
-    function openVintedDrawer(title) {
-      var bd = document.getElementById('vintedDrawerBackdrop');
-      var t = document.getElementById('vintedDrawerTitle'); if (t) t.textContent = title || 'Suivi colis';
-      if (bd) bd.classList.add('vinted-drawer__backdrop--visible');
-    }
-
-    function closeVintedDrawer() { var bd = document.getElementById('vintedDrawerBackdrop'); if (bd) bd.classList.remove('vinted-drawer__backdrop--visible'); }
-
-    document.addEventListener('keydown', function(e) { if (e.key === 'Escape') { closeVintedModal(); closeVintedDrawer(); } });
-
-    function makeEmpty(icon, title, subtitle) {
-      var wrap = document.createElement('div'); wrap.className = 'vinted-empty';
-      var ico = document.createElement('div'); ico.className = 'vinted-empty__icon'; ico.textContent = icon;
-      var tit = document.createElement('div'); tit.className = 'vinted-empty__title'; tit.textContent = title;
-      wrap.appendChild(ico); wrap.appendChild(tit);
-      if (subtitle) { var sub = document.createElement('div'); sub.className = 'vinted-empty__subtitle'; sub.textContent = subtitle; wrap.appendChild(sub); }
-      return wrap;
-    }
-
-    function setLoading(el, msg) {
-      el.innerHTML = '';
-      var wrap = document.createElement('div'); wrap.className = 'vinted-loading';
-      var sp = document.createElement('div'); sp.className = 'spinner vinted-spinner';
-      wrap.appendChild(sp); wrap.appendChild(document.createTextNode(' ' + (msg || 'Chargement...')));
-      el.appendChild(wrap);
-    }
-
-    function setError(el, retryFn, msg) {
-      el.innerHTML = '';
-      var wrap = makeEmpty('\u26A0\uFE0F', msg || 'Impossible de charger les donnees', null);
-      var btn = document.createElement('button'); btn.className = 'btn btn--ghost btn--small'; btn.textContent = 'Reessayer';
-      btn.addEventListener('click', retryFn); wrap.appendChild(btn); el.appendChild(wrap);
-    }
-
-    function vFetch(path, opts) {
-      return fetch(path, Object.assign({ credentials: 'include', headers: { 'X-Requested-With': 'XMLHttpRequest' } }, opts || {}))
-        .then(function(r) { if (!r.ok) return r.json().then(function(d) { throw new Error(d.message || 'Erreur ' + r.status); }); return r.json(); });
-    }
-
-    function loadVintedAccounts() {
-      var emptyState = document.getElementById('vintedEmptyState');
-      var workspace = document.getElementById('vintedWorkspace');
-      var bar = document.getElementById('vintedAccountBar');
-      if (emptyState) emptyState.style.display = 'none';
-      if (workspace) workspace.style.display = 'none';
-      if (bar) bar.style.display = 'none';
-
-      vFetch('/vinted/accounts')
-        .then(function(data) {
-          var accounts = Array.isArray(data) ? data : (data.accounts || []);
-          _vintedAccounts = accounts;
-          if (accounts.length === 0) { if (emptyState) emptyState.style.display = ''; return; }
-          if (accounts.length > 1 && bar) {
-            bar.style.display = '';
-            var barList = document.getElementById('vintedAccountBarList');
-            if (barList) {
-              barList.innerHTML = '';
-              accounts.forEach(function(acc) {
-                var btn = document.createElement('button'); btn.className = 'vinted-account-bar__btn'; btn.dataset.accountId = String(acc.id);
-                var av = document.createElement('span'); av.className = 'vinted-account-bar__avatar'; av.textContent = vintedInitials(acc.vinted_username);
-                var nm = document.createElement('span'); nm.textContent = escHtml(acc.label || acc.vinted_username || 'Compte');
-                btn.appendChild(av); btn.appendChild(nm);
-                btn.addEventListener('click', function() { selectVintedAccount(acc.id); });
-                barList.appendChild(btn);
-              });
-            }
-          }
-          selectVintedAccount(accounts[0].id);
-        })
-        .catch(function(err) { if (emptyState) emptyState.style.display = ''; showToast('Impossible de charger les comptes Vinted', 'error'); console.error(err); });
-    }
-
-    function selectVintedAccount(accountId) {
-      _vintedCurrentAccountId = accountId;
-      _vintedTabLoaded = {};
-      var account = _vintedAccounts.find(function(a) { return String(a.id) === String(accountId); }) || {};
-      var workspace = document.getElementById('vintedWorkspace'); if (!workspace) return;
-      workspace.style.display = '';
-      var avatar = document.getElementById('wsAvatar');
-      var usernameEl = document.getElementById('wsUsername');
-      var labelEl = document.getElementById('wsLabel');
-      var removeBtn = document.getElementById('wsRemoveBtn');
-      if (avatar) avatar.textContent = vintedInitials(account.vinted_username);
-      if (usernameEl) usernameEl.textContent = '@' + (account.vinted_username || 'Inconnu');
-      if (labelEl) labelEl.textContent = account.label || 'Compte Vinted';
-      if (removeBtn) removeBtn.onclick = function() { removeVintedAccount(accountId); };
-      document.querySelectorAll('.vinted-account-bar__btn').forEach(function(btn) {
-        btn.classList.toggle('vinted-account-bar__btn--active', String(btn.dataset.accountId) === String(accountId));
-      });
-      var tabs = ['dashboard','transactions','messages','notifications','wallet','favorites','items'];
-      tabs.forEach(function(t) { var panel = document.getElementById('vTab-' + t); if (panel) setLoading(panel); });
-      ['purchases','sales'].forEach(function(st) { var p = document.getElementById('vSubtab-' + st); if (p) setLoading(p); });
-      var inboxSidebar = document.getElementById('vInboxSidebar'); if (inboxSidebar) setLoading(inboxSidebar);
-      ['Messages','Notifications'].forEach(function(k) { var b = document.getElementById('vTabBadge' + k); if (b) b.textContent = '0'; });
-      document.querySelectorAll('#vintedTabsNav .vinted-tab-btn').forEach(function(btn) { btn.onclick = function() { switchVintedTab(btn.dataset.tab); }; });
-      document.querySelectorAll('.vinted-subtab-btn').forEach(function(btn) { btn.onclick = function() { switchVintedSubtab(btn.dataset.subtab); }; });
-      switchVintedTab('dashboard');
-    }
-
-    function switchVintedTab(tab) {
-      document.querySelectorAll('#vintedTabsNav .vinted-tab-btn').forEach(function(btn) { btn.classList.toggle('vinted-tab-btn--active', btn.dataset.tab === tab); });
-      document.querySelectorAll('.vinted-tab-content').forEach(function(panel) { panel.classList.toggle('vinted-tab-content--active', panel.id === 'vTab-' + tab); });
-      var key = _vintedCurrentAccountId + '_' + tab;
-      if (_vintedTabLoaded[key]) return;
-      if (tab === 'dashboard')     loadVintedDashboard(_vintedCurrentAccountId);
-      if (tab === 'transactions')  { loadVintedPurchases(_vintedCurrentAccountId); loadVintedSales(_vintedCurrentAccountId); }
-      if (tab === 'messages')      loadVintedMessages(_vintedCurrentAccountId);
-      if (tab === 'notifications') loadVintedNotifications(_vintedCurrentAccountId);
-      if (tab === 'wallet')        loadVintedWallet(_vintedCurrentAccountId);
-      if (tab === 'favorites')     loadVintedFavorites(_vintedCurrentAccountId);
-      if (tab === 'items')         loadVintedItems(_vintedCurrentAccountId);
-    }
-
-    function switchVintedSubtab(subtab) {
-      document.querySelectorAll('.vinted-subtab-btn').forEach(function(btn) { btn.classList.toggle('vinted-subtab-btn--active', btn.dataset.subtab === subtab); });
-      document.querySelectorAll('.vinted-subtab-content').forEach(function(p) { p.classList.toggle('vinted-subtab-content--active', p.id === 'vSubtab-' + subtab); });
-    }
-
-    function addVintedAccount(event) {
-      if (event) event.preventDefault();
-      var tokenInput = document.getElementById('vintedToken');
-      var labelInput = document.getElementById('vintedAccountLabel');
-      var btn = document.getElementById('vintedAddSubmitBtn');
-      if (!tokenInput || !tokenInput.value.trim()) { showToast('Le token est requis', 'error'); if (tokenInput) tokenInput.focus(); return; }
-      var origText = 'Connecter le compte';
-      if (btn) { btn.textContent = ''; var sp2 = document.createElement('div'); sp2.className = 'spinner vinted-spinner'; btn.appendChild(sp2); btn.disabled = true; }
-      vFetch('/vinted/accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
-        body: JSON.stringify({ refresh_token: tokenInput.value.trim(), label: labelInput ? labelInput.value.trim() : '', domain: 'fr' })
-      })
-        .then(function() { closeVintedModal(); showToast('Compte Vinted connecte avec succes', 'success'); loadVintedAccounts(); })
-        .catch(function(err) { showToast(err.message || 'Erreur lors de la connexion', 'error'); })
-        .finally(function() { if (btn) { btn.textContent = origText; btn.disabled = false; } });
-    }
-
-    function removeVintedAccount(accountId) {
-      if (!confirm('Retirer ce compte Vinted ? Ses donnees locales seront supprimees.')) return;
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId), { method: 'DELETE' })
-        .then(function() { showToast('Compte Vinted retire', 'info'); _vintedAccounts = _vintedAccounts.filter(function(a) { return String(a.id) !== String(accountId); }); loadVintedAccounts(); })
-        .catch(function() { showToast('Impossible de retirer le compte', 'error'); });
-    }
-
-    function loadVintedDashboard(accountId) {
-      var kpiRow = document.getElementById('vKpiRow'); if (!kpiRow) return;
-      Promise.all([
-        vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/purchases?page=1'),
-        vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/sales?page=1')
-      ]).then(function(results) {
-        var purchases = Array.isArray(results[0]) ? results[0] : (results[0].orders || results[0].purchases || results[0].items || []);
-        var sales = Array.isArray(results[1]) ? results[1] : (results[1].orders || results[1].sales || results[1].items || []);
-        var today = new Date().toDateString();
-        var thisMonth = new Date().getMonth() + '-' + new Date().getFullYear();
-        function sumBy(items, period) {
-          return items.filter(function(it) { var rawDate = it.created_at || it.date; if (!rawDate) return false; var d = new Date(rawDate); if (period === 'today') return d.toDateString() === today; if (period === 'month') return (d.getMonth() + '-' + d.getFullYear()) === thisMonth; return false; })
-            .reduce(function(acc, it) { return acc + parseFloat(it.amount || 0); }, 0);
-        }
-        var d = { revToday: sumBy(sales,'today'), spentToday: sumBy(purchases,'today'), revMonth: sumBy(sales,'month'), spentMonth: sumBy(purchases,'month') };
-        d.profitToday = d.revToday - d.spentToday; d.profitMonth = d.revMonth - d.spentMonth;
-        kpiRow.innerHTML = '';
-        [
-          { period:"Aujourd'hui", label:'Revenus',  val:d.revToday,   type:'revenue' },
-          { period:"Aujourd'hui", label:'Depenses', val:d.spentToday, type:'spent'   },
-          { period:"Aujourd'hui", label:'Profit',   val:d.profitToday,type:'profit'  },
-          { period:'Ce mois',     label:'Revenus',  val:d.revMonth,   type:'revenue' },
-          { period:'Ce mois',     label:'Depenses', val:d.spentMonth, type:'spent'   },
-          { period:'Ce mois',     label:'Profit',   val:d.profitMonth,type:'profit'  }
-        ].forEach(function(k) {
-          var card = document.createElement('div'); card.className = 'vinted-kpi-card';
-          var period = document.createElement('div'); period.className = 'vinted-kpi-card__period'; period.textContent = k.period;
-          var lbl = document.createElement('div'); lbl.className = 'vinted-kpi-card__label'; lbl.textContent = k.label;
-          var val = document.createElement('div'); val.className = 'vinted-kpi-card__value vinted-kpi-card__value--' + k.type; val.textContent = eur(k.val);
-          card.appendChild(period); card.appendChild(lbl); card.appendChild(val); kpiRow.appendChild(card);
-        });
-        _vintedTabLoaded[accountId + '_dashboard'] = true;
-      }).catch(function() { setError(kpiRow, function() { loadVintedDashboard(accountId); }); });
-    }
-
-    function buildTxnStatusBadge(status) {
-      var map = { 'pending':['badge--vinted-pending','En attente'], 'completed':['badge--vinted-done','Finalise'], 'transit':['badge--vinted-transit','En transit'], 'cancelled':['badge--vinted-cancelled','Annule'] };
-      var def = map[status] || ['badge--neutral', status || '-'];
-      var span = document.createElement('span'); span.className = 'badge ' + def[0]; span.textContent = def[1]; return span;
-    }
-
-    function renderTxnTable(items, panel, accountId, type) {
-      panel.innerHTML = '';
-      if (!items || items.length === 0) { panel.appendChild(makeEmpty('\uD83D\uDCED','Aucune transaction',null)); return; }
-      var wrapper = document.createElement('div'); wrapper.className = 'table-wrapper';
-      var table = document.createElement('table'); table.className = 'table';
-      var thead = document.createElement('thead'); var hrow = document.createElement('tr');
-      ['Article', type === 'purchases' ? 'Vendeur' : 'Acheteur', 'Montant', 'Statut', 'Date'].forEach(function(h) { var th = document.createElement('th'); th.textContent = h; hrow.appendChild(th); });
-      thead.appendChild(hrow); table.appendChild(thead);
-      var tbody = document.createElement('tbody');
-      items.forEach(function(item) {
-        var tr = document.createElement('tr'); tr.style.cursor = 'pointer';
-        tr.addEventListener('click', function() { openVintedDrawer(item.title || 'Colis'); loadVintedShipment(accountId, item.id || item.transaction_id); });
-        var tdArticle = document.createElement('td');
-        var cell = document.createElement('div'); cell.className = 'vinted-table-cell--title';
-        var thumb = document.createElement('div'); thumb.className = 'vinted-table-thumb';
-        if (item.image_url) { var img = document.createElement('img'); img.src = item.image_url; img.alt = ''; img.loading = 'lazy'; thumb.appendChild(img); } else { thumb.textContent = '\uD83D\uDCF7'; }
-        var titleSpan = document.createElement('span'); titleSpan.textContent = item.title || 'Article';
-        cell.appendChild(thumb); cell.appendChild(titleSpan); tdArticle.appendChild(cell);
-        var tdUser = document.createElement('td'); tdUser.style.cssText = 'font-size:0.85rem;color:var(--text-secondary);'; tdUser.textContent = item.counterpart_login || item.seller_login || item.buyer_login || '-';
-        var tdAmount = document.createElement('td'); tdAmount.style.cssText = 'font-weight:700;color:var(--text-primary);'; tdAmount.textContent = eur(item.amount);
-        var tdStatus = document.createElement('td'); tdStatus.appendChild(buildTxnStatusBadge(item.status));
-        var tdDate = document.createElement('td'); tdDate.style.cssText = 'font-size:0.8rem;color:var(--text-tertiary);'; tdDate.textContent = item.date ? vintedFormatDate(item.date) : (item.created_at ? vintedFormatDate(item.created_at) : '-');
-        tr.appendChild(tdArticle); tr.appendChild(tdUser); tr.appendChild(tdAmount); tr.appendChild(tdStatus); tr.appendChild(tdDate);
-        tbody.appendChild(tr);
-      });
-      table.appendChild(tbody); wrapper.appendChild(table); panel.appendChild(wrapper);
-    }
-
-    function loadVintedPurchases(accountId) {
-      var panel = document.getElementById('vSubtab-purchases'); if (!panel) return; setLoading(panel);
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/purchases?page=1')
-        .then(function(data) { var items = Array.isArray(data) ? data : (data.orders || data.purchases || data.items || []); renderTxnTable(items, panel, accountId, 'purchases'); var badge = document.getElementById('vSubBadgePurchases'); if (badge) badge.textContent = String(items.length); _vintedTabLoaded[accountId + '_transactions'] = true; })
-        .catch(function() { setError(panel, function() { loadVintedPurchases(accountId); }); });
-    }
-
-    function loadVintedSales(accountId) {
-      var panel = document.getElementById('vSubtab-sales'); if (!panel) return; setLoading(panel);
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/sales?page=1')
-        .then(function(data) { var items = Array.isArray(data) ? data : (data.orders || data.sales || data.items || []); renderTxnTable(items, panel, accountId, 'sales'); var badge = document.getElementById('vSubBadgeSales'); if (badge) badge.textContent = String(items.length); })
-        .catch(function() { setError(panel, function() { loadVintedSales(accountId); }); });
-    }
-
-    function loadVintedShipment(accountId, txnId) {
-      var body = document.getElementById('vintedDrawerBody'); if (!body) return; setLoading(body, 'Chargement du suivi...');
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/transactions/' + encodeURIComponent(txnId) + '/shipment')
-        .then(function(data) {
-          body.innerHTML = '';
-          if (data.carrier || data.tracking_number) {
-            var header = document.createElement('div'); header.className = 'vinted-shipment-header';
-            if (data.carrier) { var c = document.createElement('span'); c.className = 'vinted-shipment-carrier'; c.textContent = data.carrier; header.appendChild(c); }
-            if (data.tracking_number) { var tn = document.createElement('span'); tn.className = 'vinted-shipment-tracking'; tn.textContent = data.tracking_number; header.appendChild(tn); }
-            body.appendChild(header);
-          }
-          var events = data.events || data.timeline || [];
-          if (events.length === 0) { body.appendChild(makeEmpty('\uD83D\uDCE6','Aucun evenement de suivi disponible',null)); return; }
-          var timeline = document.createElement('div'); timeline.className = 'vinted-timeline';
-          events.forEach(function(ev, idx) {
-            var item = document.createElement('div'); item.className = 'vinted-timeline__item' + (idx === 0 ? ' vinted-timeline__item--active' : '');
-            var dot = document.createElement('div'); dot.className = 'vinted-timeline__dot';
-            var content = document.createElement('div'); content.className = 'vinted-timeline__content';
-            var label = document.createElement('div'); label.className = 'vinted-timeline__label'; label.textContent = ev.description || ev.status || ev.label || '';
-            var date = document.createElement('div'); date.className = 'vinted-timeline__date'; var rawEvDate = ev.occurred_at || ev.date || ev.timestamp || ''; date.textContent = rawEvDate ? vintedFormatDate(rawEvDate) : '';
-            content.appendChild(label); content.appendChild(date);
-            if (ev.location) { var loc = document.createElement('div'); loc.className = 'vinted-timeline__location'; loc.textContent = ev.location; content.appendChild(loc); }
-            item.appendChild(dot); item.appendChild(content); timeline.appendChild(item);
-          });
-          body.appendChild(timeline);
-        })
-        .catch(function() { setError(body, function() { loadVintedShipment(accountId, txnId); }, 'Impossible de charger le suivi'); });
-    }
-
-    function loadVintedMessages(accountId) {
-      var sidebarEl = document.getElementById('vInboxSidebar'); if (!sidebarEl) return; setLoading(sidebarEl);
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/messages?page=1')
-        .then(function(data) {
-          var rawConvs = Array.isArray(data) ? data : (data.conversations || data.messages || []);
-          var messages = rawConvs.map(function(c) { return { id: c.id, username: (c.with_user||{}).username || c.username || '', avatar_url: (c.with_user||{}).photo_url || c.avatar_url || '', preview: c.last_message || c.preview || '', unread_count: c.unread_count || 0, updated_at: c.updated_at || '', _raw: c }; });
-          sidebarEl.innerHTML = '';
-          if (messages.length === 0) { sidebarEl.appendChild(makeEmpty('\uD83D\uDCAC','Aucun message',null)); _vintedTabLoaded[accountId + '_messages'] = true; return; }
-          var unread = 0;
-          messages.forEach(function(msg) {
-            if (msg.unread_count > 0) unread += msg.unread_count;
-            var row = document.createElement('div'); row.className = 'vinted-message-row'; row.style.cursor = 'pointer';
-            var avatar = document.createElement('div'); avatar.className = 'vinted-message__avatar';
-            if (msg.avatar_url) { var img = document.createElement('img'); img.src = msg.avatar_url; img.alt = ''; img.loading = 'lazy'; avatar.appendChild(img); }
-            else { avatar.textContent = vintedInitials(msg.username || '?'); }
-            var bodyDiv = document.createElement('div'); bodyDiv.className = 'vinted-message__body';
-            var user = document.createElement('div'); user.className = 'vinted-message__user'; user.textContent = msg.username || 'Inconnu';
-            var preview = document.createElement('div'); preview.className = 'vinted-message__preview'; preview.textContent = msg.preview || '';
-            bodyDiv.appendChild(user); bodyDiv.appendChild(preview);
-            var meta = document.createElement('div'); meta.className = 'vinted-message__meta';
-            if (msg.unread_count > 0) { var badge = document.createElement('span'); badge.className = 'badge badge--vinted-unread'; badge.textContent = String(msg.unread_count); meta.appendChild(badge); }
-            row.appendChild(avatar); row.appendChild(bodyDiv); row.appendChild(meta);
-            row.addEventListener('click', function() { document.querySelectorAll('.vinted-message-row').forEach(function(r) { r.classList.remove('vinted-message-row--selected'); }); row.classList.add('vinted-message-row--selected'); renderVintedThread(msg); });
-            sidebarEl.appendChild(row);
-          });
-          var badgeEl = document.getElementById('vTabBadgeMessages'); if (badgeEl) badgeEl.textContent = String(unread);
-          _vintedTabLoaded[accountId + '_messages'] = true;
-        })
-        .catch(function() { setError(sidebarEl, function() { loadVintedMessages(accountId); }); });
-    }
-
-    function renderVintedThread(msg) {
-      var thread = document.getElementById('vInboxThread'); if (!thread) return; thread.innerHTML = '';
-      var header = document.createElement('div'); header.className = 'vinted-thread__header';
-      var av = document.createElement('div'); av.className = 'vinted-message__avatar'; av.style.cssText = 'width:36px;height:36px;flex-shrink:0;'; av.textContent = vintedInitials(msg.username || '?');
-      var nm = document.createElement('span'); nm.style.cssText = 'font-weight:700;font-size:0.95rem;color:var(--text-primary);'; nm.textContent = msg.username || 'Inconnu';
-      header.appendChild(av); header.appendChild(nm); thread.appendChild(header);
-      var bubblesContainer = document.createElement('div'); bubblesContainer.className = 'vinted-thread__bubbles';
-      var msgs = msg.messages || msg.thread || [];
-      if (msgs.length === 0) { var noMsg = document.createElement('p'); noMsg.style.cssText = 'text-align:center;color:var(--text-tertiary);font-size:0.85rem;padding:var(--space-xl);'; noMsg.textContent = 'Aucun message dans cette conversation.'; bubblesContainer.appendChild(noMsg); }
-      else { msgs.forEach(function(m) { var bubble = document.createElement('div'); bubble.className = 'vinted-bubble' + (m.is_mine ? ' vinted-bubble--mine' : ' vinted-bubble--theirs'); var text = document.createElement('div'); text.className = 'vinted-bubble__text'; text.textContent = m.body || m.text || ''; var ts = document.createElement('div'); ts.className = 'vinted-bubble__time'; ts.textContent = m.time || m.timestamp || ''; bubble.appendChild(text); bubble.appendChild(ts); bubblesContainer.appendChild(bubble); }); }
-      thread.appendChild(bubblesContainer);
-    }
-
-    function loadVintedNotifications(accountId) {
-      var panel = document.getElementById('vTab-notifications'); if (!panel) return; setLoading(panel);
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/notifications?page=1')
-        .then(function(data) {
-          var notifs = Array.isArray(data) ? data : (data.notifications || []);
-          panel.innerHTML = '';
-          if (notifs.length === 0) { panel.appendChild(makeEmpty('\uD83D\uDD14','Aucune notification',null)); _vintedTabLoaded[accountId + '_notifications'] = true; return; }
-          var unread = 0;
-          var list = document.createElement('div'); list.className = 'vinted-notif-list';
-          notifs.forEach(function(n) {
-            if (!n.read) unread++;
-            var row = document.createElement('div'); row.className = 'vinted-notif-row' + (!n.read ? ' vinted-notif-row--unread' : '');
-            var dot = document.createElement('div'); dot.className = 'vinted-notif-dot' + (!n.read ? ' vinted-notif-dot--active' : '');
-            var content = document.createElement('div'); content.className = 'vinted-notif-content';
-            var title = document.createElement('div'); title.className = 'vinted-notif-title'; title.textContent = n.title || n.type || 'Notification';
-            var date = document.createElement('div'); date.className = 'vinted-notif-date'; date.textContent = (n.date || n.created_at) ? vintedFormatDate(n.date || n.created_at) : '';
-            content.appendChild(title);
-            if (n.body || n.message) { var body2 = document.createElement('div'); body2.className = 'vinted-notif-body'; body2.textContent = n.body || n.message || ''; content.appendChild(body2); }
-            content.appendChild(date);
-            row.appendChild(dot); row.appendChild(content); list.appendChild(row);
-          });
-          panel.appendChild(list);
-          var badgeEl = document.getElementById('vTabBadgeNotifications'); if (badgeEl) badgeEl.textContent = String(unread);
-          _vintedTabLoaded[accountId + '_notifications'] = true;
-        })
-        .catch(function() { setError(panel, function() { loadVintedNotifications(accountId); }); });
-    }
-
-    function loadVintedWallet(accountId) {
-      var panel = document.getElementById('vTab-wallet'); if (!panel) return; setLoading(panel);
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/wallet')
-        .then(function(data) {
-          panel.innerHTML = '';
-          var grid = document.createElement('div'); grid.className = 'vinted-wallet';
-          var cardAvail = document.createElement('div'); cardAvail.className = 'vinted-wallet__block vinted-wallet__block--primary';
-          var lbl1 = document.createElement('div'); lbl1.className = 'vinted-wallet__label'; lbl1.textContent = 'Disponible';
-          var val1 = document.createElement('div'); val1.className = 'vinted-wallet__amount'; val1.textContent = eur(data.available || data.balance || 0);
-          var actions = document.createElement('div'); actions.className = 'vinted-wallet__actions';
-          var withdrawBtn = document.createElement('button'); withdrawBtn.className = 'btn btn--vinted btn--small'; withdrawBtn.textContent = 'Retirer';
-          actions.appendChild(withdrawBtn); cardAvail.appendChild(lbl1); cardAvail.appendChild(val1); cardAvail.appendChild(actions);
-          var cardPend = document.createElement('div'); cardPend.className = 'vinted-wallet__block';
-          var lbl2 = document.createElement('div'); lbl2.className = 'vinted-wallet__label'; lbl2.textContent = 'En attente';
-          var val2 = document.createElement('div'); val2.className = 'vinted-wallet__amount vinted-wallet__amount--pending'; val2.textContent = eur(data.pending || data.reserved || 0);
-          cardPend.appendChild(lbl2); cardPend.appendChild(val2);
-          grid.appendChild(cardAvail); grid.appendChild(cardPend); panel.appendChild(grid);
-          _vintedTabLoaded[accountId + '_wallet'] = true;
-        })
-        .catch(function() { setError(panel, function() { loadVintedWallet(accountId); }); });
-    }
-
-    function loadVintedFavorites(accountId) {
-      var panel = document.getElementById('vTab-favorites'); if (!panel) return; setLoading(panel);
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/favorites?page=1')
-        .then(function(data) {
-          var items = Array.isArray(data) ? data : (data.items || data.favorites || []);
-          panel.innerHTML = '';
-          if (items.length === 0) { panel.appendChild(makeEmpty('\u2764','Aucun favori',null)); _vintedTabLoaded[accountId + '_favorites'] = true; return; }
-          var grid = document.createElement('div'); grid.className = 'vinted-item-grid';
-          items.forEach(function(item) {
-            var card = document.createElement('div'); card.className = 'vinted-item-card';
-            if (item.url) { card.style.cursor = 'pointer'; card.addEventListener('click', function() { window.open(item.url, '_blank'); }); }
-            var imgWrap = document.createElement('div'); imgWrap.className = 'vinted-item-card__img';
-            if (item.image_url) { var img = document.createElement('img'); img.src = item.image_url; img.alt = item.title || ''; img.loading = 'lazy'; imgWrap.appendChild(img); } else { imgWrap.textContent = '\uD83D\uDCF7'; }
-            var info = document.createElement('div'); info.className = 'vinted-item-card__info';
-            var titleEl = document.createElement('div'); titleEl.className = 'vinted-item-card__title'; titleEl.textContent = item.title || 'Article';
-            var priceEl = document.createElement('div'); priceEl.className = 'vinted-item-card__price'; priceEl.textContent = eur(item.price);
-            info.appendChild(titleEl); info.appendChild(priceEl);
-            if (item.seller_login) { var seller = document.createElement('div'); seller.className = 'vinted-item-card__seller'; seller.textContent = '@' + item.seller_login; info.appendChild(seller); }
-            card.appendChild(imgWrap); card.appendChild(info); grid.appendChild(card);
-          });
-          panel.appendChild(grid);
-          _vintedTabLoaded[accountId + '_favorites'] = true;
-        })
-        .catch(function() { setError(panel, function() { loadVintedFavorites(accountId); }); });
-    }
-
-    function loadVintedItems(accountId) {
-      var panel = document.getElementById('vTab-items'); if (!panel) return; setLoading(panel);
-      vFetch('/vinted/accounts/' + encodeURIComponent(accountId) + '/items?page=1')
-        .then(function(data) {
-          var items = Array.isArray(data) ? data : (data.items || []);
-          panel.innerHTML = '';
-          if (items.length === 0) { panel.appendChild(makeEmpty('\uD83D\uDCF7','Aucun article en vente',null)); _vintedTabLoaded[accountId + '_items'] = true; return; }
-          var wrapper = document.createElement('div'); wrapper.className = 'table-wrapper';
-          var table = document.createElement('table'); table.className = 'table';
-          var thead = document.createElement('thead'); var hrow2 = document.createElement('tr');
-          ['Article','Prix','Statut','Date'].forEach(function(h) { var th = document.createElement('th'); th.textContent = h; hrow2.appendChild(th); });
-          thead.appendChild(hrow2); table.appendChild(thead);
-          var tbody = document.createElement('tbody');
-          items.forEach(function(item) {
-            var tr = document.createElement('tr');
-            var tdTitle = document.createElement('td');
-            var cell = document.createElement('div'); cell.className = 'vinted-table-cell--title';
-            var thumb = document.createElement('div'); thumb.className = 'vinted-table-thumb';
-            if (item.image_url) { var img = document.createElement('img'); img.src = item.image_url; img.alt = ''; img.loading = 'lazy'; thumb.appendChild(img); } else { thumb.textContent = '\uD83D\uDCF7'; }
-            var titleSpan = document.createElement('span'); titleSpan.textContent = item.title || 'Article';
-            cell.appendChild(thumb); cell.appendChild(titleSpan); tdTitle.appendChild(cell);
-            var tdPrice = document.createElement('td'); tdPrice.style.fontWeight = '600'; tdPrice.textContent = eur(item.price);
-            var tdStatus = document.createElement('td'); var statusBadge = document.createElement('span');
-            if (item.status === 'active') { statusBadge.className = 'badge badge--success'; statusBadge.textContent = 'En ligne'; }
-            else if (item.status === 'paused') { statusBadge.className = 'badge badge--warning'; statusBadge.textContent = 'Pause'; }
-            else if (item.status === 'sold') { statusBadge.className = 'badge badge--neutral'; statusBadge.textContent = 'Vendu'; }
-            else { statusBadge.className = 'badge badge--neutral'; statusBadge.textContent = item.status || '-'; }
-            tdStatus.appendChild(statusBadge);
-            var tdDate = document.createElement('td'); tdDate.style.cssText = 'color:var(--text-tertiary);font-size:0.82rem;'; tdDate.textContent = item.date ? vintedFormatDate(item.date) : (item.created_at ? vintedFormatDate(item.created_at) : '-');
-            tr.appendChild(tdTitle); tr.appendChild(tdPrice); tr.appendChild(tdStatus); tr.appendChild(tdDate);
-            tbody.appendChild(tr);
-          });
-          table.appendChild(tbody); wrapper.appendChild(table); panel.appendChild(wrapper);
-          _vintedTabLoaded[accountId + '_items'] = true;
-        })
-        .catch(function() { setError(panel, function() { loadVintedItems(accountId); }); });
-    }
-    {% endif %}
   </script>
 </body>
 </html>

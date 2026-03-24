@@ -649,34 +649,17 @@ def vinted_sell_times():
             return jsonify({"success": True, "stats": {}})
 
         stock_days = []
-        items = []
         for row in rows[1:]:
-            if not row or not row[0]:
-                continue
-            title = _clean_cell(row[0])
-            sale_price = _clean_cell(row[3] if len(row) > 3 else "")
-            sold = bool(sale_price)
-            stock_days_raw = _clean_cell(row[7] if len(row) > 7 else "")
-
-            item = {
-                "title": title,
-                "benefice": _clean_cell(row[5] if len(row) > 5 else ""),
-                "roi": _clean_cell(row[6] if len(row) > 6 else ""),
-                "sell_time": {"display": stock_days_raw} if stock_days_raw else None,
-                "sold": sold,
-            }
-            items.append(item)
-
-            if stock_days_raw:
+            if len(row) > 7 and row[7]:
                 try:
-                    days = float(stock_days_raw.replace(" j", "").strip())
+                    days = float(str(row[7]).replace(" j", "").strip())
                     if days >= 0:
                         stock_days.append(days)
                 except (ValueError, TypeError):
-                    pass
+                    continue
 
         if not stock_days:
-            return jsonify({"success": True, "stats": {"count": 0}, "items": items})
+            return jsonify({"success": True, "stats": {"count": 0}})
 
         avg_days = sum(stock_days) / len(stock_days)
         min_days = min(stock_days)
@@ -690,7 +673,6 @@ def vinted_sell_times():
                 "min_days": round(min_days, 1),
                 "max_days": round(max_days, 1),
             },
-            "items": items,
         })
     except Exception as exc:
         logger.error("Failed to get sell times: %s", exc)
