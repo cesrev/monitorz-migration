@@ -51,6 +51,16 @@ def _credentials_to_dict(credentials: Credentials) -> dict:
     }
 
 
+@auth_bp.route("/auth/session-test")
+def session_test():
+    """Debug: test that session cookies work across requests."""
+    if "test_value" in session:
+        val = session.pop("test_value")
+        return jsonify({"session_works": True, "value": val})
+    session["test_value"] = "hello"
+    return jsonify({"session_works": None, "msg": "Visit this URL again to confirm session is preserved"})
+
+
 @auth_bp.route("/auth/google")
 def auth_google():
     """Start the Google OAuth flow.
@@ -93,12 +103,19 @@ def oauth_callback():
 
     Creates or updates user, creates gmail_account, creates spreadsheet.
     """
+    # Handle Google error responses (e.g. access_denied)
+    google_error = request.args.get("error")
+    if google_error:
+        logger.warning("Google OAuth error: %s", google_error)
+        return redirect(url_for("login") + "?err=google_" + google_error)
+
     # Validate OAuth state to prevent CSRF
     stored_state = session.pop("oauth_state", None)
     received_state = request.args.get("state")
     if not stored_state or stored_state != received_state:
-        flash("Session invalide. Veuillez reessayer.", "error")
-        return redirect(url_for("login"))
+        logger.warning("OAuth state mismatch: stored=%s received=%s", stored_state, received_state)
+        # Expose reason in URL so we can debug without log access
+        return redirect(url_for("login") + "?err=state_mismatch&has_stored=" + str(stored_state is not None))
 
     monitoring_type = session.pop("oauth_monitoring_type", "tickets")
     plan = session.pop("oauth_plan", "starter")
@@ -107,12 +124,17 @@ def oauth_callback():
     redirect_uri = f"{APP_URL}/oauth/callback"
     flow = _get_oauth_flow(redirect_uri)
 
+    # Force https:// — Vercel proxies requests internally as http://
+    # which causes oauthlib InsecureTransportError
+    auth_response = request.url
+    if auth_response.startswith("http://"):
+        auth_response = "https://" + auth_response[7:]
+
     try:
-        flow.fetch_token(authorization_response=request.url)
+        flow.fetch_token(authorization_response=auth_response)
     except Exception as exc:
-        logger.error("OAuth token exchange failed: %s", exc)
-        flash("Erreur d'authentification Google. Veuillez reessayer.", "error")
-        return redirect(url_for("login"))
+        logger.error("OAuth token exchange failed: %s", exc, exc_info=True)
+        return redirect(url_for("login") + "?err=token_exchange&detail=" + str(exc)[:120])
 
     credentials = flow.credentials
 
@@ -121,7 +143,7 @@ def oauth_callback():
         oauth2_service = build("oauth2", "v2", credentials=credentials, cache_discovery=False)
         user_info = oauth2_service.userinfo().get().execute()
     except Exception as exc:
-        logger.error("Failed to get user info: %s", exc)
+        logger.error("Failed to get user info: %s", exc, exc_info=True)
         flash("Impossible de recuperer vos informations Google.", "error")
         return redirect(url_for("login"))
 
@@ -129,50 +151,60 @@ def oauth_callback():
     name = user_info.get("name", email)
     picture = user_info.get("picture", "")
 
-    # Find or create user
-    user = db.get_user_by_email(email)
-    is_new_user = False
-    if user:
-        user_id = user["id"]
-        # Update profile info + monitoring_type/plan/billing when user switches
-        db.update_user(user_id, name=name, picture=picture,
-                       monitoring_type=monitoring_type, plan=plan)
-    else:
-        user_id = db.create_user(email, name, picture, monitoring_type, plan, billing_period=billing)
-        is_new_user = True
+    try:
+        # Find or create user
+        user = db.get_user_by_email(email)
+        is_new_user = False
+        if user:
+            user_id = user["id"]
+            db.update_user(user_id, name=name, picture=picture,
+                           monitoring_type=monitoring_type, plan=plan)
+        else:
+            user_id = db.create_user(email, name, picture, monitoring_type, plan, billing_period=billing)
+            is_new_user = True
 
-    # Create or update gmail account
-    existing_accounts = db.get_gmail_accounts(user_id)
-    existing_account = next((a for a in existing_accounts if a["email"] == email), None)
+        # Create or update gmail account
+        existing_accounts = db.get_gmail_accounts(user_id)
+        existing_account = next((a for a in existing_accounts if a["email"] == email), None)
 
-    token_expiry = credentials.expiry.isoformat() if credentials.expiry else None
+        token_expiry = credentials.expiry.isoformat() if credentials.expiry else None
 
-    if existing_account:
-        db.update_gmail_account_tokens(existing_account["id"], credentials.token, token_expiry)
-        if credentials.refresh_token:
-            db.update_gmail_account_refresh_token(existing_account["id"], credentials.refresh_token)
-    else:
-        is_primary = len(existing_accounts) == 0
-        db.create_gmail_account(
-            user_id=user_id,
-            email=email,
-            oauth_token=credentials.token,
-            oauth_refresh_token=credentials.refresh_token or "",
-            token_expiry=token_expiry,
-            is_primary=is_primary,
-        )
+        if existing_account:
+            db.update_gmail_account_tokens(existing_account["id"], credentials.token, token_expiry)
+            if credentials.refresh_token:
+                db.update_gmail_account_refresh_token(existing_account["id"], credentials.refresh_token)
+        else:
+            is_primary = len(existing_accounts) == 0
+            db.create_gmail_account(
+                user_id=user_id,
+                email=email,
+                oauth_token=credentials.token,
+                oauth_refresh_token=credentials.refresh_token or "",
+                token_expiry=token_expiry,
+                is_primary=is_primary,
+            )
 
-    # For new users: activate 14-day trial and generate referral code
-    if is_new_user:
-        db.activate_trial(user_id)
-        db.generate_referral_code(user_id)
-        logger.info("New user id=%d: trial activated and referral code generated", user_id)
+        # For new users: activate 14-day trial and generate referral code
+        if is_new_user:
+            try:
+                db.activate_trial(user_id)
+                db.generate_referral_code(user_id)
+                logger.info("New user id=%d: trial activated and referral code generated", user_id)
+            except Exception as exc:
+                logger.error("Trial/referral setup failed for user id=%d: %s", user_id, exc)
 
-    # Create spreadsheet if user has none for THIS monitoring_type
-    from routes.sheets import _create_spreadsheet_for_user
-    sheets_for_type = db.get_spreadsheets(user_id, monitoring_type=monitoring_type)
-    if not sheets_for_type:
-        _create_spreadsheet_for_user(user_id, monitoring_type, plan)
+    except Exception as exc:
+        logger.error("DB error during OAuth callback for %s: %s", email, exc, exc_info=True)
+        return redirect(url_for("login") + "?err=db_error&detail=" + str(exc)[:120])
+
+    # Create spreadsheet if user has none for THIS monitoring_type (non-fatal)
+    try:
+        from routes.sheets import _create_spreadsheet_for_user
+        sheets_for_type = db.get_spreadsheets(user_id, monitoring_type=monitoring_type)
+        if not sheets_for_type:
+            _create_spreadsheet_for_user(user_id, monitoring_type, plan)
+    except Exception as exc:
+        logger.error("Spreadsheet creation failed for user id=%d: %s", user_id, exc)
 
     # Regenerate session to prevent session fixation
     session.clear()
@@ -240,8 +272,12 @@ def add_gmail_callback():
     redirect_uri = f"{APP_URL}/oauth/add-gmail/callback"
     flow = _get_oauth_flow(redirect_uri)
 
+    auth_response = request.url
+    if auth_response.startswith("http://"):
+        auth_response = "https://" + auth_response[7:]
+
     try:
-        flow.fetch_token(authorization_response=request.url)
+        flow.fetch_token(authorization_response=auth_response)
     except Exception as exc:
         logger.error("Add-Gmail OAuth failed: %s", exc)
         flash("Erreur d'authentification. Veuillez reessayer.", "error")

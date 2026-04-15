@@ -186,6 +186,7 @@ from routes.sheets import sheets_bp
 from routes.scan import scan_bp
 from routes.tickets import tickets_bp
 from routes.vinted import vinted_bp
+from routes.vinted_accounts import vinted_accounts_bp
 from routes.invoice import invoice_bp
 from routes.admin import admin_bp
 from routes.api import api_bp
@@ -200,6 +201,7 @@ app.register_blueprint(sheets_bp)
 app.register_blueprint(scan_bp)
 app.register_blueprint(tickets_bp)
 app.register_blueprint(vinted_bp)
+app.register_blueprint(vinted_accounts_bp)
 app.register_blueprint(invoice_bp)
 app.register_blueprint(admin_bp)
 app.register_blueprint(api_bp)

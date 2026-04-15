@@ -19,6 +19,10 @@ APP_URL = os.getenv("APP_URL", "http://localhost:5050")
 
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
 
+# JWT auth (mobile API) — falls back to SECRET_KEY if not explicitly set
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", SECRET_KEY)
+JWT_EXPIRY_DAYS = int(os.getenv("JWT_EXPIRY_DAYS", "30"))
+
 _admin_raw = os.getenv("ADMIN_EMAILS", "")
 if not _admin_raw:
     raise RuntimeError("ADMIN_EMAILS env var is required (comma-separated list)")

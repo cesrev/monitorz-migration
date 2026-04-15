@@ -1,7 +1,7 @@
 """
 Billets Monitor MVP - Ticket Email Parsers
 Extracted and adapted from monitor_oauth.py.
-Handles Ticketmaster, Roland-Garros, and Stade de France confirmation emails.
+Handles Ticketmaster, Roland-Garros, Stade de France, Viagogo, and Ticombo confirmation emails.
 """
 
 import re
@@ -27,6 +27,11 @@ TICKET_QUERIES: list[tuple[str, str]] = [
     ("from:accor-arena subject:confirmation", "accor-arena"),
     ("from:axs.com subject:order", "axs"),
     ("from:axs subject:confirmation", "axs"),
+    # Revente — ventes (seller)
+    ("from:automated@orders.viagogo.com", "viagogo"),
+    ("from:orders.viagogo.com subject:vendus", "viagogo"),
+    ("from:info-noreply@ticombo.com", "ticombo"),
+    ("from:ticombo subject:vendus", "ticombo"),
 ]
 
 
@@ -862,5 +867,293 @@ def parse_axs_email(subject: str, html: str) -> Optional[dict]:
         "venue": venue,
         "event_date": event_date,
         "price": price,
+        "order_link": order_link,
+    }
+
+
+# ============================================
+# VIAGOGO
+# ============================================
+
+def parse_viagogo_email(subject: str, html: str) -> Optional[dict]:
+    """Parse a Viagogo sale confirmation email (seller perspective).
+
+    From: automated@orders.viagogo.com
+    Subject: "Félicitations, vos billets ont été vendus {order_id}"
+    Structure: labelled table rows (Événement:, Lieu:, Date:, Billets:, Montant Total:)
+    Returns ticket_type="sale" → Prix Vente (col I).
+    """
+    if not html:
+        return None
+
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(separator="\n")
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+
+    # Guard — viagogo seller notifications always contain "ont été vendu"
+    if "ont été vendu" not in text.lower() and "ont ete vendu" not in text.lower():
+        return None
+
+    # --- Order ID ---
+    # "Numéro de commande: 637436961" in body, also at end of subject
+    order_id: Optional[str] = None
+    m = re.search(r"Num[eé]ro de commande\s*:\s*(\d+)", text, re.IGNORECASE)
+    if m:
+        order_id = m.group(1)
+    if not order_id and subject:
+        m = re.search(r"(\d{7,})$", subject.strip())
+        if m:
+            order_id = m.group(1)
+    if not order_id:
+        return None
+
+    # --- Event: "Événement: Clair Obscur: Expédition 33 Live in Concert" ---
+    event = "Evenement"
+    for i, line in enumerate(lines):
+        if re.match(r"^[EÉée]v[eé]nement\s*:", line, re.IGNORECASE):
+            val = re.sub(r"^[EÉée]v[eé]nement\s*:\s*", "", line, flags=re.IGNORECASE).strip()
+            if val:
+                event = val[:120]
+            elif i + 1 < len(lines):
+                event = lines[i + 1][:120]
+            break
+
+    # --- Venue: "Lieu: La Seine Musicale - Grande Seine" ---
+    venue = ""
+    for i, line in enumerate(lines):
+        if re.match(r"^Lieu\s*:", line, re.IGNORECASE):
+            val = re.sub(r"^Lieu\s*:\s*", "", line, flags=re.IGNORECASE).strip()
+            if val:
+                venue = val[:100]
+            elif i + 1 < len(lines):
+                venue = lines[i + 1][:100]
+            break
+
+    # --- Date: "Date: jeudi, 28 mai 2026 | 19h00" ---
+    event_date = ""
+    _months = {
+        "janvier": "01", "février": "02", "fevrier": "02", "mars": "03",
+        "avril": "04", "mai": "05", "juin": "06", "juillet": "07",
+        "août": "08", "aout": "08", "septembre": "09", "octobre": "10",
+        "novembre": "11", "décembre": "12", "decembre": "12",
+    }
+    for line in lines:
+        if re.match(r"^Date\s*:", line, re.IGNORECASE):
+            m = re.search(r"(\d{1,2})\s+([\w]+)\s+(\d{4})", line)
+            if m and m.group(2).lower() in _months:
+                event_date = f"{m.group(1).zfill(2)}/{_months[m.group(2).lower()]}/{m.group(3)}"
+            break
+    # Fallback: scan all lines for a date containing a month name
+    if not event_date:
+        for line in lines:
+            m = re.search(r"(\d{1,2})\s+([\w]+)\s+(\d{4})", line)
+            if m and m.group(2).lower() in _months:
+                event_date = f"{m.group(1).zfill(2)}/{_months[m.group(2).lower()]}/{m.group(3)}"
+                break
+
+    # --- Category: "Billets: Bloc N, Rang N13, (2 Billets)" ---
+    category = ""
+    for i, line in enumerate(lines):
+        if re.match(r"^Billets\s*:", line, re.IGNORECASE):
+            val = re.sub(r"^Billets\s*:\s*", "", line, flags=re.IGNORECASE).strip()
+            if val:
+                category = _format_category(val[:80])
+            elif i + 1 < len(lines):
+                category = _format_category(lines[i + 1][:80])
+            break
+
+    # --- Price: "Montant Total: 114,40 €" (last occurrence = total line) ---
+    sale_price = "0"
+    # Find all "Montant Total: X €" occurrences, take the last (the actual total row)
+    all_totals = re.findall(
+        r"Montant Total\s*:\s*([\d\s,.]+)\s*[€\u20ac]",
+        text, re.IGNORECASE
+    )
+    if all_totals:
+        raw = all_totals[-1].replace("\u202f", "").replace("\xa0", "").replace(" ", "").replace(",", ".")
+        try:
+            sale_price = str(round(float(raw), 2))
+            # Return as int if no cents
+            if sale_price.endswith(".0"):
+                sale_price = sale_price[:-2]
+        except ValueError:
+            sale_price = raw
+
+    # --- Order link: MyAccount link from HTML ---
+    order_link = ""
+    for link in soup.find_all("a", href=True):
+        href = link["href"]
+        if "viagogo" in href.lower() and "myaccount" in href.lower():
+            # Clean tracking params, keep clean URL
+            order_link = href.split("?")[0] + f"?orderid={order_id}"
+            break
+    if not order_link:
+        order_link = f"https://www.viagogo.fr/secure/MyAccount.aspx?orderid={order_id}"
+
+    return {
+        "order_id": order_id,
+        "event": event,
+        "category": category,
+        "venue": venue,
+        "event_date": event_date,
+        "price": sale_price,
+        "ticket_type": "sale",   # → scanner writes to Prix Vente (col I)
+        "order_link": order_link,
+    }
+
+
+# ============================================
+# TICOMBO
+# ============================================
+
+_TICOMBO_MONTHS = {
+    "janvier": "01", "février": "02", "fevrier": "02", "mars": "03",
+    "avril": "04", "mai": "05", "juin": "06", "juillet": "07",
+    "août": "08", "aout": "08", "septembre": "09", "octobre": "10",
+    "novembre": "11", "décembre": "12", "decembre": "12",
+    "january": "01", "february": "02", "march": "03", "april": "04",
+    "may": "05", "june": "06", "july": "07", "august": "08",
+    "september": "09", "october": "10", "november": "11", "december": "12",
+    "jan": "01", "feb": "02", "mar": "03", "apr": "04",
+    "jun": "06", "jul": "07", "aug": "08", "sep": "09", "oct": "10", "nov": "11", "dec": "12",
+}
+
+
+def parse_ticombo_email(subject: str, html: str) -> Optional[dict]:
+    """Parse a Ticombo sale confirmation email (seller perspective).
+
+    From: info-noreply@ticombo.com
+    Subject: "Félicitations !!! Vos billets pour [...] sont vendus"
+    Guard: "Billets vendus !" in body.
+    Returns ticket_type="sale" so scanner writes Prix Vente (col I) not Prix Achat (col E).
+    """
+    if not html:
+        return None
+
+    soup = BeautifulSoup(html, "html.parser")
+    text = soup.get_text(separator="\n")
+    lines = [line.strip() for line in text.split("\n") if line.strip()]
+
+    # Guard — Ticombo sale notifications always contain "Billets vendus"
+    if "billets vendus" not in text.lower():
+        return None
+
+    # --- Order ID: "Numéro de commande : yEs0ddg0nY" ---
+    order_id: Optional[str] = None
+    for pat in [
+        r"(?:Num[eé]ro de commande|Commande\s+n[o°])\s*:\s*(\S+)",
+        r"(?:order\s*number|order\s*id)\s*:\s*(\S+)",
+    ]:
+        m = re.search(pat, text, re.IGNORECASE)
+        if m:
+            order_id = m.group(1).strip()
+            break
+    # Fallback: transaction ID "ID de la transaction : 7EJQDNPCK2re"
+    if not order_id:
+        m = re.search(r"ID de la transaction\s*:\s*(\S+)", text, re.IGNORECASE)
+        if m:
+            order_id = m.group(1).strip()
+    if not order_id:
+        return None
+
+    # --- Event: h3 tag holds event name + competition ---
+    event = "Evenement"
+    for tag in soup.find_all("h3"):
+        txt = tag.get_text(separator=" ", strip=True)
+        if len(txt) > 5 and not any(kw in txt.lower() for kw in [
+            "ticombo", "commande", "résumé", "summary",
+        ]):
+            event = txt[:120]
+            break
+    # Fallback: line after "ID de la transaction" contains date + event
+    if event == "Evenement":
+        for i, line in enumerate(lines):
+            if re.search(r"ID de la transaction", line, re.IGNORECASE) and i + 2 < len(lines):
+                # Next non-date line is the event
+                candidate = lines[i + 2] if i + 2 < len(lines) else lines[i + 1]
+                if len(candidate) > 10:
+                    event = candidate[:120]
+                break
+
+    # --- Date: "10 janvier 2026, 17h00 UTC" ---
+    event_date = ""
+    for line in lines:
+        m = re.search(r"(\d{1,2})\s+([\w]+)\s+(\d{4})", line)
+        if m and m.group(2).lower() in _TICOMBO_MONTHS:
+            event_date = f"{m.group(1).zfill(2)}/{_TICOMBO_MONTHS[m.group(2).lower()]}/{m.group(3)}"
+            break
+
+    # --- Venue: small tag or line after event containing city/stade ---
+    venue = ""
+    for tag in soup.find_all("small"):
+        txt = tag.get_text(strip=True)
+        if any(kw in txt.lower() for kw in [
+            "stade", "stadium", "arena", "marrakech", "paris", "berlin",
+            "london", "madrid", "rome", "amsterdam",
+        ]) and len(txt) > 5:
+            venue = txt[:100]
+            break
+    if not venue:
+        for line in lines:
+            if any(kw in line.lower() for kw in [
+                "stade", "stadium", "arena", "maroc", "france", "espagne",
+            ]) and len(line) > 5:
+                venue = line[:100]
+                break
+
+    # --- Category: "Catégorie : Catégorie 1" + "Section : CAT 1" ---
+    category = ""
+    m = re.search(r"Cat[eé]gorie\s*:\s*([^\n<*]+)", text, re.IGNORECASE)
+    if m:
+        cat_raw = m.group(1).strip().rstrip("*").strip()
+        # Also grab section if present on same/next line
+        m2 = re.search(r"Section\s*:\s*(\S+)", text, re.IGNORECASE)
+        if m2 and m2.group(1).strip() not in cat_raw:
+            cat_raw = f"{cat_raw} / {m2.group(1).strip()}"
+        category = _format_category(cat_raw)
+
+    # --- Price net received: "Total (paiement) €340.00" ---
+    # This is what the seller actually receives after fees
+    sale_price = "0"
+    m = re.search(
+        r"Total\s*\(paiement\)\s*[€\u20ac]?\s*([\d\s,.]+)",
+        text, re.IGNORECASE
+    )
+    if m:
+        raw = m.group(1).replace("\u202f", "").replace("\xa0", "").replace(" ", "").replace(",", ".")
+        try:
+            sale_price = str(int(float(raw)))
+        except ValueError:
+            sale_price = raw
+    else:
+        # Fallback: "Prix total du billet : €170.00" × quantity
+        m_price = re.search(r"Prix total du billet\s*:\s*[€\u20ac]?\s*([\d,.]+)", text, re.IGNORECASE)
+        m_qty   = re.search(r"(\d+)\s*billets?", text, re.IGNORECASE)
+        if m_price:
+            try:
+                unit = float(m_price.group(1).replace(",", "."))
+                qty  = int(m_qty.group(1)) if m_qty else 1
+                sale_price = str(int(unit * qty))
+            except ValueError:
+                pass
+
+    # --- Order link: try to grab the "Gérer les préférences de paiement" button URL ---
+    order_link = ""
+    for link in soup.find_all("a", href=True):
+        href = link["href"]
+        if "ticombo.com" in href and "ls/click" in href:
+            order_link = href
+            break
+    if not order_link:
+        order_link = f"https://www.ticombo.com/profile/my-listings"
+
+    return {
+        "order_id": order_id,
+        "event": event,
+        "category": category,
+        "venue": venue,
+        "event_date": event_date,
+        "price": sale_price,
+        "ticket_type": "sale",   # → scanner writes to Prix Vente (col I), not Prix Achat (col E)
         "order_link": order_link,
     }

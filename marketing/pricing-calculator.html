@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitorz — Calculateur Pricing Groupe</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+  :root {
+    --bg: #0a0a0a;
+    --card: #111;
+    --border: #222;
+    --text: #eee;
+    --text-2: #888;
+    --accent: #6366f1;
+    --green: #22c55e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  h1 {
+    font-size: 1.4rem;
+    font-weight: 800;
+    margin-bottom: 32px;
+    letter-spacing: -0.02em;
+  }
+  h1 span { color: var(--accent); }
+
+  .calculator {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    width: 100%;
+    max-width: 600px;
+    margin-bottom: 32px;
+  }
+
+  .form-row {
+    display: flex;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .form-group {
+    flex: 1;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-2);
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  .form-group input, .form-group select {
+    width: 100%;
+    padding: 10px 14px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #1a1a1a;
+    color: var(--text);
+    font-size: 0.88rem;
+    font-family: 'Inter', sans-serif;
+  }
+  .form-group input:focus, .form-group select:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 24px 0;
+  }
+
+  .results {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 32px;
+    width: 100%;
+    max-width: 600px;
+  }
+
+  .results h2 {
+    font-size: 1rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  .result-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .result-card {
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    text-align: center;
+  }
+  .result-card__value {
+    font-size: 1.4rem;
+    font-weight: 800;
+  }
+  .result-card__label {
+    font-size: 0.7rem;
+    color: var(--text-2);
+    margin-top: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+  .result-card--green .result-card__value { color: var(--green); }
+  .result-card--accent .result-card__value { color: var(--accent); }
+
+  .breakdown {
+    font-size: 0.82rem;
+    line-height: 2;
+    color: var(--text-2);
+  }
+  .breakdown strong { color: var(--text); }
+
+  .copy-block {
+    background: #1a1a1a;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    margin-top: 20px;
+    font-size: 0.8rem;
+    color: var(--text-2);
+    white-space: pre-wrap;
+    line-height: 1.6;
+    position: relative;
+  }
+  .copy-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 4px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--card);
+    color: var(--text);
+    font-size: 0.72rem;
+    cursor: pointer;
+  }
+  .copy-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  @media (max-width: 640px) {
+    body { padding: 16px; }
+    .form-row { flex-direction: column; gap: 0; }
+    .result-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<h1><span>Monitorz</span> — Calculateur Pricing</h1>
+
+<div class="calculator">
+  <div class="form-row">
+    <div class="form-group">
+      <label>Nom du groupe</label>
+      <input type="text" id="groupName" value="French Resell" oninput="calc()">
+    </div>
+    <div class="form-group">
+      <label>Membres du groupe</label>
+      <input type="number" id="groupSize" value="500" oninput="calc()">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Taux conversion estime (%)</label>
+      <input type="number" id="convRate" value="5" min="1" max="100" oninput="calc()">
+    </div>
+    <div class="form-group">
+      <label>Commission owner (%)</label>
+      <input type="number" id="ownerCommission" value="10" min="0" max="50" oninput="calc()">
+    </div>
+  </div>
+
+  <hr>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Prix Mensuel normal (EUR)</label>
+      <input type="number" id="priceMonthly" value="9.99" step="0.01" oninput="calc()">
+    </div>
+    <div class="form-group">
+      <label>Reduction groupe (%)</label>
+      <input type="number" id="discount" value="30" min="0" max="80" oninput="calc()">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Prix Annuel normal (EUR)</label>
+      <input type="number" id="priceAnnual" value="99.99" step="0.01" oninput="calc()">
+    </div>
+    <div class="form-group">
+      <label>Prix Lifetime normal (EUR)</label>
+      <input type="number" id="priceLifetime" value="199.99" step="0.01" oninput="calc()">
+    </div>
+  </div>
+
+  <div class="form-row">
+    <div class="form-group">
+      <label>Repartition estimee (Monthly / Annual / Lifetime)</label>
+      <div style="display: flex; gap: 8px;">
+        <input type="number" id="splitMonthly" value="50" min="0" max="100" style="width:33%" oninput="calc()">
+        <input type="number" id="splitAnnual" value="35" min="0" max="100" style="width:33%" oninput="calc()">
+        <input type="number" id="splitLifetime" value="15" min="0" max="100" style="width:33%" oninput="calc()">
+      </div>
+      <div style="font-size: 0.7rem; color: var(--text-2); margin-top: 4px;">% de souscripteurs par forfait (total = 100%)</div>
+    </div>
+  </div>
+</div>
+
+<div class="results">
+  <h2>Projection pour <span id="rGroupName">French Resell</span></h2>
+
+  <div class="result-grid">
+    <div class="result-card">
+      <div class="result-card__value" id="rClients">25</div>
+      <div class="result-card__label">Clients estimes</div>
+    </div>
+    <div class="result-card result-card--green">
+      <div class="result-card__value" id="rRevenue">0 EUR</div>
+      <div class="result-card__label">Revenu premiere vague</div>
+    </div>
+    <div class="result-card result-card--accent">
+      <div class="result-card__value" id="rMRR">0 EUR</div>
+      <div class="result-card__label">MRR (recurrent mensuel)</div>
+    </div>
+    <div class="result-card">
+      <div class="result-card__value" id="rOwnerPayout">0 EUR</div>
+      <div class="result-card__label">Commission owner</div>
+    </div>
+  </div>
+
+  <div class="breakdown" id="breakdown"></div>
+
+  <div class="copy-block" id="offerSummary">
+    <button class="copy-btn" onclick="copyOffer()">Copier</button>
+  </div>
+</div>
+
+<script>
+function calc() {
+  var groupName = document.getElementById('groupName').value || 'Groupe';
+  var groupSize = parseInt(document.getElementById('groupSize').value) || 0;
+  var convRate = parseFloat(document.getElementById('convRate').value) || 0;
+  var ownerComm = parseFloat(document.getElementById('ownerCommission').value) || 0;
+  var discount = parseFloat(document.getElementById('discount').value) || 0;
+
+  var priceM = parseFloat(document.getElementById('priceMonthly').value) || 0;
+  var priceA = parseFloat(document.getElementById('priceAnnual').value) || 0;
+  var priceL = parseFloat(document.getElementById('priceLifetime').value) || 0;
+
+  var splitM = parseFloat(document.getElementById('splitMonthly').value) || 0;
+  var splitA = parseFloat(document.getElementById('splitAnnual').value) || 0;
+  var splitL = parseFloat(document.getElementById('splitLifetime').value) || 0;
+
+  // Discounted prices
+  var discM = priceM * (1 - discount / 100);
+  var discA = priceA * (1 - discount / 100);
+  var discL = priceL * (1 - discount / 100);
+
+  // Clients
+  var clients = Math.round(groupSize * convRate / 100);
+  var clientsM = Math.round(clients * splitM / 100);
+  var clientsA = Math.round(clients * splitA / 100);
+  var clientsL = Math.round(clients * splitL / 100);
+
+  // Revenue first wave
+  var revM = clientsM * discM;
+  var revA = clientsA * discA;
+  var revL = clientsL * discL;
+  var totalRev = revM + revA + revL;
+
+  // MRR (monthly only + annual/12)
+  var mrr = (clientsM * discM) + (clientsA * discA / 12);
+
+  // Owner commission
+  var ownerPayout = totalRev * ownerComm / 100;
+
+  // Display
+  document.getElementById('rGroupName').textContent = groupName;
+  document.getElementById('rClients').textContent = clients;
+  document.getElementById('rRevenue').textContent = totalRev.toFixed(0) + ' EUR';
+  document.getElementById('rMRR').textContent = mrr.toFixed(0) + ' EUR';
+  document.getElementById('rOwnerPayout').textContent = ownerPayout.toFixed(0) + ' EUR';
+
+  document.getElementById('breakdown').innerHTML =
+    '<strong>' + groupSize + '</strong> membres x <strong>' + convRate + '%</strong> conversion = <strong>' + clients + ' clients</strong><br>' +
+    'Mensuel : <strong>' + clientsM + '</strong> x ' + discM.toFixed(2) + ' EUR = <strong>' + revM.toFixed(0) + ' EUR</strong><br>' +
+    'Annuel : <strong>' + clientsA + '</strong> x ' + discA.toFixed(2) + ' EUR = <strong>' + revA.toFixed(0) + ' EUR</strong><br>' +
+    'Lifetime : <strong>' + clientsL + '</strong> x ' + discL.toFixed(2) + ' EUR = <strong>' + revL.toFixed(0) + ' EUR</strong><br>' +
+    'Commission owner (' + ownerComm + '%) : <strong>' + ownerPayout.toFixed(0) + ' EUR</strong>';
+
+  // Offer summary for DM
+  var summary =
+    'Offre exclusive ' + groupName + ' (-' + discount + '%)\n\n' +
+    'Mensuel : ' + discM.toFixed(2) + ' EUR/mois (au lieu de ' + priceM.toFixed(2) + ' EUR)\n' +
+    'Annuel : ' + discA.toFixed(2) + ' EUR/an (au lieu de ' + priceA.toFixed(2) + ' EUR)\n' +
+    'Lifetime : ' + discL.toFixed(2) + ' EUR une fois (au lieu de ' + priceL.toFixed(2) + ' EUR)\n\n' +
+    'Offre valable 1 semaine.';
+
+  document.getElementById('offerSummary').innerHTML =
+    '<button class="copy-btn" onclick="copyOffer()">Copier</button>' + summary;
+}
+
+function copyOffer() {
+  var el = document.getElementById('offerSummary');
+  var text = el.textContent.replace('Copier', '').trim();
+  navigator.clipboard.writeText(text).then(function() {
+    var btn = el.querySelector('.copy-btn');
+    btn.textContent = 'Copie !';
+    setTimeout(function() { btn.textContent = 'Copier'; }, 1500);
+  });
+}
+
+calc();
+</script>
+</body>
+</html>

@@ -49,10 +49,16 @@ def _get_sheet_data_cached(sheets_service, spreadsheet_id: str, range_name: str,
 # ============================================
 
 def login_required(f):
-    """Decorator that redirects to /login if user is not authenticated."""
+    """Decorator that redirects to /login if user is not authenticated.
+    For API routes (/api/*), returns JSON 401 instead of an HTML redirect
+    so that fetch() calls don't silently fail with a parse error.
+    """
     @wraps(f)
     def decorated_function(*args, **kwargs):
         if "user_id" not in session:
+            from flask import request as _req, jsonify as _jsonify
+            if _req.path.startswith("/api/"):
+                return _jsonify({"success": False, "error": "Session expirée, veuillez vous reconnecter", "redirect": "/login"}), 401
             return redirect(url_for("login"))
         return f(*args, **kwargs)
     return decorated_function

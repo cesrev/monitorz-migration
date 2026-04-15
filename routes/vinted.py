@@ -624,7 +624,10 @@ def vinted_articles():
 @vinted_bp.route("/api/vinted-sell-times")
 @login_required
 def vinted_sell_times():
-    """Return average sell times and statistics for Vinted articles."""
+    """Return sell time stats calculated from Date Achat (col C) and Date Vente (col E)."""
+    import re as _re
+    from parsers.vinted import calculate_time_in_stock
+
     user_id = session["user_id"]
     user = db.get_user_by_id(user_id)
 
@@ -639,6 +642,17 @@ def vinted_sell_times():
     if err:
         return err
 
+    def _norm_date(d):
+        if not d:
+            return ""
+        d = str(d).strip()
+        m = _re.match(r"(\d{1,2})[/\-.](\d{1,2})[/\-.](\d{4})", d)
+        if m:
+            return f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
+        if _re.match(r"\d{4}-\d{2}-\d{2}", d):
+            return d
+        return ""
+
     try:
         sheets_service = build("sheets", "v4", credentials=creds, cache_discovery=False)
         spreadsheet_id = sheets[0]["spreadsheet_id"]
@@ -646,33 +660,56 @@ def vinted_sell_times():
         rows = _get_sheet_data_cached(sheets_service, spreadsheet_id, "Commandes!A:I")
 
         if len(rows) < 2:
-            return jsonify({"success": True, "stats": {}})
+            return jsonify({"success": True, "stats": {"count": 0, "average_days": 0, "min_days": 0, "max_days": 0}, "items": []})
 
-        stock_days = []
+        items = []
+        total_days = 0
+        sold_count = 0
+        fastest = None
+        slowest = None
+
         for row in rows[1:]:
-            if len(row) > 7 and row[7]:
-                try:
-                    days = float(str(row[7]).replace(" j", "").strip())
-                    if days >= 0:
-                        stock_days.append(days)
-                except (ValueError, TypeError):
-                    continue
+            if not row or not row[0]:
+                continue
 
-        if not stock_days:
-            return jsonify({"success": True, "stats": {"count": 0}})
+            title      = _clean_cell(row[0])
+            sale_price = _clean_cell(row[3] if len(row) > 3 else "")
+            sold       = bool(sale_price)
+            pdate      = _norm_date(row[2] if len(row) > 2 else "")
+            sdate      = _norm_date(row[4] if len(row) > 4 else "")
+            benefice   = _clean_cell(row[5] if len(row) > 5 else "")
+            roi        = _clean_cell(row[6] if len(row) > 6 else "")
 
-        avg_days = sum(stock_days) / len(stock_days)
-        min_days = min(stock_days)
-        max_days = max(stock_days)
+            sell_time = None
+            if pdate and sdate and sold:
+                sell_time = calculate_time_in_stock(pdate, sdate)
+                d = sell_time["days"]
+                total_days += d
+                sold_count += 1
+                if fastest is None or d < fastest:
+                    fastest = d
+                if slowest is None or d > slowest:
+                    slowest = d
+
+            items.append({
+                "title": title,
+                "benefice": benefice,
+                "roi": roi,
+                "sell_time": sell_time,
+                "sold": sold,
+            })
+
+        avg_days = round(total_days / sold_count, 1) if sold_count > 0 else 0
 
         return jsonify({
             "success": True,
             "stats": {
-                "count": len(stock_days),
-                "average_days": round(avg_days, 1),
-                "min_days": round(min_days, 1),
-                "max_days": round(max_days, 1),
+                "count": sold_count,
+                "average_days": avg_days,
+                "min_days": fastest or 0,
+                "max_days": slowest or 0,
             },
+            "items": items,
         })
     except Exception as exc:
         logger.error("Failed to get sell times: %s", exc)

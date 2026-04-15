@@ -124,7 +124,7 @@ def _check_alerts_for_user(user: dict):
             # Read ticket data: A=Event, B=Cat, C=Lieu, D=Date, E=Prix Achat, I=Prix Vente
             result = sheets_service.spreadsheets().values().get(
                 spreadsheetId=spreadsheet_id,
-                range="Commandes!A:J",
+                range="Commandes!A:K",
             ).execute()
             rows = result.get("values", [])
 

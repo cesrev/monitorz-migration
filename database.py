@@ -8,6 +8,7 @@ import uuid
 import logging
 import secrets
 import string
+import threading
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -26,18 +27,17 @@ logger = logging.getLogger(__name__)
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
-_client: Client | None = None
+_thread_local = threading.local()
 
 
 def _get_client() -> Client:
-    """Lazy-init Supabase client."""
-    global _client
-    if _client is None:
+    """Thread-local Supabase client — one instance per thread to avoid httpx concurrency issues."""
+    if not hasattr(_thread_local, "client") or _thread_local.client is None:
         if not SUPABASE_URL or not SUPABASE_KEY:
             raise RuntimeError("SUPABASE_URL and SUPABASE_KEY must be set in .env")
-        _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+        _thread_local.client = create_client(SUPABASE_URL, SUPABASE_KEY)
         logger.info("Supabase client initialized for %s", SUPABASE_URL)
-    return _client
+    return _thread_local.client
 
 
 def _now_iso() -> str:
@@ -684,6 +684,77 @@ def increment_invoice_counter(user_id: int, conn=None) -> int:
     sb = _get_client()
     response = sb.rpc("increment_invoice_counter", {"p_user_id": user_id}).execute()
     return response.data if isinstance(response.data, int) else 1
+
+
+# ============================================
+# VINTED ACCOUNTS
+# ============================================
+
+def create_vinted_account(
+    user_id: int,
+    label: str,
+    refresh_token_encrypted: str,
+    vinted_user_id: str,
+    vinted_username: str,
+    domain: str = "fr",
+    conn=None,
+) -> dict:
+    """Create a new Vinted account entry. Returns the created row."""
+    sb = _get_client()
+    response = sb.table("vinted_accounts").insert({
+        "user_id": user_id,
+        "label": label or "",
+        "refresh_token": refresh_token_encrypted,
+        "vinted_user_id": vinted_user_id,
+        "vinted_username": vinted_username,
+        "domain": domain,
+    }).execute()
+    logger.info("Created vinted_account for user=%s (@%s)", user_id, vinted_username)
+    return response.data[0]
+
+
+def get_vinted_accounts(user_id: int, conn=None) -> list[dict]:
+    """Get all Vinted accounts for a user."""
+    sb = _get_client()
+    response = (sb.table("vinted_accounts")
+                .select("*")
+                .eq("user_id", user_id)
+                .order("created_at", desc=False)
+                .execute())
+    return response.data
+
+
+def get_vinted_account(user_id: int, account_id: int, conn=None) -> Optional[dict]:
+    """Get a single Vinted account by id, verifying ownership."""
+    sb = _get_client()
+    response = (sb.table("vinted_accounts")
+                .select("*")
+                .eq("id", account_id)
+                .eq("user_id", user_id)
+                .execute())
+    return response.data[0] if response.data else None
+
+
+def update_vinted_account(user_id: int, account_id: int, conn=None, **kwargs) -> bool:
+    """Update allowed fields on a Vinted account."""
+    allowed = {"label", "refresh_token", "vinted_username", "domain"}
+    fields = {k: v for k, v in kwargs.items() if k in allowed}
+    if not fields:
+        return False
+    sb = _get_client()
+    sb.table("vinted_accounts").update(fields).eq("id", account_id).eq("user_id", user_id).execute()
+    return True
+
+
+def delete_vinted_account(user_id: int, account_id: int, conn=None) -> bool:
+    """Delete a Vinted account, verifying ownership."""
+    sb = _get_client()
+    response = (sb.table("vinted_accounts")
+                .delete()
+                .eq("id", account_id)
+                .eq("user_id", user_id)
+                .execute())
+    return bool(response.data)
 
 
 # ============================================

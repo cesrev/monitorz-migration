@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Monitorz — Connexion extension</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #080808;
+      color: #fff;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #111;
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 48px 40px;
+      max-width: 440px;
+      width: 90%;
+      text-align: center;
+    }
+    .logo { font-size: 32px; font-weight: 900; letter-spacing: -1.5px;
+      background: linear-gradient(135deg, #FFD700, #F5A623, #FF6600);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 700; margin: 16px 0 8px; color: #fff; }
+    .sub { font-size: 14px; color: #666; margin-bottom: 32px; line-height: 1.6; }
+    .email-badge {
+      display: inline-block; background: #1a1a1a;
+      border: 1px solid rgba(255,255,255,0.1); border-radius: 20px;
+      padding: 6px 16px; font-size: 13px; color: #aaa; margin-bottom: 32px;
+    }
+    .btn {
+      display: block; width: 100%; padding: 16px;
+      background: linear-gradient(135deg, #FFD700, #F5A623, #FF6600);
+      border: none; border-radius: 12px; font-size: 16px; font-weight: 700;
+      color: #000; cursor: pointer; transition: opacity 0.2s, transform 0.15s;
+      box-shadow: 0 0 30px rgba(245,166,35,0.3);
+    }
+    .btn:hover { opacity: 0.9; transform: scale(1.02); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .status { margin-top: 20px; font-size: 14px; min-height: 20px; color: #666; }
+    .status.success { color: #22C55E; }
+    .status.error   { color: #EF4444; }
+    .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); margin: 24px 0; }
+    .footer-note { font-size: 12px; color: #333; }
+    .sparkle { color: #F5A623; }
+  </style>
+</head>
+<body>
+<div class="card">
+  <div class="logo">monitorz</div>
+  <div class="icon" style="margin-top:28px;">🔌</div>
+  <h1>Connecter l'extension Chrome</h1>
+  <p class="sub">Un seul clic pour lier votre compte Monitorz à l'extension.</p>
+  {% if user %}
+  <div class="email-badge">{{ user.email }}</div>
+  {% endif %}
+  <button class="btn" id="btnConnect">
+    ✦ Connecter l'extension
+  </button>
+  <p class="status" id="statusMsg"></p>
+  <hr class="divider">
+  <p class="footer-note">Cette page peut être fermée après la connexion.</p>
+</div>
+
+<script>
+  var btn    = document.getElementById('btnConnect');
+  var status = document.getElementById('statusMsg');
+
+  // Wait up to 2s for bridge.js to inject data-mntrz-ext (content scripts run after window.load)
+  function waitForBridge(timeout) {
+    return new Promise(function(resolve) {
+      if (document.documentElement.hasAttribute('data-mntrz-ext')) { resolve(true); return; }
+      var observer = new MutationObserver(function() {
+        if (document.documentElement.hasAttribute('data-mntrz-ext')) {
+          observer.disconnect();
+          resolve(true);
+        }
+      });
+      observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-mntrz-ext'] });
+      setTimeout(function() { observer.disconnect(); resolve(false); }, timeout);
+    });
+  }
+
+  waitForBridge(2000).then(function(found) {
+    if (!found) {
+      status.textContent = 'Extension non détectée. Installez l\'extension puis rechargez.';
+      status.className = 'status error';
+      btn.disabled = true;
+    }
+  });
+
+  btn.addEventListener('click', async function() {
+    btn.disabled = true;
+    btn.textContent = 'Connexion en cours...';
+    status.textContent = '';
+    status.className = 'status';
+
+    try {
+      var res = await fetch('/api/extension/auth/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+
+      if (!res.ok) {
+        var err = await res.json().catch(() => ({}));
+        if (err.code === 'NOT_PRO') {
+          status.textContent = 'L\'extension est réservée au plan Pro.';
+        } else {
+          status.textContent = 'Erreur: ' + (err.error || 'Inconnue');
+        }
+        status.className = 'status error';
+        btn.disabled = false;
+        btn.textContent = '✦ Connecter l\'extension';
+        return;
+      }
+
+      var data = await res.json();
+
+      // Dispatch event for bridge.js
+      document.dispatchEvent(new CustomEvent('mntrz:auth', {
+        detail: {
+          jwt: data.token,
+          email: data.email,
+          name: data.name,
+          monitorzUrl: window.location.origin,
+        }
+      }));
+
+      // Wait for bridge.js response
+      document.addEventListener('mntrz:auth:done', function(e) {
+        if (e.detail && e.detail.ok) {
+          btn.textContent = '✦ Connecté !';
+          status.textContent = 'Extension connectée avec succès. Vous pouvez fermer cet onglet.';
+          status.className = 'status success';
+          setTimeout(function() { window.close(); }, 2000);
+        } else {
+          status.textContent = 'Erreur lors de la connexion à l\'extension.';
+          status.className = 'status error';
+          btn.disabled = false;
+          btn.textContent = '✦ Réessayer';
+        }
+      }, { once: true });
+
+    } catch (e) {
+      status.textContent = 'Erreur réseau. Vérifiez que le serveur est démarré.';
+      status.className = 'status error';
+      btn.disabled = false;
+      btn.textContent = '✦ Connecter l\'extension';
+    }
+  });
+</script>
+</body>
+</html>

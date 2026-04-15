@@ -1,0 +1,11 @@
+venv/
+__pycache__/
+*.pyc
+.env
+monitor.db
+tests/
+marketing/
+migrate_*.py
+database_sqlite.py
+schema.sql
+.git/

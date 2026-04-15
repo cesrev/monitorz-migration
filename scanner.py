@@ -25,6 +25,8 @@ from parsers.tickets import (
     parse_ticketmaster_uk_email,
     parse_accor_arena_email,
     parse_axs_email,
+    parse_viagogo_email,
+    parse_ticombo_email,
     TICKET_QUERIES,
 )
 from parsers.vinted import (
@@ -135,7 +137,7 @@ def _validate_order_data(order: dict) -> dict:
 
 TICKET_HEADERS = [
     "Événement", "Catégorie", "Lieu", "Date", "Prix Achat",
-    "N° Commande", "Lien", "Compte", "Prix Vente", "Bénéfice",
+    "N° Commande", "Lien", "Compte", "Prix Vente", "Bénéfice", "PAS",
 ]
 
 # Same template for starter and pro — Bénéfice(F), ROI %(G), Temps en stock(H) are formula cols
@@ -153,18 +155,17 @@ def _ensure_sheet_headers(sheets_service, spreadsheet_id: str, monitoring_type: 
     """Ensure the first row has correct headers."""
     headers = TICKET_HEADERS if monitoring_type == "tickets" else VINTED_HEADERS
 
+    end_col = chr(ord("A") + len(headers) - 1)
     try:
         result = sheets_service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
-            range="Commandes!A1:J1",
+            range=f"Commandes!A1:{end_col}1",
         ).execute()
         existing = result.get("values", [[]])[0]
-        if existing and existing[0] == headers[0]:
-            return  # headers already set
+        if existing == headers:
+            return  # headers already complete and correct
     except Exception:
         pass
-
-    end_col = chr(ord("A") + len(headers) - 1)
     sheets_service.spreadsheets().values().update(
         spreadsheetId=spreadsheet_id,
         range=f"Commandes!A1:{end_col}1",
@@ -202,7 +203,30 @@ def _get_existing_order_ids(sheets_service, spreadsheet_id: str) -> set[str]:
         return set()
 
 
-def _write_ticket_orders(sheets_service, spreadsheet_id: str, orders: list[dict]) -> int:
+def _get_external_email_sources(sheets_service, spreadsheet_id: str) -> list[str]:
+    """Read external Gmail addresses to scan from the Config sheet tab.
+
+    Expected layout in 'Config' tab:
+      Row 1: "📧 Sources Externes" (section header)
+      Row 2: "Email" (column header)
+      Row 3+: one gmail address per row
+    """
+    try:
+        result = sheets_service.spreadsheets().values().get(
+            spreadsheetId=spreadsheet_id,
+            range="Config!A:A",
+        ).execute()
+        rows = result.get("values", [])
+        emails = []
+        for row in rows[2:]:  # Skip rows 1-2 (section + column headers)
+            if row and row[0] and "@" in row[0]:
+                emails.append(row[0].strip().lower())
+        return emails
+    except Exception:
+        return []  # Config tab doesn't exist or inaccessible
+
+
+def _write_ticket_orders(sheets_service, spreadsheet_id: str, orders: list[dict], user_id: int = None) -> int:
     """Write ticket orders to the sheet. Returns count of rows written.
 
     Columns A-I are data; J (Bénéfice) is a pre-seeded formula — we do NOT write to it.
@@ -225,23 +249,41 @@ def _write_ticket_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
     batch = []
     for i, order in enumerate(new_orders):
         r = start_row + i
-        # Validate order data before writing
         validated_order = _validate_order_data(order.copy())
-        # Write A-I only (J = Bénéfice is a formula, leave untouched)
-        batch.append({
-            "range": f"Commandes!A{r}:I{r}",
-            "values": [[
-                validated_order.get("event", ""),
-                validated_order.get("category", ""),
-                validated_order.get("venue", ""),
-                validated_order.get("event_date", ""),
-                validated_order.get("price", ""),
-                validated_order.get("order_id", ""),
-                validated_order.get("order_link", ""),
-                validated_order.get("account", ""),
-                "",  # Prix Vente (I) — filled in later by user
-            ]],
-        })
+        is_sale = validated_order.get("ticket_type") == "sale"
+
+        if is_sale:
+            # Sale confirmation (Ticombo/Viagogo seller): price → Prix Vente (I), Prix Achat (E) empty
+            batch.append({
+                "range": f"Commandes!A{r}:I{r}",
+                "values": [[
+                    validated_order.get("event", ""),
+                    validated_order.get("category", ""),
+                    validated_order.get("venue", ""),
+                    validated_order.get("event_date", ""),
+                    "",   # Prix Achat (E) — unknown at sale time
+                    validated_order.get("order_id", ""),
+                    validated_order.get("order_link", ""),
+                    validated_order.get("account", ""),
+                    validated_order.get("price", ""),  # Prix Vente (I)
+                ]],
+            })
+        else:
+            # Purchase confirmation (Ticketmaster etc.): price → Prix Achat (E)
+            batch.append({
+                "range": f"Commandes!A{r}:I{r}",
+                "values": [[
+                    validated_order.get("event", ""),
+                    validated_order.get("category", ""),
+                    validated_order.get("venue", ""),
+                    validated_order.get("event_date", ""),
+                    validated_order.get("price", ""),
+                    validated_order.get("order_id", ""),
+                    validated_order.get("order_link", ""),
+                    validated_order.get("account", ""),
+                    "",  # Prix Vente (I) — filled in later by user
+                ]],
+            })
 
     sheets_service.spreadsheets().values().batchUpdate(
         spreadsheetId=spreadsheet_id,
@@ -249,6 +291,26 @@ def _write_ticket_orders(sheets_service, spreadsheet_id: str, orders: list[dict]
     ).execute()
 
     logger.info("Wrote %d ticket orders to sheet %s", len(new_orders), spreadsheet_id)
+
+    # Create in-app notifications for sale confirmations
+    if user_id:
+        for order in new_orders:
+            if order.get("ticket_type") == "sale":
+                event = order.get("event", "Événement inconnu")
+                price = order.get("price", "")
+                order_id = order.get("order_id", "")
+                source = order.get("source", "")
+                price_str = f" — {price}€" if price else ""
+                source_str = f" ({source})" if source else ""
+                db.create_notification(
+                    user_id,
+                    "sale_confirmation",
+                    f"Vente confirmée{source_str} — {event}",
+                    f"{event}{price_str} · Commande #{order_id}",
+                    reference_key=f"sale:{order_id}",
+                    monitoring_type="tickets",
+                )
+
     return len(new_orders)
 
 
@@ -447,6 +509,10 @@ def _scan_gmail_account(
                         order = parse_accor_arena_email(subject, html_content)
                     elif source == "axs":
                         order = parse_axs_email(subject, html_content)
+                    elif source == "viagogo":
+                        order = parse_viagogo_email(subject, html_content)
+                    elif source == "ticombo":
+                        order = parse_ticombo_email(subject, html_content)
                 elif monitoring_type == "vinted":
                     if source == "vinted-sale":
                         order = parse_vinted_sale_email(html_content)
@@ -476,6 +542,101 @@ def _scan_gmail_account(
 
         except Exception as exc:
             logger.error("Error scanning account %s query '%s': %s", account_email, query_str, exc)
+
+    return all_orders
+
+
+def _scan_external_gmail_sources(
+    gmail_service,
+    user_id: int,
+    sheets_service,
+    spreadsheet_id: str,
+) -> list[dict]:
+    """Scan Gmail for ticket confirmation emails forwarded from external sources.
+
+    Reads source email addresses from the Config sheet tab, then searches
+    the user's Gmail for emails FROM those addresses and applies all
+    compatible ticket parsers.
+    """
+    external_emails = _get_external_email_sources(sheets_service, spreadsheet_id)
+    if not external_emails:
+        return []
+
+    processed_ids = db.get_processed_email_ids(user_id, monitoring_type="tickets")
+    all_orders: list[dict] = []
+
+    # All parser functions with their source identifier
+    parsers = [
+        (parse_ticketmaster_email, "ticketmaster"),
+        (parse_roland_garros_email, "roland-garros"),
+        (parse_stade_de_france_email, "stade-de-france"),
+        (parse_ticketmaster_us_email, "ticketmaster-us"),
+        (parse_ticketmaster_uk_email, "ticketmaster-uk"),
+        (parse_accor_arena_email, "accor-arena"),
+        (parse_axs_email, "axs"),
+        (parse_viagogo_email, "viagogo"),
+        (parse_ticombo_email, "ticombo"),
+    ]
+
+    for source_email in external_emails:
+        try:
+            results = gmail_service.users().messages().list(
+                userId="me",
+                q=f"from:{source_email}",
+                maxResults=50,
+            ).execute()
+            messages = results.get("messages", [])
+
+            for msg_info in messages:
+                msg_id = msg_info["id"]
+                if msg_id in processed_ids:
+                    continue
+
+                msg = gmail_service.users().messages().get(
+                    userId="me",
+                    id=msg_id,
+                    format="full",
+                ).execute()
+
+                payload = msg.get("payload", {})
+                headers = _headers_to_dict(payload.get("headers", []))
+                subject = _get_header(headers, "subject")
+                html_content = _extract_html_from_payload(payload)
+
+                # Try all ticket parsers — stop at first match
+                order = None
+                matched_source = None
+                for parser_func, source_name in parsers:
+                    try:
+                        result = parser_func(subject, html_content)
+                        if result:
+                            order = result
+                            matched_source = source_name
+                            break
+                    except Exception:
+                        continue
+
+                if order:
+                    order["account"] = source_email  # Tag as external source
+                    order["msg_id"] = msg_id
+                    order["source"] = matched_source
+
+                    order_number = order.get("order_id", msg_id)
+                    db.create_processed_order(
+                        user_id, order_number, matched_source, msg_id,
+                        monitoring_type="tickets",
+                    )
+                    processed_ids.add(msg_id)
+                    all_orders.append(order)
+                    logger.info(
+                        "External source %s: parsed %s | %s",
+                        source_email,
+                        order.get("event", "?"),
+                        order.get("order_id", "n/a"),
+                    )
+
+        except Exception as exc:
+            logger.error("Error scanning external source %s: %s", source_email, exc)
 
     return all_orders
 
@@ -513,6 +674,7 @@ def scan_user(user_id: int) -> int:
     spreadsheet_id = sheet["spreadsheet_id"]
 
     total_orders = 0
+    primary_gmail_service = None
 
     for account in accounts:
         log_id = db.create_scan_log(
@@ -531,12 +693,15 @@ def scan_user(user_id: int) -> int:
 
             gmail_service = build("gmail", "v1", credentials=creds, cache_discovery=False)
 
+            if account.get("is_primary") and monitoring_type == "tickets":
+                primary_gmail_service = gmail_service
+
             orders = _scan_gmail_account(gmail_service, user_id, account, monitoring_type, plan)
 
             # Write to sheet
             if orders:
                 if monitoring_type == "tickets":
-                    written = _write_ticket_orders(sheets_service, spreadsheet_id, orders)
+                    written = _write_ticket_orders(sheets_service, spreadsheet_id, orders, user_id=user_id)
                 else:
                     written = _write_vinted_orders(sheets_service, spreadsheet_id, orders, plan)
                 total_orders += written
@@ -562,6 +727,21 @@ def scan_user(user_id: int) -> int:
             else:
                 sanitized = f"{type(exc).__name__}: {err_str[:200]}"
             db.update_scan_log(log_id, 0, "error", sanitized)
+
+    # Scan external Gmail sources (tickets only, using primary account)
+    if monitoring_type == "tickets" and primary_gmail_service:
+        try:
+            ext_orders = _scan_external_gmail_sources(
+                primary_gmail_service, user_id, sheets_service, spreadsheet_id
+            )
+            if ext_orders:
+                written_ext = _write_ticket_orders(sheets_service, spreadsheet_id, ext_orders, user_id=user_id)
+                total_orders += written_ext
+                logger.info(
+                    "External sources scan: user=%d orders=%d", user_id, written_ext
+                )
+        except Exception as exc:
+            logger.error("External sources scan failed: user=%d error=%s", user_id, exc)
 
     return total_orders
 
@@ -593,7 +773,7 @@ def organize_ticket_tabs(user_id: int) -> dict:
         # Read all ticket data from main sheet
         result = sheets_service.spreadsheets().values().get(
             spreadsheetId=spreadsheet_id,
-            range="Commandes!A:J",
+            range="Commandes!A:K",
         ).execute()
         rows = result.get("values", [])
         if len(rows) < 2:
@@ -649,7 +829,7 @@ def organize_ticket_tabs(user_id: int) -> dict:
                 try:
                     sheets_service.spreadsheets().values().clear(
                         spreadsheetId=spreadsheet_id,
-                        range=f"'{tab_name}'!A:J",
+                        range=f"'{tab_name}'!A:K",
                     ).execute()
                 except Exception as exc:
                     logger.warning("Could not clear tab '%s': %s", tab_name, exc)
@@ -689,8 +869,21 @@ def scan_all_users() -> dict[int, int]:
     for user in users:
         user_id = user["id"]
         try:
-            count = scan_user(user_id)
-            results[user_id] = count
+            import signal
+
+            def _timeout_handler(signum, frame):
+                raise TimeoutError(f"Scan timeout for user id={user_id}")
+
+            signal.signal(signal.SIGALRM, _timeout_handler)
+            signal.alarm(300)  # 5 min max par user
+            try:
+                count = scan_user(user_id)
+                results[user_id] = count
+            finally:
+                signal.alarm(0)  # reset
+        except TimeoutError as exc:
+            logger.error("Scan timeout for user id=%d (>5min), skipping", user_id)
+            results[user_id] = 0
         except Exception as exc:
             logger.error("Scan failed for user id=%d: %s", user_id, exc)
             results[user_id] = 0

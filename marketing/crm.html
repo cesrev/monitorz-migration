@@ -1,0 +1,656 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitorz — CRM Outreach</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --bg-card: #141414;
+    --bg-elevated: #1a1a1a;
+    --border: #2a2a2a;
+    --text: #e5e5e5;
+    --text-secondary: #888;
+    --accent: #6366f1;
+    --accent-hover: #818cf8;
+    --success: #22c55e;
+    --warning: #f59e0b;
+    --error: #ef4444;
+    --info: #3b82f6;
+    --radius: 10px;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  .header h1 span { color: var(--accent); }
+
+  .header-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text);
+    font-size: 0.82rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .btn:hover { border-color: var(--accent); color: var(--accent); }
+  .btn--primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .btn--primary:hover { background: var(--accent-hover); }
+  .btn--danger { color: var(--error); }
+  .btn--danger:hover { border-color: var(--error); }
+  .btn--small { padding: 4px 10px; font-size: 0.75rem; }
+
+  /* Stats bar */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  .stat {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    text-align: center;
+  }
+  .stat__value { font-size: 1.6rem; font-weight: 700; }
+  .stat__label { font-size: 0.72rem; color: var(--text-secondary); margin-top: 4px; text-transform: uppercase; letter-spacing: 0.06em; }
+
+  /* Filters */
+  .filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .filter-btn {
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .filter-btn:hover, .filter-btn.active {
+    border-color: var(--accent);
+    color: var(--accent);
+    background: rgba(99, 102, 241, 0.1);
+  }
+
+  /* Table */
+  .table-wrap {
+    overflow-x: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-card);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+  }
+
+  th {
+    padding: 12px 14px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    background: var(--bg-elevated);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+
+  td {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* Status badges */
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+  }
+  .badge--dm { background: rgba(99,102,241,0.15); color: var(--accent); }
+  .badge--replied { background: rgba(59,130,246,0.15); color: var(--info); }
+  .badge--video { background: rgba(168,85,247,0.15); color: #a855f7; }
+  .badge--testing { background: rgba(245,158,11,0.15); color: var(--warning); }
+  .badge--debrief { background: rgba(236,72,153,0.15); color: #ec4899; }
+  .badge--deal { background: rgba(34,197,94,0.15); color: var(--success); }
+  .badge--launched { background: rgba(34,197,94,0.3); color: var(--success); }
+  .badge--lost { background: rgba(239,68,68,0.15); color: var(--error); }
+  .badge--noresponse { background: rgba(100,100,100,0.15); color: #666; }
+
+  /* Type badges */
+  .type-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 0.68rem;
+    font-weight: 600;
+  }
+  .type-badge--tickets { background: rgba(245,158,11,0.15); color: var(--warning); }
+  .type-badge--vinted { background: rgba(34,197,94,0.15); color: var(--success); }
+  .type-badge--both { background: rgba(99,102,241,0.15); color: var(--accent); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 28px;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  .modal h2 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 20px;
+  }
+
+  .form-group {
+    margin-bottom: 14px;
+  }
+  .form-group label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-secondary);
+    margin-bottom: 5px;
+    font-weight: 500;
+  }
+  .form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg-elevated);
+    color: var(--text);
+    font-size: 0.85rem;
+    font-family: var(--font);
+  }
+  .form-group textarea { resize: vertical; min-height: 60px; }
+  .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  .form-row { display: flex; gap: 12px; }
+  .form-row .form-group { flex: 1; }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+
+  .notes-cell {
+    max-width: 200px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-secondary);
+    font-size: 0.78rem;
+  }
+
+  .date-cell {
+    font-size: 0.78rem;
+    color: var(--text-secondary);
+    white-space: nowrap;
+  }
+
+  .name-cell {
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .group-cell {
+    font-size: 0.82rem;
+    color: var(--text);
+  }
+
+  .members-cell {
+    font-weight: 600;
+    text-align: center;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: var(--text-secondary);
+  }
+  .empty-state p { font-size: 0.88rem; margin-bottom: 16px; }
+
+  @media (max-width: 768px) {
+    body { padding: 12px; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .form-row { flex-direction: column; gap: 0; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1><span>Monitorz</span> — CRM Outreach</h1>
+  <div class="header-actions">
+    <button class="btn" onclick="exportCSV()">Exporter CSV</button>
+    <button class="btn" onclick="importCSV()">Importer CSV</button>
+    <button class="btn btn--primary" onclick="openModal()">+ Ajouter un owner</button>
+  </div>
+</div>
+
+<div class="stats" id="stats"></div>
+
+<div class="filters" id="filters">
+  <button class="filter-btn active" onclick="filterBy('all', this)">Tous</button>
+  <button class="filter-btn" onclick="filterBy('dm_sent', this)">DM envoye</button>
+  <button class="filter-btn" onclick="filterBy('replied', this)">A repondu</button>
+  <button class="filter-btn" onclick="filterBy('video_sent', this)">Video envoyee</button>
+  <button class="filter-btn" onclick="filterBy('testing', this)">En test</button>
+  <button class="filter-btn" onclick="filterBy('debrief', this)">Debrief</button>
+  <button class="filter-btn" onclick="filterBy('deal_closed', this)">Deal ferme</button>
+  <button class="filter-btn" onclick="filterBy('launched', this)">Lance</button>
+  <button class="filter-btn" onclick="filterBy('lost', this)">Perdu</button>
+  <button class="filter-btn" onclick="filterBy('no_response', this)">Pas de reponse</button>
+</div>
+
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        <th>Owner</th>
+        <th>Groupe</th>
+        <th>Type</th>
+        <th>Membres</th>
+        <th>Plateforme</th>
+        <th>Statut</th>
+        <th>Date DM</th>
+        <th>Derniere action</th>
+        <th>Notes</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <p>Aucun owner pour le moment</p>
+    <button class="btn btn--primary" onclick="openModal()">Ajouter ton premier owner</button>
+  </div>
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">Ajouter un owner</h2>
+    <input type="hidden" id="editId">
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nom / Pseudo</label>
+        <input type="text" id="fName" placeholder="@pseudo_owner">
+      </div>
+      <div class="form-group">
+        <label>Plateforme</label>
+        <select id="fPlatform">
+          <option value="discord">Discord</option>
+          <option value="instagram">Instagram</option>
+          <option value="telegram">Telegram</option>
+          <option value="twitter">Twitter/X</option>
+          <option value="whatsapp">WhatsApp</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Nom du groupe</label>
+        <input type="text" id="fGroup" placeholder="ex: French Resell">
+      </div>
+      <div class="form-group">
+        <label>Nombre de membres</label>
+        <input type="number" id="fMembers" placeholder="ex: 500">
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Type de resell</label>
+        <select id="fType">
+          <option value="tickets">Tickets</option>
+          <option value="vinted">Vinted</option>
+          <option value="both">Les deux</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Statut</label>
+        <select id="fStatus">
+          <option value="dm_sent">DM envoye</option>
+          <option value="replied">A repondu</option>
+          <option value="video_sent">Video envoyee</option>
+          <option value="testing">En test</option>
+          <option value="debrief">Debrief</option>
+          <option value="deal_closed">Deal ferme</option>
+          <option value="launched">Lance</option>
+          <option value="lost">Perdu</option>
+          <option value="no_response">Pas de reponse</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group">
+      <label>Lien offre groupe (optionnel)</label>
+      <input type="text" id="fOfferLink" placeholder="https://...">
+    </div>
+
+    <div class="form-group">
+      <label>Notes</label>
+      <textarea id="fNotes" placeholder="Ex: owner receptif, veut tester la semaine pro..."></textarea>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn" onclick="closeModal()">Annuler</button>
+      <button class="btn btn--primary" onclick="saveOwner()">Sauvegarder</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var STORAGE_KEY = 'monitorz_crm_owners';
+var currentFilter = 'all';
+
+var STATUS_MAP = {
+  dm_sent: { label: 'DM envoye', cls: 'badge--dm' },
+  replied: { label: 'A repondu', cls: 'badge--replied' },
+  video_sent: { label: 'Video envoyee', cls: 'badge--video' },
+  testing: { label: 'En test', cls: 'badge--testing' },
+  debrief: { label: 'Debrief', cls: 'badge--debrief' },
+  deal_closed: { label: 'Deal ferme', cls: 'badge--deal' },
+  launched: { label: 'Lance', cls: 'badge--launched' },
+  lost: { label: 'Perdu', cls: 'badge--lost' },
+  no_response: { label: 'Pas de reponse', cls: 'badge--noresponse' },
+};
+
+function load() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY)) || []; }
+  catch(e) { return []; }
+}
+
+function save(owners) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(owners));
+}
+
+function render() {
+  var owners = load();
+  var filtered = currentFilter === 'all' ? owners : owners.filter(function(o) { return o.status === currentFilter; });
+
+  // Stats
+  var stats = document.getElementById('stats');
+  var total = owners.length;
+  var replied = owners.filter(function(o) { return ['replied','video_sent','testing','debrief','deal_closed','launched'].indexOf(o.status) >= 0; }).length;
+  var testing = owners.filter(function(o) { return o.status === 'testing'; }).length;
+  var deals = owners.filter(function(o) { return o.status === 'deal_closed' || o.status === 'launched'; }).length;
+  var launched = owners.filter(function(o) { return o.status === 'launched'; }).length;
+  var totalMembers = owners.filter(function(o) { return o.status === 'launched'; }).reduce(function(s, o) { return s + (parseInt(o.members) || 0); }, 0);
+  var convRate = total > 0 ? Math.round(deals / total * 100) : 0;
+
+  stats.innerHTML =
+    '<div class="stat"><div class="stat__value">' + total + '</div><div class="stat__label">Owners DM</div></div>' +
+    '<div class="stat"><div class="stat__value">' + replied + '</div><div class="stat__label">Ont repondu</div></div>' +
+    '<div class="stat"><div class="stat__value">' + testing + '</div><div class="stat__label">En test</div></div>' +
+    '<div class="stat"><div class="stat__value">' + deals + '</div><div class="stat__label">Deals fermes</div></div>' +
+    '<div class="stat"><div class="stat__value">' + launched + '</div><div class="stat__label">Lances</div></div>' +
+    '<div class="stat"><div class="stat__value">' + totalMembers.toLocaleString() + '</div><div class="stat__label">Membres touches</div></div>' +
+    '<div class="stat"><div class="stat__value">' + convRate + '%</div><div class="stat__label">Taux conversion</div></div>';
+
+  // Table
+  var tbody = document.getElementById('tableBody');
+  var empty = document.getElementById('emptyState');
+
+  if (!filtered.length) {
+    tbody.innerHTML = '';
+    empty.style.display = '';
+    return;
+  }
+  empty.style.display = 'none';
+
+  tbody.innerHTML = filtered.map(function(o, idx) {
+    var realIdx = owners.indexOf(o);
+    var s = STATUS_MAP[o.status] || { label: o.status, cls: '' };
+    var typeMap = { tickets: 'type-badge--tickets', vinted: 'type-badge--vinted', both: 'type-badge--both' };
+    var typeLabel = { tickets: 'Tickets', vinted: 'Vinted', both: 'Tickets + Vinted' };
+    var lastAction = o.last_action || o.dm_date || '-';
+
+    return '<tr>' +
+      '<td class="name-cell">' + esc(o.name) + '</td>' +
+      '<td class="group-cell">' + esc(o.group) + '</td>' +
+      '<td><span class="type-badge ' + (typeMap[o.type] || '') + '">' + (typeLabel[o.type] || o.type) + '</span></td>' +
+      '<td class="members-cell">' + (o.members || '-') + '</td>' +
+      '<td style="font-size:0.78rem;">' + esc(o.platform || 'discord') + '</td>' +
+      '<td><span class="badge ' + s.cls + '">' + s.label + '</span></td>' +
+      '<td class="date-cell">' + (o.dm_date || '-') + '</td>' +
+      '<td class="date-cell">' + lastAction + '</td>' +
+      '<td class="notes-cell" title="' + esc(o.notes || '') + '">' + esc(o.notes || '-') + '</td>' +
+      '<td style="white-space:nowrap;">' +
+        '<button class="btn btn--small" onclick="advanceStatus(' + realIdx + ')">Avancer</button> ' +
+        '<button class="btn btn--small" onclick="editOwner(' + realIdx + ')">Edit</button> ' +
+        '<button class="btn btn--small btn--danger" onclick="deleteOwner(' + realIdx + ')">X</button>' +
+      '</td>' +
+    '</tr>';
+  }).join('');
+}
+
+function esc(str) {
+  var d = document.createElement('div');
+  d.textContent = str || '';
+  return d.innerHTML;
+}
+
+function openModal(data) {
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modalTitle').textContent = data ? 'Modifier owner' : 'Ajouter un owner';
+  document.getElementById('editId').value = data ? data._idx : '';
+  document.getElementById('fName').value = data ? data.name : '';
+  document.getElementById('fGroup').value = data ? data.group : '';
+  document.getElementById('fMembers').value = data ? data.members : '';
+  document.getElementById('fType').value = data ? data.type : 'tickets';
+  document.getElementById('fStatus').value = data ? data.status : 'dm_sent';
+  document.getElementById('fPlatform').value = data ? (data.platform || 'discord') : 'discord';
+  document.getElementById('fOfferLink').value = data ? (data.offer_link || '') : '';
+  document.getElementById('fNotes').value = data ? data.notes : '';
+  document.getElementById('fName').focus();
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+}
+
+function saveOwner() {
+  var owners = load();
+  var editId = document.getElementById('editId').value;
+  var today = new Date().toLocaleDateString('fr-FR');
+
+  var entry = {
+    name: document.getElementById('fName').value.trim(),
+    group: document.getElementById('fGroup').value.trim(),
+    members: document.getElementById('fMembers').value.trim(),
+    type: document.getElementById('fType').value,
+    status: document.getElementById('fStatus').value,
+    platform: document.getElementById('fPlatform').value,
+    offer_link: document.getElementById('fOfferLink').value.trim(),
+    notes: document.getElementById('fNotes').value.trim(),
+    last_action: today,
+  };
+
+  if (!entry.name) { alert('Nom requis'); return; }
+
+  if (editId !== '') {
+    var idx = parseInt(editId);
+    entry.dm_date = owners[idx].dm_date;
+    owners[idx] = entry;
+  } else {
+    entry.dm_date = today;
+    owners.push(entry);
+  }
+
+  save(owners);
+  closeModal();
+  render();
+}
+
+function editOwner(idx) {
+  var owners = load();
+  var o = owners[idx];
+  o._idx = idx;
+  openModal(o);
+}
+
+function deleteOwner(idx) {
+  if (!confirm('Supprimer cet owner ?')) return;
+  var owners = load();
+  owners.splice(idx, 1);
+  save(owners);
+  render();
+}
+
+var STATUS_ORDER = ['dm_sent', 'replied', 'video_sent', 'testing', 'debrief', 'deal_closed', 'launched'];
+
+function advanceStatus(idx) {
+  var owners = load();
+  var o = owners[idx];
+  var curr = STATUS_ORDER.indexOf(o.status);
+  if (curr >= 0 && curr < STATUS_ORDER.length - 1) {
+    o.status = STATUS_ORDER[curr + 1];
+    o.last_action = new Date().toLocaleDateString('fr-FR');
+    save(owners);
+    render();
+  }
+}
+
+function filterBy(status, btn) {
+  currentFilter = status;
+  document.querySelectorAll('.filter-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  render();
+}
+
+function exportCSV() {
+  var owners = load();
+  if (!owners.length) { alert('Rien a exporter'); return; }
+  var headers = ['Nom', 'Groupe', 'Type', 'Membres', 'Plateforme', 'Statut', 'Date DM', 'Derniere action', 'Lien offre', 'Notes'];
+  var rows = owners.map(function(o) {
+    return [o.name, o.group, o.type, o.members, o.platform, o.status, o.dm_date, o.last_action, o.offer_link || '', o.notes].map(function(v) {
+      return '"' + String(v || '').replace(/"/g, '""') + '"';
+    }).join(',');
+  });
+  var csv = headers.join(',') + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'monitorz_crm_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function importCSV() {
+  var input = document.createElement('input');
+  input.type = 'file';
+  input.accept = '.csv';
+  input.onchange = function(e) {
+    var file = e.target.files[0];
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function(ev) {
+      var lines = ev.target.result.split('\n').slice(1);
+      var owners = load();
+      lines.forEach(function(line) {
+        if (!line.trim()) return;
+        var cols = line.match(/(".*?"|[^,]+)/g) || [];
+        var clean = cols.map(function(c) { return c.replace(/^"|"$/g, '').replace(/""/g, '"'); });
+        if (clean[0]) {
+          owners.push({
+            name: clean[0], group: clean[1] || '', type: clean[2] || 'tickets',
+            members: clean[3] || '', platform: clean[4] || 'discord', status: clean[5] || 'dm_sent',
+            dm_date: clean[6] || '', last_action: clean[7] || '', offer_link: clean[8] || '', notes: clean[9] || '',
+          });
+        }
+      });
+      save(owners);
+      render();
+      alert('Import OK : ' + lines.filter(function(l) { return l.trim(); }).length + ' lignes');
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+// Close modal on overlay click
+document.getElementById('modal').addEventListener('click', function(e) {
+  if (e.target === this) closeModal();
+});
+
+// Close modal on Escape
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeModal();
+});
+
+render();
+</script>
+</body>
+</html>

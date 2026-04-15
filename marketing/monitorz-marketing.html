@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitorz — Marketing Hub</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap');
+
+  :root {
+    --bg: #111116;
+    --bg-secondary: #1a1a22;
+    --bg-tertiary: #22222e;
+    --bg-elevated: #2a2a38;
+    --bg-surface: rgba(255,255,255,0.03);
+    --border: rgba(255,255,255,0.08);
+    --border-hover: rgba(255,255,255,0.14);
+    --glass-bg: rgba(255,255,255,0.04);
+    --glass-bg-hover: rgba(255,255,255,0.07);
+    --text: #f0ece6;
+    --text-2: #a8a3a0;
+    --text-3: #6e6a68;
+    --text-muted: #4a4744;
+    --accent-start: #f5a623;
+    --accent-mid: #f0804e;
+    --accent-end: #e8636b;
+    --accent-glow: rgba(240,128,78,0.25);
+    --accent-glow-strong: rgba(240,128,78,0.45);
+    --green: #34d399;
+    --green-glow: rgba(52,211,153,0.12);
+    --warning: #fbbf24;
+    --error: #f87171;
+    --info: #60a5fa;
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+    --radius-full: 999px;
+    --sidebar-w: 240px;
+    --font-display: 'Sora', sans-serif;
+    --font-body: 'Plus Jakarta Sans', sans-serif;
+    --ease-out: cubic-bezier(0.16,1,0.3,1);
+    --ease-spring: cubic-bezier(0.34,1.56,0.64,1);
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.2);
+    --shadow-md: 0 8px 32px rgba(0,0,0,0.3);
+    --shadow-lg: 0 16px 64px rgba(0,0,0,0.4);
+    --shadow-glow: 0 0 40px var(--accent-glow);
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; }
+
+  body {
+    font-family: var(--font-body);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.6;
+  }
+
+  body::after {
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:9999;opacity:0.035;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-size:128px 128px;
+  }
+
+  body::before {
+    content:'';position:fixed;inset:0;pointer-events:none;z-index:0;
+    background:radial-gradient(ellipse 600px 600px at 80% 10%,rgba(245,166,35,0.06),transparent),radial-gradient(ellipse 500px 500px at 20% 80%,rgba(232,99,107,0.05),transparent);
+  }
+
+  @keyframes fadeInUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+
+  ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(245,166,35,0.2);border-radius:6px}::-webkit-scrollbar-thumb:hover{background:rgba(245,166,35,0.35)}
+
+  /* ── Sidebar ── */
+  .sidebar{width:var(--sidebar-w);background:var(--bg-secondary);border-right:1px solid var(--border);padding:28px 18px;position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:50;transition:transform 0.3s var(--ease-out);backdrop-filter:blur(16px)}
+  .sidebar__logo{font-family:var(--font-display);font-size:1.2rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:6px;background:linear-gradient(135deg,var(--accent-start),var(--accent-mid),var(--accent-end));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .sidebar__sub{font-size:0.68rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.15em;margin-bottom:36px;font-weight:500}
+  .sidebar__nav{list-style:none;flex:1}
+  .sidebar__nav li{margin-bottom:4px}
+  .sidebar__nav a{display:flex;align-items:center;gap:12px;padding:11px 16px;border-radius:var(--radius-md);color:var(--text-2);text-decoration:none;font-size:0.85rem;font-weight:500;transition:all 0.3s var(--ease-out);cursor:pointer;border:1px solid transparent}
+  .sidebar__nav a:hover{color:var(--text);background:var(--bg-surface);border-color:var(--border)}
+  .sidebar__nav a.active{color:var(--accent-mid);background:var(--glass-bg-hover);border-color:var(--border-hover)}
+  .sidebar__nav .nav-icon{font-size:1rem;width:22px;text-align:center}
+  .sidebar__footer{font-size:0.68rem;color:var(--text-muted);padding-top:18px;border-top:1px solid var(--border)}
+
+  .burger{display:none;position:fixed;top:14px;left:14px;z-index:60;padding:10px 14px;border-radius:var(--radius-sm);border:1px solid var(--border);background:var(--glass-bg);backdrop-filter:blur(12px);color:var(--text);font-size:1.1rem;cursor:pointer}
+  .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:40;backdrop-filter:blur(4px)}
+
+  .main{margin-left:var(--sidebar-w);flex:1;min-height:100vh;position:relative;z-index:1}
+  .page{display:none;padding:36px;min-height:100vh;animation:fadeInUp 0.5s var(--ease-out)}.page.active{display:block}
+
+  /* ── Shared ── */
+  .btn{padding:9px 18px;border-radius:var(--radius-full);border:1px solid var(--border);background:var(--glass-bg);backdrop-filter:blur(12px);color:var(--text);font-size:0.82rem;font-weight:600;cursor:pointer;transition:all 0.3s var(--ease-out);font-family:var(--font-display);letter-spacing:-0.01em}
+  .btn:hover{border-color:var(--border-hover);background:var(--glass-bg-hover);transform:translateY(-1px)}
+  .btn--primary{background:linear-gradient(135deg,var(--accent-start),var(--accent-mid),var(--accent-end));border-color:transparent;color:#111116;box-shadow:0 4px 20px var(--accent-glow)}
+  .btn--primary:hover{box-shadow:0 6px 30px var(--accent-glow-strong);transform:translateY(-2px)}
+  .btn--danger{color:var(--error)}.btn--danger:hover{border-color:var(--error)}
+  .btn--small{padding:5px 12px;font-size:0.73rem}
+  .btn--green{background:var(--green);border-color:var(--green);color:#111116}
+
+  .page-title{font-family:var(--font-display);font-size:1.5rem;font-weight:800;letter-spacing:-0.02em;margin-bottom:32px}
+  .page-title span{background:linear-gradient(135deg,var(--accent-start),var(--accent-mid));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+  hr.divider{border:none;border-top:1px solid var(--border);margin:24px 0}
+
+  .form-group{margin-bottom:14px}
+  .form-group label{display:block;font-size:0.75rem;color:var(--text-3);margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:0.06em}
+  .form-group input,.form-group select,.form-group textarea{width:100%;padding:10px 14px;border:1px solid var(--border);border-radius:var(--radius-md);background:var(--bg-tertiary);color:var(--text);font-size:0.85rem;font-family:var(--font-body);transition:all 0.2s var(--ease-out)}
+  .form-group textarea{resize:vertical;min-height:60px}
+  .form-group input:focus,.form-group select:focus,.form-group textarea:focus{outline:none;border-color:var(--accent-mid);box-shadow:0 0 0 3px var(--accent-glow)}
+  .form-row{display:flex;gap:14px}.form-row .form-group{flex:1}
+
+  .glass-card{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;transition:all 0.3s var(--ease-out)}
+
+  /* ────────────────────────────────
+     PAGE 1 : CRM
+  ──────────────────────────────── */
+  .crm-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:28px;flex-wrap:wrap;gap:14px}
+  .crm-header-actions{display:flex;gap:10px;flex-wrap:wrap}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:28px}
+  .stat{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;text-align:center;transition:all 0.3s var(--ease-out)}
+  .stat:hover{background:var(--glass-bg-hover);border-color:var(--border-hover)}
+  .stat__value{font-family:var(--font-display);font-size:1.5rem;font-weight:700}
+  .stat__label{font-size:0.7rem;color:var(--text-3);margin-top:5px;text-transform:uppercase;letter-spacing:0.1em;font-weight:500}
+
+  .filters{display:flex;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+  .filter-btn{padding:6px 14px;border-radius:var(--radius-full);border:1px solid var(--border);background:transparent;color:var(--text-2);font-size:0.75rem;font-weight:500;cursor:pointer;transition:all 0.2s var(--ease-out);font-family:var(--font-body)}
+  .filter-btn:hover,.filter-btn.active{border-color:var(--accent-mid);color:var(--accent-mid);background:rgba(240,128,78,0.08)}
+
+  .table-wrap{overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-lg);background:var(--glass-bg);backdrop-filter:blur(16px)}
+  table{width:100%;border-collapse:collapse;font-size:0.82rem}
+  th{padding:13px 14px;text-align:left;font-family:var(--font-display);font-weight:600;font-size:0.7rem;text-transform:uppercase;letter-spacing:0.08em;color:var(--text-3);background:var(--bg-tertiary);border-bottom:1px solid var(--border);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:last-child td{border-bottom:none}tr:hover td{background:var(--bg-surface)}
+
+  .badge{display:inline-block;padding:3px 10px;border-radius:var(--radius-full);font-size:0.68rem;font-weight:600;letter-spacing:0.03em}
+  .badge--dm{background:rgba(240,128,78,0.12);color:var(--accent-mid)}.badge--replied{background:rgba(96,165,250,0.12);color:var(--info)}.badge--video{background:rgba(168,85,247,0.12);color:#a855f7}.badge--testing{background:rgba(251,191,36,0.12);color:var(--warning)}.badge--debrief{background:rgba(236,72,153,0.12);color:#ec4899}.badge--deal{background:rgba(52,211,153,0.12);color:var(--green)}.badge--launched{background:rgba(52,211,153,0.22);color:var(--green)}.badge--lost{background:rgba(248,113,113,0.12);color:var(--error)}.badge--noresponse{background:rgba(100,100,100,0.12);color:var(--text-3)}
+
+  .type-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:0.68rem;font-weight:600}
+  .type-badge--tickets{background:rgba(251,191,36,0.12);color:var(--warning)}.type-badge--vinted{background:rgba(52,211,153,0.12);color:var(--green)}.type-badge--both{background:rgba(240,128,78,0.12);color:var(--accent-mid)}
+
+  .notes-cell{max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--text-2);font-size:0.78rem}
+  .date-cell{font-size:0.78rem;color:var(--text-2);white-space:nowrap}.name-cell{font-weight:600;white-space:nowrap}.members-cell{font-weight:600;text-align:center}
+  .empty-state{text-align:center;padding:60px 24px;color:var(--text-2)}.empty-state p{font-size:0.88rem;margin-bottom:16px}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.65);backdrop-filter:blur(6px);z-index:100;justify-content:center;align-items:center;padding:24px}.modal-overlay.open{display:flex}
+  .modal{background:var(--bg-secondary);border:1px solid var(--border-hover);border-radius:var(--radius-xl);padding:32px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow-lg);animation:fadeInUp 0.4s var(--ease-spring)}
+  .modal h2{font-family:var(--font-display);font-size:1.15rem;font-weight:700;margin-bottom:22px}
+  .modal-actions{display:flex;gap:12px;justify-content:flex-end;margin-top:22px}
+
+  /* ────────────────────────────────
+     PAGE 2 : PRICING CALCULATOR
+  ──────────────────────────────── */
+  .calculator{max-width:620px;margin-bottom:28px}
+  .results-box{max-width:620px}
+  .results-box h2{font-family:var(--font-display);font-size:1.05rem;font-weight:700;margin-bottom:20px}
+  .result-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:22px}
+  .result-card{background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;text-align:center;transition:all 0.3s var(--ease-out)}
+  .result-card:hover{border-color:var(--border-hover)}
+  .result-card__value{font-family:var(--font-display);font-size:1.4rem;font-weight:800}
+  .result-card__label{font-size:0.68rem;color:var(--text-3);margin-top:5px;text-transform:uppercase;letter-spacing:0.06em}
+  .result-card--green .result-card__value{color:var(--green)}
+  .result-card--accent .result-card__value{background:linear-gradient(135deg,var(--accent-start),var(--accent-mid));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .breakdown{font-size:0.82rem;line-height:2;color:var(--text-2)}.breakdown strong{color:var(--text)}
+  .copy-block{background:var(--bg-tertiary);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px;margin-top:20px;font-size:0.8rem;color:var(--text-2);white-space:pre-wrap;line-height:1.7;position:relative}
+  .copy-btn{position:absolute;top:12px;right:12px;padding:5px 14px;border-radius:var(--radius-full);border:1px solid var(--border);background:var(--glass-bg);color:var(--text);font-size:0.7rem;font-weight:600;cursor:pointer;font-family:var(--font-display);transition:all 0.2s var(--ease-out)}
+  .copy-btn:hover{border-color:var(--accent-mid);color:var(--accent-mid)}
+
+  /* ────────────────────────────────
+     PAGE 3 : OFFER TEMPLATE
+  ──────────────────────────────── */
+  .offer-config{max-width:620px;margin-bottom:28px}
+  .offer-config h3{font-family:var(--font-display);font-size:0.92rem;font-weight:700;margin-bottom:16px}
+
+  .offer-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:24px}
+
+  .offer-preview{background:#0a0a0f;border:1px solid var(--border);border-radius:var(--radius-xl);overflow:hidden;position:relative}
+  .offer-preview::before{content:'';position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 400px 400px at 70% 5%,rgba(245,166,35,0.06),transparent),radial-gradient(ellipse 300px 300px at 30% 90%,rgba(232,99,107,0.04),transparent)}
+
+  .offer-hero{text-align:center;padding:60px 24px 48px;position:relative}
+  .offer-hero::before{content:'';position:absolute;top:-80px;left:50%;transform:translateX(-50%);width:500px;height:500px;background:radial-gradient(circle,var(--accent-glow) 0%,transparent 70%);pointer-events:none}
+  .offer-hero > *{position:relative;z-index:1}
+  .offer-hero__badge{display:inline-block;padding:6px 16px;border-radius:var(--radius-full);background:linear-gradient(135deg,var(--accent-start),var(--accent-mid));color:#111116;font-family:var(--font-display);font-size:0.72rem;font-weight:700;letter-spacing:0.06em;margin-bottom:22px}
+  .offer-hero__group{font-size:0.88rem;color:var(--text-2);margin-bottom:10px}
+  .offer-hero h2{font-family:var(--font-display);font-size:clamp(1.6rem,4vw,2.6rem);font-weight:900;letter-spacing:-0.03em;line-height:1.1;margin-bottom:16px}
+  .offer-hero h2 span{background:linear-gradient(135deg,var(--accent-start),var(--accent-mid),var(--accent-end));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .offer-hero__sub{font-size:0.95rem;color:var(--text-2);max-width:480px;margin:0 auto;line-height:1.7}
+
+  .offer-countdown{display:flex;justify-content:center;gap:14px;padding:0 24px 44px}
+  .offer-cd-block{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;min-width:76px;text-align:center}
+  .offer-cd-val{font-family:var(--font-display);font-size:1.7rem;font-weight:800;background:linear-gradient(135deg,var(--accent-start),var(--accent-mid));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .offer-cd-lbl{font-size:0.65rem;color:var(--text-3);text-transform:uppercase;letter-spacing:0.1em;margin-top:4px}
+  .offer-expired{display:none;text-align:center;padding:18px;background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:var(--radius-lg);color:var(--error);font-family:var(--font-display);font-weight:700;margin:0 24px 44px}
+
+  .offer-features{max-width:880px;margin:0 auto;padding:0 24px 52px;position:relative}
+  .offer-features h3{font-family:var(--font-display);text-align:center;font-size:1.3rem;font-weight:800;margin-bottom:28px;letter-spacing:-0.02em}
+  .offer-features-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .offer-feat{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;transition:all 0.3s var(--ease-out)}
+  .offer-feat:hover{border-color:var(--border-hover);background:var(--glass-bg-hover);transform:translateY(-2px)}
+  .offer-feat__icon{font-size:1.3rem;margin-bottom:12px}
+  .offer-feat__title{font-family:var(--font-display);font-size:0.88rem;font-weight:700;margin-bottom:6px}
+  .offer-feat__desc{font-size:0.8rem;color:var(--text-2);line-height:1.6}
+
+  /* Segmented control */
+  .seg-control{display:inline-flex;background:var(--glass-bg);border:1px solid var(--border);border-radius:var(--radius-full);padding:3px;margin:0 auto 32px;position:relative}
+  .seg-control__btn{padding:8px 24px;border:none;background:none;color:var(--text-2);font-family:var(--font-display);font-size:0.8rem;font-weight:600;cursor:pointer;border-radius:var(--radius-full);transition:all 0.3s var(--ease-out);position:relative;z-index:1}
+  .seg-control__btn.active{color:#111116}
+  .seg-control__indicator{position:absolute;top:3px;height:calc(100% - 6px);border-radius:var(--radius-full);background:linear-gradient(135deg,var(--accent-start),var(--accent-mid));transition:all 0.35s var(--ease-out);z-index:0}
+
+  .offer-pricing{max-width:920px;margin:0 auto;padding:0 24px 52px;position:relative}
+  .offer-pricing h3{font-family:var(--font-display);text-align:center;font-size:1.3rem;font-weight:800;margin-bottom:6px;letter-spacing:-0.02em}
+  .offer-pricing__sub{text-align:center;color:var(--text-2);font-size:0.88rem;margin-bottom:20px}
+  .offer-pricing__toggle{text-align:center;margin-bottom:28px}
+  .offer-pricing-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}
+
+  .offer-price-card{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px 26px;position:relative;transition:all 0.3s var(--ease-out)}
+  .offer-price-card:hover{transform:translateY(-4px);border-color:var(--border-hover)}
+  .offer-price-card--pop{border-color:var(--accent-mid);box-shadow:var(--shadow-glow);background:var(--glass-bg-hover)}
+  .offer-price-card__badge{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:linear-gradient(135deg,var(--accent-start),var(--accent-mid));color:#111116;padding:4px 16px;border-radius:var(--radius-full);font-family:var(--font-display);font-size:0.68rem;font-weight:700}
+  .offer-price-card__name{font-family:var(--font-display);font-size:0.8rem;font-weight:600;color:var(--text-3);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:12px}
+  .offer-price-card__orig{font-size:0.88rem;color:var(--text-3);text-decoration:line-through;margin-bottom:4px}
+  .offer-price-card__price{font-family:var(--font-display);font-size:2.4rem;font-weight:900;letter-spacing:-0.03em;margin-bottom:4px}
+  .offer-price-card__period{font-size:0.78rem;color:var(--text-2);margin-bottom:18px}
+  .offer-price-card__save{display:inline-block;padding:4px 12px;border-radius:var(--radius-sm);background:var(--green-glow);color:var(--green);font-size:0.72rem;font-weight:700;margin-bottom:20px}
+  .offer-price-card ul{list-style:none;margin-bottom:22px}
+  .offer-price-card li{font-size:0.82rem;color:var(--text-2);padding:5px 0;display:flex;align-items:center;gap:8px}
+  .offer-price-card li::before{content:'\2713';color:var(--green);font-weight:700}
+  .offer-price-card__cta{display:block;width:100%;padding:12px;border-radius:var(--radius-full);border:1px solid var(--border);background:var(--glass-bg);color:var(--text);font-family:var(--font-display);font-size:0.88rem;font-weight:600;cursor:pointer;text-align:center;text-decoration:none;transition:all 0.3s var(--ease-out)}
+  .offer-price-card__cta:hover{border-color:var(--accent-mid);color:var(--accent-mid)}
+  .offer-price-card--pop .offer-price-card__cta{background:linear-gradient(135deg,var(--accent-start),var(--accent-mid),var(--accent-end));border-color:transparent;color:#111116;box-shadow:0 4px 20px var(--accent-glow)}
+
+  .offer-footer{text-align:center;padding:36px 24px;color:var(--text-3);font-size:0.75rem;border-top:1px solid var(--border)}
+
+  /* ────────────────────────────────
+     PAGE 4 : DM TEMPLATES
+  ──────────────────────────────── */
+  .dm-section{margin-bottom:32px}
+  .dm-section h3{font-family:var(--font-display);font-size:0.95rem;font-weight:700;margin-bottom:8px}
+  .dm-section h4{font-size:0.82rem;font-weight:600;color:var(--text-2);margin-bottom:10px}
+  .dm-block{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;font-size:0.84rem;color:var(--text-2);line-height:1.7;position:relative;margin-bottom:14px;transition:all 0.3s var(--ease-out)}
+  .dm-block:hover{border-color:var(--border-hover)}
+  .dm-block__header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+  .dm-label{font-family:var(--font-display);font-size:0.68rem;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;background:linear-gradient(135deg,var(--accent-start),var(--accent-mid));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  .dm-block__actions{display:flex;gap:6px}
+  .dm-textarea{width:100%;background:transparent;border:1px solid transparent;border-radius:var(--radius-sm);color:var(--text-2);font-size:0.84rem;font-family:var(--font-body);line-height:1.7;resize:vertical;padding:8px;transition:all 0.2s var(--ease-out);white-space:pre-wrap}
+  .dm-textarea:focus{outline:none;border-color:var(--accent-mid);background:var(--bg-tertiary)}
+  .dm-saved{display:inline-block;font-size:0.68rem;color:var(--green);font-weight:600;opacity:0;transition:opacity 0.3s}
+  .dm-saved.show{opacity:1}
+
+  .dm-rules{background:var(--glass-bg);backdrop-filter:blur(16px);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-top:28px}
+  .dm-rules h3{font-family:var(--font-display);font-size:0.95rem;font-weight:700;margin-bottom:14px}
+  .dm-rules ol{padding-left:22px;font-size:0.84rem;color:var(--text-2);line-height:2.2}.dm-rules strong{color:var(--text)}
+
+  /* Toast */
+  .toast{position:fixed;bottom:24px;right:24px;padding:12px 20px;border-radius:var(--radius-md);background:var(--green);color:#111116;font-family:var(--font-display);font-size:0.82rem;font-weight:600;z-index:200;animation:fadeInUp 0.4s var(--ease-spring);box-shadow:var(--shadow-md)}
+
+  /* ── Responsive ── */
+  @media(max-width:768px){
+    .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}.burger{display:block}.overlay.open{display:block}
+    .main{margin-left:0}.page{padding:20px;padding-top:60px}
+    .stats{grid-template-columns:repeat(2,1fr)}.form-row{flex-direction:column;gap:0}
+    .result-grid{grid-template-columns:1fr}.offer-countdown{gap:8px}.offer-cd-block{padding:12px 14px;min-width:62px}
+    .offer-pricing-grid{grid-template-columns:1fr}.offer-features-grid{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<button class="burger" id="burger" onclick="toggleSidebar()">&#9776;</button>
+<div class="overlay" id="overlay" onclick="toggleSidebar()"></div>
+
+<nav class="sidebar" id="sidebar">
+  <div class="sidebar__logo">Monitorz</div>
+  <div class="sidebar__sub">Marketing Hub</div>
+  <ul class="sidebar__nav">
+    <li><a class="active" onclick="showPage('crm',this)"><span class="nav-icon">&#x1F4CB;</span> CRM Outreach</a></li>
+    <li><a onclick="showPage('pricing',this)"><span class="nav-icon">&#x1F4B0;</span> Calculateur</a></li>
+    <li><a onclick="showPage('offer',this)"><span class="nav-icon">&#x1F381;</span> Page Offre</a></li>
+    <li><a onclick="showPage('dm',this)"><span class="nav-icon">&#x1F4AC;</span> Templates DM</a></li>
+  </ul>
+  <div class="sidebar__footer">Monitorz &copy; 2026</div>
+</nav>
+
+<div class="main">
+
+  <!-- ===================== PAGE : CRM ===================== -->
+  <div class="page active" id="page-crm">
+    <div class="crm-header">
+      <h1 class="page-title"><span>CRM</span> Outreach</h1>
+      <div class="crm-header-actions">
+        <button class="btn" onclick="exportCSV()">Exporter CSV</button>
+        <button class="btn" onclick="importCSV()">Importer CSV</button>
+        <button class="btn btn--primary" onclick="openModal()">+ Ajouter un owner</button>
+      </div>
+    </div>
+    <div class="stats" id="stats"></div>
+    <div class="filters" id="filters">
+      <button class="filter-btn active" onclick="filterBy('all',this)">Tous</button>
+      <button class="filter-btn" onclick="filterBy('dm_sent',this)">DM envoye</button>
+      <button class="filter-btn" onclick="filterBy('replied',this)">A repondu</button>
+      <button class="filter-btn" onclick="filterBy('video_sent',this)">Video envoyee</button>
+      <button class="filter-btn" onclick="filterBy('testing',this)">En test</button>
+      <button class="filter-btn" onclick="filterBy('debrief',this)">Debrief</button>
+      <button class="filter-btn" onclick="filterBy('deal_closed',this)">Deal ferme</button>
+      <button class="filter-btn" onclick="filterBy('launched',this)">Lance</button>
+      <button class="filter-btn" onclick="filterBy('lost',this)">Perdu</button>
+      <button class="filter-btn" onclick="filterBy('no_response',this)">Pas de reponse</button>
+    </div>
+    <div class="table-wrap">
+      <table><thead><tr><th>Owner</th><th>Groupe</th><th>Type</th><th>Membres</th><th>Plateforme</th><th>Statut</th><th>Date DM</th><th>Derniere action</th><th>Notes</th><th>Actions</th></tr></thead><tbody id="tableBody"></tbody></table>
+      <div id="emptyState" class="empty-state" style="display:none;"><p>Aucun owner pour le moment</p><button class="btn btn--primary" onclick="openModal()">Ajouter ton premier owner</button></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE : PRICING CALCULATOR ===================== -->
+  <div class="page" id="page-pricing">
+    <h1 class="page-title"><span>Calculateur</span> Pricing</h1>
+    <div class="glass-card calculator">
+      <div class="form-row">
+        <div class="form-group"><label>Nom du groupe</label><input type="text" id="calcGroupName" value="French Resell" oninput="calcPricing()"></div>
+        <div class="form-group"><label>Membres du groupe</label><input type="number" id="calcGroupSize" value="500" oninput="calcPricing()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Taux conversion (%)</label><input type="number" id="calcConvRate" value="5" min="1" max="100" oninput="calcPricing()"></div>
+        <div class="form-group"><label>Commission owner (%)</label><input type="number" id="calcOwnerComm" value="10" min="0" max="50" oninput="calcPricing()"></div>
+      </div>
+      <hr class="divider">
+      <div style="font-size:0.78rem;color:var(--text-2);margin-bottom:16px;padding:12px;background:var(--bg-surface);border-radius:var(--radius-sm);border:1px solid var(--border);">
+        <strong style="color:var(--text);">Prix de base (depuis le dashboard) :</strong><br>
+        Starter : 7.99€/mois — 60€/an &nbsp;|&nbsp; Pro : 9.99€/mois — 90€/an
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Reduction groupe (%)</label><input type="number" id="calcDiscount" value="30" min="0" max="80" oninput="calcPricing()"></div>
+        <div class="form-group"><label>Periode dominante</label><select id="calcPeriod" onchange="calcPricing()"><option value="monthly">Mensuel</option><option value="annual">Annuel</option></select></div>
+      </div>
+      <div class="form-group">
+        <label>Repartition Starter / Pro (%)</label>
+        <div style="display:flex;gap:10px;"><input type="number" id="calcSplitStarter" value="30" min="0" max="100" style="width:50%" oninput="calcPricing()"><input type="number" id="calcSplitPro" value="70" min="0" max="100" style="width:50%" oninput="calcPricing()"></div>
+        <div style="font-size:0.68rem;color:var(--text-3);margin-top:5px;">% de souscripteurs par forfait (total = 100%)</div>
+      </div>
+    </div>
+    <div class="glass-card results-box">
+      <h2>Projection pour <span id="rGroupName">French Resell</span></h2>
+      <div class="result-grid">
+        <div class="result-card"><div class="result-card__value" id="rClients">25</div><div class="result-card__label">Clients estimes</div></div>
+        <div class="result-card result-card--green"><div class="result-card__value" id="rRevenue">0 EUR</div><div class="result-card__label">Revenu premiere vague</div></div>
+        <div class="result-card result-card--accent"><div class="result-card__value" id="rMRR">0 EUR</div><div class="result-card__label">MRR (recurrent mensuel)</div></div>
+        <div class="result-card"><div class="result-card__value" id="rOwnerPayout">0 EUR</div><div class="result-card__label">Commission owner</div></div>
+      </div>
+      <div class="breakdown" id="breakdown"></div>
+      <div class="copy-block" id="offerSummary"><button class="copy-btn" onclick="copyOffer()">Copier</button></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE : OFFER TEMPLATE ===================== -->
+  <div class="page" id="page-offer">
+    <h1 class="page-title"><span>Page</span> Offre Groupe</h1>
+
+    <div class="glass-card offer-config">
+      <h3>Configuration de l'offre</h3>
+      <div class="form-row">
+        <div class="form-group"><label>Nom du groupe</label><input type="text" id="offerGroupName" value="NOM_DU_GROUPE" oninput="updateOffer()"></div>
+        <div class="form-group"><label>Duree offre (jours)</label><input type="number" id="offerDays" value="7" min="1" max="30" oninput="updateOffer()"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Reduction (%)</label><input type="number" id="offerDiscount" value="30" min="0" max="80" oninput="updateOffer()"></div>
+      </div>
+      <div style="font-size:0.75rem;color:var(--text-3);margin-bottom:14px;padding:12px;background:var(--bg-tertiary);border-radius:var(--radius-sm);">
+        <strong style="color:var(--text);">Prix de base (depuis le dashboard) :</strong><br>
+        Starter : 7.99€/mois — 60€/an | Pro : 9.99€/mois — 90€/an
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>Lien paiement Starter</label><input type="text" id="offerLinkStarter" placeholder="https://..."></div>
+        <div class="form-group"><label>Lien paiement Pro</label><input type="text" id="offerLinkPro" placeholder="https://..."></div>
+      </div>
+      <button class="btn btn--primary" style="margin-top:14px;" onclick="updateOffer()">Appliquer</button>
+    </div>
+
+    <div class="offer-actions">
+      <button class="btn btn--primary" onclick="copyFullOffer()">Copier toute l'offre (texte DM)</button>
+      <button class="btn btn--green" onclick="openOfferFullscreen()">Ouvrir pleine page</button>
+    </div>
+
+    <div class="offer-preview" id="offerPreview">
+      <section class="offer-hero">
+        <div class="offer-hero__badge">OFFRE EXCLUSIVE</div>
+        <p class="offer-hero__group">Offre reservee aux membres de <strong id="offerGN1">NOM_DU_GROUPE</strong></p>
+        <h2>Automatise ton <span>resell</span> de billets</h2>
+        <p class="offer-hero__sub">Monitorz scanne tes emails d'achat, organise tout dans un Google Sheet, et genere tes WTS automatiquement.</p>
+      </section>
+
+      <div class="offer-countdown" id="offerCountdown">
+        <div class="offer-cd-block"><div class="offer-cd-val" id="oCdD">0</div><div class="offer-cd-lbl">Jours</div></div>
+        <div class="offer-cd-block"><div class="offer-cd-val" id="oCdH">0</div><div class="offer-cd-lbl">Heures</div></div>
+        <div class="offer-cd-block"><div class="offer-cd-val" id="oCdM">0</div><div class="offer-cd-lbl">Minutes</div></div>
+        <div class="offer-cd-block"><div class="offer-cd-val" id="oCdS">0</div><div class="offer-cd-lbl">Secondes</div></div>
+      </div>
+      <div class="offer-expired" id="offerExpired">Cette offre a expire</div>
+
+      <section class="offer-features">
+        <h3>Tout ce que Monitorz Pro fait pour toi</h3>
+        <div class="offer-features-grid">
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F4E7;</div><div class="offer-feat__title">Scan Gmail automatique</div><div class="offer-feat__desc">Connecte tes comptes Gmail. Monitorz detecte automatiquement tes achats : Ticketmaster, Accor Arena, AXS, Roland-Garros, Stade de France, Ticketmaster UK/US.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F4CA;</div><div class="offer-feat__title">Google Sheet organise</div><div class="offer-feat__desc">Chaque billet dans un Sheet propre : evenement, categorie, lieu, date, prix d'achat, prix de vente, benefice — calcule automatiquement.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F4DD;</div><div class="offer-feat__title">Generation WTS en 1 clic</div><div class="offer-feat__desc">Genere tes annonces WTS formatees avec artiste, venue, date, categorie, prix. Template pro + version IA avec Claude.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F4C1;</div><div class="offer-feat__title">Organisation par event</div><div class="offer-feat__desc">Un onglet Google Sheet par evenement, cree automatiquement. Tes billets PSG, Jul, Beyonce — chacun dans son tab.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F9FE;</div><div class="offer-feat__title">Factures PDF pro</div><div class="offer-feat__desc">Genere des factures conformes : nom entreprise, SIRET, TVA, IBAN. Personnalise le prefix, le taux TVA, les notes.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F4F1;</div><div class="offer-feat__title">Multi-comptes Gmail</div><div class="offer-feat__desc">Connecte autant de comptes Gmail que tu veux. Tous tes achats centralises au meme endroit.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F4C8;</div><div class="offer-feat__title">Dashboard & Analytics</div><div class="offer-feat__desc">Depenses, revenus, profit, ROI en temps reel. Stats mensuelles, meilleur mois, pire mois, inventaire unsold.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">&#x1F6CD;&#xFE0F;</div><div class="offer-feat__title">Monitoring Vinted</div><div class="offer-feat__desc">Scan tes ventes ET achats Vinted + Leboncoin. Calcul automatique du ROI, temps en stock, benefice par article.</div></div>
+          <div class="offer-feat"><div class="offer-feat__icon">#&#xFE0F;&#x20E3;</div><div class="offer-feat__title">Hashtags Vinted</div><div class="offer-feat__desc">Genere des hashtags optimises pour tes annonces Vinted. 100+ marques reconnues, taille, etat detectes auto.</div></div>
+        </div>
+      </section>
+
+      <section class="offer-pricing">
+        <h3>Tarifs exclusifs <span id="offerGN2">NOM_DU_GROUPE</span></h3>
+        <p class="offer-pricing__sub" id="offerDiscountLabel">-30% sur tous les forfaits — offre valable 1 semaine uniquement</p>
+        <div class="offer-pricing__toggle">
+          <div class="seg-control" id="pricingToggle">
+            <button class="seg-control__btn active" onclick="setPricingView('monthly',this)">Mensuel</button>
+            <button class="seg-control__btn" onclick="setPricingView('annual',this)">Annuel</button>
+            <div class="seg-control__indicator" id="segIndicator"></div>
+          </div>
+        </div>
+
+        <div class="offer-pricing-grid" id="offerPricingGrid">
+          <!-- Generated by JS -->
+        </div>
+      </section>
+
+      <div class="offer-footer">Monitorz &copy; 2026 — Offre exclusive reservee aux membres de <span id="offerGN3">NOM_DU_GROUPE</span></div>
+    </div>
+  </div>
+
+  <!-- ===================== PAGE : DM TEMPLATES ===================== -->
+  <div class="page" id="page-dm">
+    <h1 class="page-title"><span>Templates</span> DM Outreach</h1>
+    <p style="color:var(--text-2);font-size:0.84rem;margin-bottom:12px;">Modifie les textes directement — ils se sauvegardent automatiquement.</p>
+    <p style="color:var(--text-3);font-size:0.75rem;margin-bottom:28px;">Remplace [OWNER], [GROUPE], [X], [LIEN_PAGE_VIDEO], [LIEN_APP], [LIEN_OFFRE_GROUPE] par tes valeurs.</p>
+
+    <div id="dmContainer"></div>
+
+    <div class="dm-rules">
+      <h3>Regles d'or</h3>
+      <ol>
+        <li><strong>Jamais plus de 3 relances</strong> — au-dela tu deviens spam</li>
+        <li><strong>Toujours personnaliser</strong> le nom du groupe et de l'owner</li>
+        <li><strong>Jamais envoyer le MP4 en piece jointe</strong> — toujours un lien</li>
+        <li><strong>Repondre en moins de 2h</strong> quand un owner repond</li>
+        <li><strong>Screenshot de resultats</strong> > mots — montre des vrais Sheets remplis</li>
+        <li><strong>Ne jamais mentir sur le nombre d'users</strong> — la confiance c'est tout</li>
+      </ol>
+    </div>
+  </div>
+
+</div>
+
+<!-- CRM MODAL -->
+<div class="modal-overlay" id="modal">
+  <div class="modal">
+    <h2 id="modalTitle">Ajouter un owner</h2>
+    <input type="hidden" id="editId">
+    <div class="form-row"><div class="form-group"><label>Nom / Pseudo</label><input type="text" id="fName" placeholder="@pseudo_owner"></div><div class="form-group"><label>Plateforme</label><select id="fPlatform"><option value="discord">Discord</option><option value="instagram">Instagram</option><option value="telegram">Telegram</option><option value="twitter">Twitter/X</option><option value="whatsapp">WhatsApp</option></select></div></div>
+    <div class="form-row"><div class="form-group"><label>Nom du groupe</label><input type="text" id="fGroup" placeholder="ex: French Resell"></div><div class="form-group"><label>Nombre de membres</label><input type="number" id="fMembers" placeholder="ex: 500"></div></div>
+    <div class="form-row"><div class="form-group"><label>Type de resell</label><select id="fType"><option value="tickets">Tickets</option><option value="vinted">Vinted</option><option value="both">Les deux</option></select></div><div class="form-group"><label>Statut</label><select id="fStatus"><option value="dm_sent">DM envoye</option><option value="replied">A repondu</option><option value="video_sent">Video envoyee</option><option value="testing">En test</option><option value="debrief">Debrief</option><option value="deal_closed">Deal ferme</option><option value="launched">Lance</option><option value="lost">Perdu</option><option value="no_response">Pas de reponse</option></select></div></div>
+    <div class="form-group"><label>Lien offre groupe (optionnel)</label><input type="text" id="fOfferLink" placeholder="https://..."></div>
+    <div class="form-group"><label>Notes</label><textarea id="fNotes" placeholder="Ex: owner receptif, veut tester la semaine pro..."></textarea></div>
+    <div class="modal-actions"><button class="btn" onclick="closeModal()">Annuler</button><button class="btn btn--primary" onclick="saveOwner()">Sauvegarder</button></div>
+  </div>
+</div>
+
+<script>
+// ============================================
+// NAVIGATION
+// ============================================
+function showPage(id,el){
+  document.querySelectorAll('.page').forEach(function(p){p.classList.remove('active')});
+  document.getElementById('page-'+id).classList.add('active');
+  document.querySelectorAll('.sidebar__nav a').forEach(function(a){a.classList.remove('active')});
+  if(el)el.classList.add('active');
+  if(window.innerWidth<=768)toggleSidebar();
+}
+function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('open')}
+
+function showToast(msg){
+  var t=document.createElement('div');t.className='toast';t.textContent=msg;document.body.appendChild(t);
+  setTimeout(function(){t.remove()},2000);
+}
+
+// ============================================
+// CRM
+// ============================================
+var STORAGE_KEY='monitorz_crm_owners';var currentFilter='all';
+var STATUS_MAP={dm_sent:{label:'DM envoye',cls:'badge--dm'},replied:{label:'A repondu',cls:'badge--replied'},video_sent:{label:'Video envoyee',cls:'badge--video'},testing:{label:'En test',cls:'badge--testing'},debrief:{label:'Debrief',cls:'badge--debrief'},deal_closed:{label:'Deal ferme',cls:'badge--deal'},launched:{label:'Lance',cls:'badge--launched'},lost:{label:'Perdu',cls:'badge--lost'},no_response:{label:'Pas de reponse',cls:'badge--noresponse'}};
+var STATUS_ORDER=['dm_sent','replied','video_sent','testing','debrief','deal_closed','launched'];
+function crmLoad(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||[]}catch(e){return[]}}
+function crmSave(o){localStorage.setItem(STORAGE_KEY,JSON.stringify(o))}
+function esc(s){var d=document.createElement('div');d.textContent=s||'';return d.innerHTML}
+
+function renderCRM(){
+  var owners=crmLoad();var filtered=currentFilter==='all'?owners:owners.filter(function(o){return o.status===currentFilter});
+  var total=owners.length;var replied=owners.filter(function(o){return['replied','video_sent','testing','debrief','deal_closed','launched'].indexOf(o.status)>=0}).length;
+  var testing=owners.filter(function(o){return o.status==='testing'}).length;var deals=owners.filter(function(o){return o.status==='deal_closed'||o.status==='launched'}).length;
+  var launched=owners.filter(function(o){return o.status==='launched'}).length;var totalMembers=owners.filter(function(o){return o.status==='launched'}).reduce(function(s,o){return s+(parseInt(o.members)||0)},0);
+  var convRate=total>0?Math.round(deals/total*100):0;
+  document.getElementById('stats').innerHTML='<div class="stat"><div class="stat__value">'+total+'</div><div class="stat__label">Owners DM</div></div><div class="stat"><div class="stat__value">'+replied+'</div><div class="stat__label">Ont repondu</div></div><div class="stat"><div class="stat__value">'+testing+'</div><div class="stat__label">En test</div></div><div class="stat"><div class="stat__value">'+deals+'</div><div class="stat__label">Deals fermes</div></div><div class="stat"><div class="stat__value">'+launched+'</div><div class="stat__label">Lances</div></div><div class="stat"><div class="stat__value">'+totalMembers.toLocaleString()+'</div><div class="stat__label">Membres touches</div></div><div class="stat"><div class="stat__value">'+convRate+'%</div><div class="stat__label">Taux conversion</div></div>';
+  var tbody=document.getElementById('tableBody');var empty=document.getElementById('emptyState');
+  if(!filtered.length){tbody.innerHTML='';empty.style.display='';return}empty.style.display='none';
+  tbody.innerHTML=filtered.map(function(o){var ri=owners.indexOf(o);var s=STATUS_MAP[o.status]||{label:o.status,cls:''};var tm={tickets:'type-badge--tickets',vinted:'type-badge--vinted',both:'type-badge--both'};var tl={tickets:'Tickets',vinted:'Vinted',both:'Tickets + Vinted'};return'<tr><td class="name-cell">'+esc(o.name)+'</td><td>'+esc(o.group)+'</td><td><span class="type-badge '+(tm[o.type]||'')+'">'+(tl[o.type]||o.type)+'</span></td><td class="members-cell">'+(o.members||'-')+'</td><td style="font-size:0.78rem;">'+esc(o.platform||'discord')+'</td><td><span class="badge '+s.cls+'">'+s.label+'</span></td><td class="date-cell">'+(o.dm_date||'-')+'</td><td class="date-cell">'+(o.last_action||o.dm_date||'-')+'</td><td class="notes-cell" title="'+esc(o.notes||'')+'">'+esc(o.notes||'-')+'</td><td style="white-space:nowrap;"><button class="btn btn--small" onclick="advanceStatus('+ri+')">Avancer</button> <button class="btn btn--small" onclick="editOwner('+ri+')">Edit</button> <button class="btn btn--small btn--danger" onclick="deleteOwner('+ri+')">X</button></td></tr>'}).join('');
+}
+function openModal(data){document.getElementById('modal').classList.add('open');document.getElementById('modalTitle').textContent=data?'Modifier owner':'Ajouter un owner';document.getElementById('editId').value=data?data._idx:'';document.getElementById('fName').value=data?data.name:'';document.getElementById('fGroup').value=data?data.group:'';document.getElementById('fMembers').value=data?data.members:'';document.getElementById('fType').value=data?data.type:'tickets';document.getElementById('fStatus').value=data?data.status:'dm_sent';document.getElementById('fPlatform').value=data?(data.platform||'discord'):'discord';document.getElementById('fOfferLink').value=data?(data.offer_link||''):'';document.getElementById('fNotes').value=data?data.notes:'';document.getElementById('fName').focus()}
+function closeModal(){document.getElementById('modal').classList.remove('open')}
+function saveOwner(){var owners=crmLoad();var editId=document.getElementById('editId').value;var today=new Date().toLocaleDateString('fr-FR');var entry={name:document.getElementById('fName').value.trim(),group:document.getElementById('fGroup').value.trim(),members:document.getElementById('fMembers').value.trim(),type:document.getElementById('fType').value,status:document.getElementById('fStatus').value,platform:document.getElementById('fPlatform').value,offer_link:document.getElementById('fOfferLink').value.trim(),notes:document.getElementById('fNotes').value.trim(),last_action:today};if(!entry.name){alert('Nom requis');return}if(editId!==''){var idx=parseInt(editId);entry.dm_date=owners[idx].dm_date;owners[idx]=entry}else{entry.dm_date=today;owners.push(entry)}crmSave(owners);closeModal();renderCRM()}
+function editOwner(i){var o=crmLoad();var x=o[i];x._idx=i;openModal(x)}
+function deleteOwner(i){if(!confirm('Supprimer cet owner ?'))return;var o=crmLoad();o.splice(i,1);crmSave(o);renderCRM()}
+function advanceStatus(i){var o=crmLoad();var x=o[i];var c=STATUS_ORDER.indexOf(x.status);if(c>=0&&c<STATUS_ORDER.length-1){x.status=STATUS_ORDER[c+1];x.last_action=new Date().toLocaleDateString('fr-FR');crmSave(o);renderCRM()}}
+function filterBy(s,btn){currentFilter=s;document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active')});btn.classList.add('active');renderCRM()}
+function exportCSV(){var o=crmLoad();if(!o.length){alert('Rien a exporter');return}var h=['Nom','Groupe','Type','Membres','Plateforme','Statut','Date DM','Derniere action','Lien offre','Notes'];var r=o.map(function(x){return[x.name,x.group,x.type,x.members,x.platform,x.status,x.dm_date,x.last_action,x.offer_link||'',x.notes].map(function(v){return'"'+String(v||'').replace(/"/g,'""')+'"'}).join(',')});var csv=h.join(',')+'\n'+r.join('\n');var b=new Blob([csv],{type:'text/csv'});var a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='monitorz_crm_'+new Date().toISOString().slice(0,10)+'.csv';a.click()}
+function importCSV(){var inp=document.createElement('input');inp.type='file';inp.accept='.csv';inp.onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){var lines=ev.target.result.split('\n').slice(1);var o=crmLoad();lines.forEach(function(l){if(!l.trim())return;var cols=l.match(/(".*?"|[^,]+)/g)||[];var c=cols.map(function(x){return x.replace(/^"|"$/g,'').replace(/""/g,'"')});if(c[0])o.push({name:c[0],group:c[1]||'',type:c[2]||'tickets',members:c[3]||'',platform:c[4]||'discord',status:c[5]||'dm_sent',dm_date:c[6]||'',last_action:c[7]||'',offer_link:c[8]||'',notes:c[9]||''})});crmSave(o);renderCRM();alert('Import OK')};r.readAsText(f)};inp.click()}
+document.getElementById('modal').addEventListener('click',function(e){if(e.target===this)closeModal()});
+document.addEventListener('keydown',function(e){if(e.key==='Escape')closeModal()});
+
+// ============================================
+// PRICING CALCULATOR
+// ============================================
+function calcPricing(){
+  var gn=document.getElementById('calcGroupName').value||'Groupe';var gs=parseInt(document.getElementById('calcGroupSize').value)||0;
+  var cr=parseFloat(document.getElementById('calcConvRate').value)||0;var oc=parseFloat(document.getElementById('calcOwnerComm').value)||0;
+  var disc=parseFloat(document.getElementById('calcDiscount').value)||0;
+  var period=document.getElementById('calcPeriod').value;
+  var splitS=parseFloat(document.getElementById('calcSplitStarter').value)||0;
+  var splitP=parseFloat(document.getElementById('calcSplitPro').value)||0;
+
+  // Base prices from dashboard
+  var priceStarter=period==='annual'?PRICES.starter.annual:PRICES.starter.monthly;
+  var pricePro=period==='annual'?PRICES.pro.annual:PRICES.pro.monthly;
+
+  // Discounted prices
+  var discStarter=priceStarter*(1-disc/100);
+  var discPro=pricePro*(1-disc/100);
+
+  var clients=Math.round(gs*cr/100);
+  var cStarter=Math.round(clients*splitS/100);
+  var cPro=Math.round(clients*splitP/100);
+
+  var revStarter=cStarter*discStarter;
+  var revPro=cPro*discPro;
+  var total=revStarter+revPro;
+
+  // MRR: if annual, divide by 12
+  var mrr=period==='annual'?total/12:total;
+  var ownerPay=total*oc/100;
+  var periodLabel=period==='annual'?'an':'mois';
+
+  document.getElementById('rGroupName').textContent=gn;document.getElementById('rClients').textContent=clients;
+  document.getElementById('rRevenue').textContent=total.toFixed(0)+' EUR';document.getElementById('rMRR').textContent=mrr.toFixed(0)+' EUR';document.getElementById('rOwnerPayout').textContent=ownerPay.toFixed(0)+' EUR';
+  document.getElementById('breakdown').innerHTML='<strong>'+gs+'</strong> membres x <strong>'+cr+'%</strong> conversion = <strong>'+clients+' clients</strong><br>Starter : <strong>'+cStarter+'</strong> x '+discStarter.toFixed(2)+' EUR/'+periodLabel+' = <strong>'+revStarter.toFixed(0)+' EUR</strong><br>Pro : <strong>'+cPro+'</strong> x '+discPro.toFixed(2)+' EUR/'+periodLabel+' = <strong>'+revPro.toFixed(0)+' EUR</strong><br>Commission owner ('+oc+'%) : <strong>'+ownerPay.toFixed(0)+' EUR</strong>';
+  var summary='Offre exclusive '+gn+' (-'+disc+'%)\n\nStarter : '+discStarter.toFixed(2)+' EUR/'+periodLabel+' (au lieu de '+priceStarter.toFixed(2)+' EUR)\nPro : '+discPro.toFixed(2)+' EUR/'+periodLabel+' (au lieu de '+pricePro.toFixed(2)+' EUR)\n\nOffre valable 1 semaine.';
+  document.getElementById('offerSummary').innerHTML='<button class="copy-btn" onclick="copyOffer()">Copier</button>'+summary;
+}
+function copyOffer(){var el=document.getElementById('offerSummary');var t=el.textContent.replace('Copier','').trim();navigator.clipboard.writeText(t).then(function(){showToast('Offre copiee !')})}
+
+// ============================================
+// OFFER TEMPLATE
+// ============================================
+var offerEndDate=new Date(Date.now()+7*24*60*60*1000);
+var currentPricingView='monthly';
+
+// Real prices from dashboard
+var PRICES={
+  starter:{monthly:7.99,annual:60},
+  pro:{monthly:9.99,annual:90}
+};
+
+var STARTER_FEATURES=['1 compte Gmail','Scan auto toutes les heures','Scan manuel illimite','Google Sheet organise','Dashboard & stats'];
+var PRO_FEATURES=['Gmail illimite (multi-comptes)','Scan auto toutes les 5 min','ROI & benefice automatique','Generation WTS en 1 clic','Generation WTS avec IA (Claude)','Organisation auto par evenement','Factures PDF conformes','Dashboard & Analytics avance','Monitoring Vinted + Leboncoin','Hashtags Vinted optimises','Rapports CSV & PDF','Support prioritaire'];
+
+function getOfferValues(){
+  var disc=parseFloat(document.getElementById('offerDiscount').value)||30;
+  return{disc:disc};
+}
+
+function updateOffer(){
+  var gn=document.getElementById('offerGroupName').value||'NOM_DU_GROUPE';
+  var days=parseInt(document.getElementById('offerDays').value)||7;
+  offerEndDate=new Date(Date.now()+days*24*60*60*1000);
+  var v=getOfferValues();
+  document.getElementById('offerGN1').textContent=gn;document.getElementById('offerGN2').textContent=gn;document.getElementById('offerGN3').textContent=gn;
+  document.getElementById('offerDiscountLabel').textContent='-'+v.disc+'% sur tous les forfaits — offre valable '+days+' jour'+(days>1?'s':'')+' uniquement';
+  var ls=document.getElementById('offerLinkStarter').value;var lp=document.getElementById('offerLinkPro').value;
+  renderPricingCards(v,ls,lp);
+}
+
+function renderPricingCards(v,linkStarter,linkPro){
+  var grid=document.getElementById('offerPricingGrid');
+  var isAnnual=currentPricingView==='annual';
+  var disc=v.disc;
+
+  // Starter prices
+  var starterOrig=isAnnual?PRICES.starter.annual:PRICES.starter.monthly;
+  var starterDisc=starterOrig*(1-disc/100);
+  var starterPeriod=isAnnual?'/an':'/mois';
+  var starterEquiv=isAnnual?' ('+(starterDisc/12).toFixed(2)+'€/mois)':'';
+
+  // Pro prices
+  var proOrig=isAnnual?PRICES.pro.annual:PRICES.pro.monthly;
+  var proDisc=proOrig*(1-disc/100);
+  var proPeriod=isAnnual?'/an':'/mois';
+  var proEquiv=isAnnual?' ('+(proDisc/12).toFixed(2)+'€/mois)':'';
+
+  // Annual savings vs monthly
+  var annualSaveStarter=isAnnual?Math.round((1-PRICES.starter.annual/(PRICES.starter.monthly*12))*100):0;
+  var annualSavePro=isAnnual?Math.round((1-PRICES.pro.annual/(PRICES.pro.monthly*12))*100):0;
+
+  grid.innerHTML=
+    '<div class="offer-price-card">'+
+      '<div class="offer-price-card__name">Starter</div>'+
+      '<div class="offer-price-card__orig">'+starterOrig.toFixed(2)+'€'+starterPeriod+'</div>'+
+      '<div class="offer-price-card__price">'+starterDisc.toFixed(2)+'€</div>'+
+      '<div class="offer-price-card__period">'+(isAnnual?'par an'+starterEquiv:'par mois')+'</div>'+
+      '<div class="offer-price-card__save">-'+disc+'%'+(isAnnual&&annualSaveStarter?' + '+annualSaveStarter+'% vs mensuel':'')+'</div>'+
+      '<ul>'+STARTER_FEATURES.map(function(f){return'<li>'+f+'</li>'}).join('')+'</ul>'+
+      '<a href="'+(linkStarter||'#')+'" class="offer-price-card__cta">Choisir Starter</a></div>'+
+
+    '<div class="offer-price-card offer-price-card--pop">'+
+      '<div class="offer-price-card__badge">RECOMMANDE</div>'+
+      '<div class="offer-price-card__name">Pro</div>'+
+      '<div class="offer-price-card__orig">'+proOrig.toFixed(2)+'€'+proPeriod+'</div>'+
+      '<div class="offer-price-card__price">'+proDisc.toFixed(2)+'€</div>'+
+      '<div class="offer-price-card__period">'+(isAnnual?'par an'+proEquiv:'par mois')+'</div>'+
+      '<div class="offer-price-card__save">-'+disc+'%'+(isAnnual&&annualSavePro?' + '+annualSavePro+'% vs mensuel':'')+'</div>'+
+      '<ul>'+PRO_FEATURES.map(function(f){return'<li>'+f+'</li>'}).join('')+'</ul>'+
+      '<a href="'+(linkPro||'#')+'" class="offer-price-card__cta">Choisir Pro</a></div>';
+}
+
+function setPricingView(view,btn){
+  currentPricingView=view;
+  document.querySelectorAll('.seg-control__btn').forEach(function(b){b.classList.remove('active')});
+  btn.classList.add('active');
+  // Move indicator
+  var toggle=document.getElementById('pricingToggle');var btns=toggle.querySelectorAll('.seg-control__btn');
+  var idx=Array.prototype.indexOf.call(btns,btn);
+  var ind=document.getElementById('segIndicator');
+  ind.style.left=btn.offsetLeft+'px';ind.style.width=btn.offsetWidth+'px';
+  updateOffer();
+}
+
+function updateOfferCountdown(){
+  var diff=offerEndDate-new Date();
+  if(diff<=0){document.getElementById('offerCountdown').style.display='none';document.getElementById('offerExpired').style.display='block';return}
+  document.getElementById('offerCountdown').style.display='';document.getElementById('offerExpired').style.display='none';
+  var d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);
+  document.getElementById('oCdD').textContent=d;document.getElementById('oCdH').textContent=h<10?'0'+h:h;document.getElementById('oCdM').textContent=m<10?'0'+m:m;document.getElementById('oCdS').textContent=s<10?'0'+s:s;
+}
+setInterval(updateOfferCountdown,1000);
+
+// Copy full offer as DM text
+function copyFullOffer(){
+  var gn=document.getElementById('offerGroupName').value||'NOM_DU_GROUPE';
+  var v=getOfferValues();
+  var disc=v.disc;
+  var diff=offerEndDate-new Date();
+  var daysLeft=Math.max(0,Math.ceil(diff/86400000));
+
+  var sM=(PRICES.starter.monthly*(1-disc/100)).toFixed(2);
+  var sA=(PRICES.starter.annual*(1-disc/100)).toFixed(2);
+  var pM=(PRICES.pro.monthly*(1-disc/100)).toFixed(2);
+  var pA=(PRICES.pro.annual*(1-disc/100)).toFixed(2);
+
+  var text='OFFRE EXCLUSIVE — '+gn+'\n\n'+
+    'Automatise ton resell de billets avec Monitorz\n'+
+    'Scanne tes emails d\'achat, organise tout dans un Google Sheet, genere tes WTS automatiquement.\n\n'+
+    'Il reste '+daysLeft+' jour'+(daysLeft>1?'s':'')+' pour profiter de l\'offre !\n\n'+
+    'Ce que Monitorz Pro fait pour toi :\n'+
+    '- Gmail illimite (multi-comptes)\n'+
+    '- Scan auto toutes les 5 min\n'+
+    '- ROI & benefice automatique\n'+
+    '- Generation WTS en 1 clic + IA\n'+
+    '- Organisation auto par evenement\n'+
+    '- Factures PDF conformes (SIRET, TVA)\n'+
+    '- Dashboard & Analytics avance\n'+
+    '- Monitoring Vinted + Leboncoin\n'+
+    '- Hashtags Vinted optimises\n'+
+    '- Support prioritaire\n\n'+
+    'TARIFS EXCLUSIFS '+gn.toUpperCase()+' (-'+disc+'%) :\n\n'+
+    'STARTER :\n'+
+    'Mensuel : '+sM+'€/mois (au lieu de '+PRICES.starter.monthly.toFixed(2)+'€)\n'+
+    'Annuel : '+sA+'€/an (au lieu de '+PRICES.starter.annual.toFixed(2)+'€)\n\n'+
+    'PRO :\n'+
+    'Mensuel : '+pM+'€/mois (au lieu de '+PRICES.pro.monthly.toFixed(2)+'€)\n'+
+    'Annuel : '+pA+'€/an (au lieu de '+PRICES.pro.annual.toFixed(2)+'€)\n\n'+
+    'Offre valable '+daysLeft+' jour'+(daysLeft>1?'s':'')+'.\n'+
+    (document.getElementById('offerLinkPro').value?'\nLien : '+document.getElementById('offerLinkPro').value:'');
+
+  navigator.clipboard.writeText(text).then(function(){showToast('Offre complete copiee !')});
+}
+
+// Open offer as standalone page
+function openOfferFullscreen(){
+  var preview=document.getElementById('offerPreview');
+  var w=window.open('','_blank');
+  w.document.write('<!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Monitorz — Offre Exclusive</title>');
+  // Copy all styles
+  var styles=document.querySelectorAll('style');styles.forEach(function(s){w.document.write('<style>'+s.innerHTML+'</style>')});
+  w.document.write('</head><body style="display:block;padding:0;">');
+  w.document.write(preview.outerHTML);
+  // Copy countdown script
+  w.document.write('<script>var offerEndDate=new Date("'+offerEndDate.toISOString()+'");function upd(){var diff=offerEndDate-new Date();if(diff<=0){document.getElementById("offerCountdown").style.display="none";document.getElementById("offerExpired").style.display="block";return}var d=Math.floor(diff/86400000),h=Math.floor((diff%86400000)/3600000),m=Math.floor((diff%3600000)/60000),s=Math.floor((diff%60000)/1000);document.getElementById("oCdD").textContent=d;document.getElementById("oCdH").textContent=h<10?"0"+h:h;document.getElementById("oCdM").textContent=m<10?"0"+m:m;document.getElementById("oCdS").textContent=s<10?"0"+s:s}upd();setInterval(upd,1000);<\/script>');
+  w.document.write('</body></html>');
+  w.document.close();
+}
+
+// ============================================
+// DM TEMPLATES (editable + localStorage)
+// ============================================
+var DM_STORAGE='monitorz_dm_templates';
+
+var DEFAULT_DMS=[
+  {id:'dm_short',title:'1. Premier DM — Version courte',label:'DM court',text:'Salut [OWNER], je suis le fondateur de Monitorz.\n\nOn a build un outil qui scan automatiquement les emails d\'achat de billets (Ticketmaster, Accor Arena, AXS, etc.) et les organise dans un Google Sheet avec prix d\'achat, events, categories — pret a revendre.\n\nDeja [X] resellers l\'utilisent. Je te propose de le tester gratuitement pendant 1 semaine, sans engagement.\n\nCa t\'interesse que je te montre en 2 min ?'},
+  {id:'dm_long',title:'1. Premier DM — Version longue',label:'DM long',text:'Salut [OWNER],\n\nJe suis Cesar, fondateur de Monitorz — un outil de monitoring pour resellers de billets et Vinted.\n\nEn gros, tu connectes ton Gmail, l\'outil scan automatiquement tes confirmations d\'achat (Ticketmaster, Roland Garros, Stade de France, Accor Arena, AXS...) et organise tout dans un Google Sheet propre : evenement, categorie, prix d\'achat, date, lien commande.\n\nTu as aussi :\n- Generation WTS automatique (template pro pret a poster)\n- Generation WTS avec IA\n- Factures auto pour tes ventes\n- Dashboard avec stats en temps reel\n\nJe te propose de tester en Pro gratuit pendant 1 semaine. Si ca te plait, j\'ai une offre exclusive pour ton groupe [GROUPE].\n\nCa t\'interesse ?'},
+  {id:'dm_video',title:'2. Envoi video',label:'Video',text:'Top ! Voici une presentation rapide (2 min) :\n[LIEN_PAGE_VIDEO]\n\nTu peux tester directement ici : [LIEN_APP]\nJe t\'ai active le plan Pro pour 7 jours.\n\nN\'hesite pas si tu as des questions, je suis dispo.'},
+  {id:'dm_relance1',title:'3. Relance J+3',label:'Relance 1',text:'Hey [OWNER], je me permets de relancer. Je sais que t\'es busy.\n\nEn 30 sec : Monitorz scan tes emails d\'achat de billets et organise tout automatiquement. [X] resellers l\'utilisent deja.\n\nVoici un apercu rapide : [LIEN_PAGE_VIDEO]\n\nSi ca t\'interesse, je t\'offre 1 semaine Pro gratuite pour tester.'},
+  {id:'dm_relance2',title:'4. Relance J+6 (derniere)',label:'Relance finale',text:'Dernier message, promis ! Si ca t\'interesse pas, aucun souci.\n\nJuste un lien si jamais tu veux voir ce que fait Monitorz : [LIEN_PAGE_VIDEO]\n\nBonne continuation avec [GROUPE].'},
+  {id:'dm_debrief',title:'5. Debrief post-essai',label:'Debrief',text:'Hey [OWNER], ca fait 1 semaine que tu testes Monitorz. Comment ca s\'est passe ?\n\nQuelques questions rapides :\n- Est-ce que l\'outil t\'a fait gagner du temps ?\n- Il y a des features qui manquent ?\n- Tu voudrais continuer a l\'utiliser ?\n\nSi ca te plait, j\'ai une proposition pour toi et ton groupe [GROUPE].'},
+  {id:'dm_deal',title:'6. Proposition Owner',label:'Deal owner',text:'Voila ce que je te propose :\n\nPour toi :\n- Compte Pro Lifetime gratuit (a vie, zero frais)\n- Commission de 10% sur chaque membre de [GROUPE] qui souscrit\n\nPour ton groupe :\n- Offre exclusive -30% sur tous les forfaits (Monthly / Annuel / Lifetime)\n- L\'offre est active pendant 1 semaine\n- Page dediee pour ton groupe : [LIEN_OFFRE_GROUPE]\n\nEn echange, il me faudrait :\n- Un message de presentation dans ton channel principal\n- 2-3 demos avec tes staff pour qu\'ils connaissent l\'outil\n- Un pin du message pendant la semaine d\'offre\n\nCa te va ?'},
+  {id:'dm_group_launch',title:'7. Message lancement groupe',label:'Post groupe',text:'Yo @everyone\n\nJ\'ai teste un outil qui s\'appelle Monitorz pendant 1 semaine et c\'est un game-changer.\n\nEn gros, tu connectes ton Gmail et l\'outil scan automatiquement tous tes achats de billets (Ticketmaster, Accor, AXS, SDF, Roland Garros...). Il organise tout dans un Google Sheet propre avec :\n- Evenement / Categorie / Lieu / Date / Prix d\'achat\n- Generation WTS automatique + IA\n- Dashboard + Stats + Factures\n\nLe fondateur nous fait une offre exclusive pour [GROUPE] :\n[PRIX_REDUIT] au lieu de [PRIX_NORMAL] — offre valable 1 semaine.\n\nLien : [LIEN_OFFRE_GROUPE]\n\nPerso je l\'utilise au quotidien maintenant. Si vous avez des questions, [FONDATEUR] est dispo pour des demos.'},
+  {id:'dm_group_relance',title:'8. Relance groupe J+3',label:'Relance groupe',text:'Rappel : l\'offre exclusive Monitorz pour [GROUPE] se termine dans 4 jours.\n\nDeja [X] membres du groupe l\'utilisent.\n\n[LIEN_OFFRE_GROUPE]'},
+  {id:'dm_group_last',title:'9. Derniere chance groupe',label:'Derniere chance',text:'Derniere chance — l\'offre Monitorz pour [GROUPE] se termine demain.\n\nApres ca, les prix reviennent a la normale.\n\n[LIEN_OFFRE_GROUPE]'}
+];
+
+function loadDMs(){
+  try{var saved=JSON.parse(localStorage.getItem(DM_STORAGE));if(saved&&saved.length===DEFAULT_DMS.length)return saved;return null}catch(e){return null}
+}
+
+function saveDMs(dms){localStorage.setItem(DM_STORAGE,JSON.stringify(dms))}
+
+function renderDMs(){
+  var saved=loadDMs();
+  var dms=saved||DEFAULT_DMS.map(function(d){return{id:d.id,title:d.title,label:d.label,text:d.text}});
+  if(!saved)saveDMs(dms);
+
+  var container=document.getElementById('dmContainer');
+  container.innerHTML=dms.map(function(dm,idx){
+    var rows=dm.text.split('\n').length;
+    return'<div class="dm-section"><h3>'+esc(dm.title)+'</h3>'+
+      '<div class="dm-block"><div class="dm-block__header"><span class="dm-label">'+esc(dm.label)+'</span>'+
+      '<div class="dm-block__actions"><span class="dm-saved" id="saved_'+idx+'">Sauvegarde</span>'+
+      '<button class="btn btn--small" onclick="copyDmIdx('+idx+')">Copier</button>'+
+      '<button class="btn btn--small" onclick="resetDm('+idx+')">Reset</button></div></div>'+
+      '<textarea class="dm-textarea" id="dm_'+idx+'" rows="'+Math.max(rows+2,4)+'" oninput="autoSaveDm('+idx+')">'+esc(dm.text)+'</textarea></div></div>';
+  }).join('');
+}
+
+var dmSaveTimers={};
+function autoSaveDm(idx){
+  clearTimeout(dmSaveTimers[idx]);
+  dmSaveTimers[idx]=setTimeout(function(){
+    var dms=loadDMs()||DEFAULT_DMS;
+    dms[idx].text=document.getElementById('dm_'+idx).value;
+    saveDMs(dms);
+    var el=document.getElementById('saved_'+idx);el.classList.add('show');
+    setTimeout(function(){el.classList.remove('show')},1500);
+  },500);
+}
+
+function copyDmIdx(idx){
+  var text=document.getElementById('dm_'+idx).value;
+  navigator.clipboard.writeText(text).then(function(){showToast('Template copie !')});
+}
+
+function resetDm(idx){
+  if(!confirm('Remettre le texte par defaut ?'))return;
+  var dms=loadDMs()||DEFAULT_DMS;
+  dms[idx].text=DEFAULT_DMS[idx].text;
+  saveDMs(dms);
+  document.getElementById('dm_'+idx).value=DEFAULT_DMS[idx].text;
+  showToast('Template reinitialise');
+}
+
+// ============================================
+// INIT
+// ============================================
+renderCRM();
+calcPricing();
+updateOfferCountdown();
+updateOffer();
+renderDMs();
+
+// Init segmented indicator
+setTimeout(function(){
+  var firstBtn=document.querySelector('.seg-control__btn.active');
+  if(firstBtn){var ind=document.getElementById('segIndicator');ind.style.left=firstBtn.offsetLeft+'px';ind.style.width=firstBtn.offsetWidth+'px'}
+},100);
+</script>
+</body>
+</html>

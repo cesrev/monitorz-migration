@@ -1,0 +1,183 @@
+<!--
+  vinted_accounts_section.html
+  Reusable snippet — Vinted Accounts section for the Monitorz dashboard.
+  Include inside a <section class="dashboard__section"> wrapper.
+  Requires: style.css (vinted classes), app.js (showToast), dashboard JS helpers.
+-->
+
+<!-- Section Header -->
+<div class="dashboard__section-header">
+  <h3>&#128247; Comptes Vinted</h3>
+  <button class="btn btn--primary btn--small" onclick="openVintedModal()">
+    + Ajouter un compte
+  </button>
+</div>
+
+<!-- Accounts list — populated by loadVintedAccounts() -->
+<div class="vinted-accounts-grid" id="vintedAccountsGrid">
+
+  <!-- EMPTY STATE (shown when no accounts) -->
+  <div class="vinted-empty" id="vintedEmptyState">
+    <div class="vinted-empty__icon">&#128247;</div>
+    <div class="vinted-empty__title">Aucun compte Vinted connecte</div>
+    <div class="vinted-empty__subtitle">
+      Lie ton premier compte Vinted pour suivre ton portefeuille,
+      tes messages, favoris et ventes en un seul endroit.
+    </div>
+    <button class="btn btn--primary" onclick="openVintedModal()">
+      + Connecter mon premier compte Vinted
+    </button>
+  </div>
+
+  <!--
+    ACCOUNT CARDS are injected here by loadVintedAccounts().
+    Template for a single account card (rendered via JS):
+
+    <div class="vinted-card" id="vintedCard-{id}" data-account-id="{id}">
+      <div class="vinted-card__header">
+        <div class="vinted-card__identity">
+          <div class="vinted-card__avatar">{initials or <img>}</div>
+          <div class="vinted-card__meta">
+            <div class="vinted-card__username">@{username}</div>
+            <div class="vinted-card__label">{label}</div>
+            <div class="vinted-card__date">Connecte le {date}</div>
+          </div>
+        </div>
+        <div class="vinted-card__actions">
+          <span class="badge badge--success">Actif</span>
+          <button class="btn btn--danger btn--small"
+            onclick="removeVintedAccount('{id}')">Retirer</button>
+        </div>
+      </div>
+      <div class="vinted-tabs" id="vintedTabs-{id}">
+        <nav class="vinted-tabs__nav">
+          <button class="vinted-tab-btn vinted-tab-btn--active"
+            onclick="switchVintedTab('{id}', 'wallet')">
+            Portefeuille
+          </button>
+          <button class="vinted-tab-btn"
+            onclick="switchVintedTab('{id}', 'messages')">
+            Messages
+            <span class="vinted-tab-badge" id="vintedMsgBadge-{id}">0</span>
+          </button>
+          <button class="vinted-tab-btn"
+            onclick="switchVintedTab('{id}', 'favorites')">
+            Favoris
+          </button>
+          <button class="vinted-tab-btn"
+            onclick="switchVintedTab('{id}', 'items')">
+            Articles
+          </button>
+          <button class="vinted-tab-btn"
+            onclick="switchVintedTab('{id}', 'transactions')">
+            Transactions
+          </button>
+        </nav>
+        <div class="vinted-tab-content vinted-tab-content--active"
+          id="vintedTab-{id}-wallet"> ... </div>
+        <div class="vinted-tab-content" id="vintedTab-{id}-messages"> ... </div>
+        <div class="vinted-tab-content" id="vintedTab-{id}-favorites"> ... </div>
+        <div class="vinted-tab-content" id="vintedTab-{id}-items"> ... </div>
+        <div class="vinted-tab-content" id="vintedTab-{id}-transactions"> ... </div>
+      </div>
+    </div>
+  -->
+
+</div>
+
+<!-- ======================================================
+     ADD ACCOUNT MODAL
+     ====================================================== -->
+<div class="vinted-modal__backdrop" id="vintedModalBackdrop"
+  onclick="closeVintedModalOnBackdrop(event)">
+  <div class="vinted-modal" role="dialog" aria-modal="true"
+    aria-labelledby="vintedModalTitle">
+
+    <div class="vinted-modal__header">
+      <span class="vinted-modal__title" id="vintedModalTitle">
+        &#128247; Connecter un compte Vinted
+      </span>
+      <button class="vinted-modal__close" onclick="closeVintedModal()"
+        aria-label="Fermer">&#10005;</button>
+    </div>
+
+    <div class="vinted-modal__body">
+
+      <!-- Onboarding steps -->
+      <div class="vinted-onboarding-steps">
+        <div class="vinted-onboarding-steps__title">Comment recuperer ton token</div>
+        <div class="vinted-onboarding-steps__list">
+          <div class="vinted-onboarding-step">
+            <span class="vinted-onboarding-step__num">1</span>
+            <span>Ouvre une fenetre de navigation privee</span>
+          </div>
+          <div class="vinted-onboarding-step">
+            <span class="vinted-onboarding-step__num">2</span>
+            <span>Connecte-toi sur <strong style="color: var(--text-primary);">vinted.fr</strong></span>
+          </div>
+          <div class="vinted-onboarding-step">
+            <span class="vinted-onboarding-step__num">3</span>
+            <span>
+              Ouvre les DevTools
+              <kbd style="font-size:0.75rem; background:var(--bg-elevated); padding:1px 5px; border-radius:4px; border:1px solid var(--border-light); color:var(--text-secondary);">F12</kbd>
+              &rarr; Application &rarr; Cookies &rarr; copie
+              <code style="font-size:0.78rem; background:var(--bg-elevated); padding:1px 6px; border-radius:4px; color:var(--accent-mid);">refresh_token_web</code>
+            </span>
+          </div>
+          <div class="vinted-onboarding-step">
+            <span class="vinted-onboarding-step__num">4</span>
+            <span>Colle-le dans le champ ci-dessous</span>
+          </div>
+        </div>
+        <div class="vinted-onboarding-steps__security">
+          <span>&#128274;</span>
+          <span>Le token est chiffre et stocke cote serveur.</span>
+        </div>
+      </div>
+
+      <!-- Form -->
+      <form id="vintedAddForm" onsubmit="addVintedAccount(event)">
+
+        <div class="vinted-form__field">
+          <label class="vinted-form__label" for="vintedAccountLabel">
+            Nom du compte (optionnel)
+          </label>
+          <input
+            type="text"
+            class="input"
+            id="vintedAccountLabel"
+            name="label"
+            placeholder="Ex: Compte perso, Revente..."
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="vinted-form__field">
+          <label class="vinted-form__label" for="vintedToken">
+            Token (refresh_token_web) <span style="color:var(--error);">*</span>
+          </label>
+          <input
+            type="password"
+            class="input"
+            id="vintedToken"
+            name="token"
+            placeholder="Colle ton refresh_token_web ici"
+            required
+            autocomplete="off"
+            style="font-family: monospace; font-size: 0.82rem; letter-spacing: 0.02em;"
+          >
+        </div>
+
+      </form>
+    </div>
+
+    <div class="vinted-modal__footer">
+      <button class="btn btn--ghost" onclick="closeVintedModal()">Annuler</button>
+      <button class="btn btn--primary" id="vintedAddSubmitBtn"
+        onclick="addVintedAccount(event)">
+        Connecter le compte
+      </button>
+    </div>
+
+  </div>
+</div>
